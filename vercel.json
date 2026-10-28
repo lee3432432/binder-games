@@ -1,6 +1,5 @@
 {
-  "cleanUrls": true,
-  "trailingSlash": false,
+  "trailingSlash": true,
   "headers": [
     { "source": "/games.json", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
   ]
