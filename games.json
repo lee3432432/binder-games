@@ -1,10 +1,24 @@
 [
   {
+    "id": "taxi-meter",
+    "title": "말 택시미터기",
+    "desc": "말이 달리는 택시미터기. 주행을 시작하면 실제 이동 거리와 속도로 요금이 올라가요. (예시 요금)",
+    "thumb": "assets/thumbs/taxi-meter.jpg",
+    "tags": [
+      "모바일",
+      "재미"
+    ],
+    "new": true
+  },
+  {
     "id": "mega-waterslide",
     "title": "메가 워터슬라이드",
     "desc": "말 한마디로 만든 초대형 워터슬라이드. 시속 160km로 내려가 수영장 정중앙에 착지하세요!",
     "thumb": "assets/thumbs/mega-waterslide.jpg",
-    "tags": ["3D", "레이싱"],
+    "tags": [
+      "3D",
+      "레이싱"
+    ],
     "new": true
   }
 ]
