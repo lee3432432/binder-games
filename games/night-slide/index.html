@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>야경 스카이슬라이드 · 커맨드 플레이</title>
+<meta name="description" content="300m 빌딩 옥상에서 출발하는 네온 투명 워터슬라이드. 말 한마디로 만들고 1인칭으로 내려가세요.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0b0d1a;--neon:#39d5ff}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#0b0d1a;font-family:"Noto Sans KR",system-ui,sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+#flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none}
+#vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.55) 100%);opacity:0;transition:opacity .5s}
+.hud{position:fixed;top:10px;left:10px;display:flex;gap:8px;z-index:5}
+.stat{min-width:58px;padding:4px 10px 6px;border:2px solid var(--neon);border-radius:12px;color:#fff;background:rgba(8,12,30,.75);box-shadow:0 0 12px rgba(57,213,255,.5)}
+.stat small{display:block;font-size:11px;font-weight:700;opacity:.8}
+.stat b{font-family:"Black Han Sans",sans-serif;font-size:24px;line-height:1;color:var(--neon);text-shadow:0 0 8px var(--neon)}
+.top-r{position:fixed;top:10px;right:10px;display:flex;gap:8px;z-index:5}
+.btn{border:2px solid var(--neon);background:rgba(8,12,30,.8);color:#fff;font:inherit;font-weight:900;font-size:13px;border-radius:12px;padding:6px 12px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;box-shadow:0 0 10px rgba(57,213,255,.35)}
+.btn:active{transform:translateY(1px)}
+#prog{position:fixed;top:18px;left:50%;transform:translateX(-50%);width:min(300px,34vw);height:10px;border:2px solid var(--neon);border-radius:99px;background:rgba(8,12,30,.7);overflow:hidden;z-index:5}
+#prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#39d5ff,#b14cff);box-shadow:0 0 10px var(--neon)}
+#badge{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%) scale(0);font-family:"Black Han Sans",sans-serif;font-size:clamp(34px,7vw,64px);color:#fff;
+  text-shadow:0 0 10px var(--neon),0 0 30px var(--neon),0 0 60px #2a7dff;white-space:nowrap;pointer-events:none;z-index:6;opacity:0}
+#badge.show{animation:pop 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
+@keyframes pop{0%{transform:translate(-50%,-50%) scale(0);opacity:0}18%{transform:translate(-50%,-50%) scale(1.15);opacity:1}30%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{transform:translate(-50%,-60%) scale(1);opacity:0}}
+#toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:rgba(8,12,30,.92);border:1px solid var(--neon);color:#fff;padding:10px 16px;border-radius:12px;font-weight:700;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:7;max-width:92vw;text-align:center}
+#toast.on{opacity:1}
+#bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(560px,calc(100vw - 24px));background:rgba(20,22,36,.94);border-radius:18px;padding:12px 12px 10px;z-index:8;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+#q{width:100%;background:transparent;border:2px solid transparent;border-radius:10px;color:#fff;font:inherit;font-size:17px;font-weight:700;padding:6px 8px;outline:none}
+#q:focus{border-color:var(--neon)}
+#q::placeholder{color:#8f93a8}
+.row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.ic{width:28px;height:28px;border-radius:50%;border:1.5px solid #6d7189;color:#c9cbd8;display:grid;place-items:center;font-size:14px}
+#send{margin-left:auto;width:36px;height:36px;border-radius:50%;border:0;background:#fff;color:#2b2d3a;font-size:20px;font-weight:900;cursor:pointer}
+#send:disabled{opacity:.35}
+#result{position:fixed;inset:0;display:none;place-items:center;z-index:9;background:rgba(5,8,20,.5)}
+#result.on{display:grid}
+.card{background:#10142a;border:2px solid var(--neon);border-radius:22px;box-shadow:0 0 30px rgba(57,213,255,.5);padding:22px 26px;text-align:center;width:min(340px,90vw);color:#fff}
+.card h2{font-family:"Black Han Sans",sans-serif;font-size:40px;color:#fff;text-shadow:0 0 12px var(--neon),0 0 30px var(--neon)}
+.card ul{list-style:none;margin:14px 0 18px;font-weight:700;line-height:1.9}
+.card ul b{font-family:"Black Han Sans",sans-serif;font-size:20px;color:var(--neon)}
+.card .btn{font-size:16px;padding:10px 18px;margin:4px}
+#hint{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);color:#fff;font-weight:900;text-shadow:0 0 8px var(--neon);font-size:14px;opacity:0;transition:opacity .3s;z-index:5;pointer-events:none;white-space:nowrap}
+#hint.on{opacity:1}
+@media (max-width:520px){.stat b{font-size:20px}.btn{font-size:12px;padding:5px 9px}#prog{top:60px;width:60vw}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<canvas id="fx"></canvas>
+<div id="vig"></div>
+<div id="flash"></div>
+<div class="hud"><div class="stat"><small>속도 km/h</small><b id="spdv">0</b></div><div class="stat"><small>코인</small><b id="cnv">0</b></div><div class="stat"><small>높이 m</small><b id="altv">0</b></div></div>
+<div id="prog"><i id="progi"></i></div>
+<div class="top-r"><a class="btn" href="/" title="게임 목록">🏠</a><button class="btn" id="demo">자동 데모</button><button class="btn" id="snd">소리 꺼짐</button></div>
+<div id="badge"></div>
+<div id="toast"></div>
+<div id="hint">← → 또는 화면을 좌우로 드래그해서 코인을 모으세요</div>
+<div id="bar"><form id="f" autocomplete="off"><input id="q" placeholder="무엇을 만들까요?" maxlength="40" enterkeyhint="send"></form>
+  <div class="row"><span class="ic">+</span><span class="ic">✎</span><button id="send" form="f" type="submit" aria-label="보내기">↑</button></div></div>
+<div id="result"><div class="card"><h2 id="rt">정중앙!!</h2><ul id="rl"></ul><button class="btn" id="again">다시 타기</button><button class="btn" id="reset">처음부터</button></div></div>
+
+<script type="module">
+import * as THREE from '../mega-waterslide/three.module.min.js';
+
+/* ---------- 기본 ---------- */
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene();
+const BG_EMPTY=new THREE.Color(0x3a3d48),BG_NIGHT=new THREE.Color(0x070a18);
+scene.background=BG_EMPTY.clone();
+const camera=new THREE.PerspectiveCamera(60,1,0.1,6000);
+const hemi=new THREE.HemisphereLight(0xffffff,0x8a8f99,1.1);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xffffff,1.4);sun.position.set(120,200,-80);scene.add(sun);
+const moon=new THREE.DirectionalLight(0x8fb4ff,0);moon.position.set(-200,300,100);scene.add(moon);
+const fxc=document.getElementById('fx'),fx=fxc.getContext('2d');
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();fxc.width=w*devicePixelRatio;fxc.height=h*devicePixelRatio}
+addEventListener('resize',resize);resize();
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const rand=(a,b)=>a+Math.random()*(b-a);
+const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+const tweens=[];
+function tween(dur,fn){return new Promise(res=>tweens.push({t0:performance.now(),dur,fn,res}))}
+const loader=new THREE.TextureLoader();
+function loadTex(url,repeat){const t=loader.load(url);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=renderer.capabilities.getMaxAnisotropy();if(repeat){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(...repeat)}return t}
+function canvasTex(w,h,draw,repeat){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=renderer.capabilities.getMaxAnisotropy();
+  if(repeat){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(repeat[0],repeat[1])}return t}
+const checkerTex=canvasTex(256,256,(g)=>{for(let y=0;y<2;y++)for(let x=0;x<2;x++){g.fillStyle=(x+y)%2?'#9a9ea8':'#b9bdc6';g.fillRect(x*128,y*128,128,128)}},[400,400]);
+const starTex=canvasTex(256,256,(g)=>{g.fillStyle='#fff';g.fillRect(0,0,256,256);g.lineWidth=16;g.strokeStyle='#1b1b2f';g.beginPath();g.ellipse(128,128,96,96,0,0,7);g.stroke();
+  g.fillStyle='#1b1b2f';g.beginPath();for(let i=0;i<10;i++){const r=i%2?28:62,a=-Math.PI/2+i*Math.PI/5;g.lineTo(128+r*Math.cos(a),128+r*Math.sin(a))}g.fill()});
+const waterTex=canvasTex(128,256,(g,w,h)=>{g.fillStyle='rgba(60,200,255,.35)';g.fillRect(0,0,w,h);g.strokeStyle='rgba(210,245,255,.9)';g.lineWidth=2;for(let i=0;i<40;i++){const x=rand(0,w),y=rand(0,h);g.beginPath();g.moveTo(x,y);g.lineTo(x+rand(-4,4),y+rand(12,30));g.stroke()}},[1,1]);
+const poolTex=canvasTex(256,256,(g,w,h)=>{g.fillStyle='#1fa8e0';g.fillRect(0,0,w,h);g.strokeStyle='rgba(220,250,255,.55)';g.lineWidth=3;for(let i=0;i<70;i++){g.beginPath();g.arc(rand(0,w),rand(0,h),rand(6,16),rand(0,3),rand(3,6));g.stroke()}},[3,3]);
+// 챗GPT 생성 이미지
+const cityPanoTex=loadTex('city_pano.jpg');cityPanoTex.wrapS=THREE.RepeatWrapping;cityPanoTex.repeat.set(2,1);
+const facadeTex=loadTex('facade.jpg',[1,3]);
+const starsTex=canvasTex(1024,1024,(g,w,h)=>{g.fillStyle='#000';g.fillRect(0,0,w,h);for(let i=0;i<900;i++){g.fillStyle=`rgba(255,255,255,${rand(.3,1)})`;g.fillRect(rand(0,w),rand(0,h),rand(.6,2),rand(.6,2))}},[4,4]);
+
+/* ---------- 바닥·발판 ---------- */
+const groundMat=new THREE.MeshLambertMaterial({map:checkerTex});
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(8000,8000),groundMat);ground.rotation.x=-Math.PI/2;scene.add(ground);
+const pad=new THREE.Mesh(new THREE.BoxGeometry(6,.5,6),[0,1,2,3,4,5].map(i=>new THREE.MeshLambertMaterial(i===2?{map:starTex}:{color:0xdde3e0})));pad.position.set(0,.25,0);scene.add(pad);
+
+/* ---------- 경로: 300m 옥상에서 급강하 ---------- */
+const pts=[];const TOP=300;
+[[0,TOP,0],[0,TOP-2,14],[0,TOP-14,34],[0,TOP-60,62],[0,TOP-120,86],[8,TOP-160,110],[28,TOP-185,130],[44,TOP-200,160],[36,TOP-212,194],[8,TOP-222,214],[-22,TOP-232,232],[-30,TOP-244,264],[-14,TOP-256,290],[6,TOP-266,316],[14,TOP-276,346],[6,TOP-284,376],[0,TOP-288,400],[0,TOP-290,420],[0,TOP-289,432]].forEach(p=>pts.push(new THREE.Vector3(p[0],TOP-(TOP-p[1])*.66,p[2])));
+const curve=new THREE.CatmullRomCurve3(pts,false,'catmullrom',.5);
+const NS=1400;const L=curve.getLength();
+const SP=[],ST=[],SB=[],SN=[];
+for(let i=0;i<=NS;i++){const u=i/NS;const p=curve.getPointAt(u),t=curve.getTangentAt(u).normalize();
+  const b=new THREE.Vector3().crossVectors(t,new THREE.Vector3(0,1,0)).normalize();const n=new THREE.Vector3().crossVectors(b,t).normalize();SP.push(p);ST.push(t);SB.push(b);SN.push(n)}
+function frameAt(s){const f=Math.max(0,Math.min(NS,s/L*NS));const i=Math.min(NS-1,Math.floor(f)),k=f-i;const lerp=(A)=>A[i].clone().lerp(A[i+1],k);return{p:lerp(SP),t:lerp(ST).normalize(),b:lerp(SB).normalize(),n:lerp(SN).normalize()}}
+const R=2.4;
+function halfPipe(rad,a0,a1,segA,vRep,mat){const pos=[],uv=[],idx=[];
+  for(let i=0;i<=NS;i++){for(let j=0;j<=segA;j++){const a=a0+(a1-a0)*j/segA;const p=SP[i].clone().addScaledVector(SB[i],rad*Math.sin(a)).addScaledVector(SN[i],-rad*Math.cos(a));pos.push(p.x,p.y,p.z);uv.push(j/segA,i/NS*vRep)}}
+  for(let i=0;i<NS;i++)for(let j=0;j<segA;j++){const a=i*(segA+1)+j,b=a+segA+1;idx.push(a,b,a+1,b,b+1,a+1)}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();
+  const m=new THREE.Mesh(g,mat);m.userData.full=idx.length;return m}
+const glassMat=new THREE.MeshPhysicalMaterial({color:0x9fe8ff,transparent:true,opacity:.4,roughness:.05,metalness:0,side:THREE.DoubleSide,depthWrite:false});
+const slide=halfPipe(R,-2.0,2.0,24,L/14,glassMat);slide.visible=false;scene.add(slide);
+const neonMat=new THREE.MeshBasicMaterial({color:0x39d5ff,side:THREE.DoubleSide});
+const neonL=halfPipe(R+.06,-2.15,-1.85,2,1,neonMat),neonR=halfPipe(R+.06,1.85,2.15,2,1,neonMat),neonB=halfPipe(R+.04,-.12,.12,2,1,new THREE.MeshBasicMaterial({color:0x7be9ff,side:THREE.DoubleSide,transparent:true,opacity:.7}));
+[neonL,neonR,neonB].forEach(m=>{m.visible=false;scene.add(m)});
+const waterMesh=halfPipe(R-.08,-1.15,1.15,14,L/8,new THREE.MeshBasicMaterial({map:waterTex,transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending}));waterMesh.visible=false;scene.add(waterMesh);
+const neonLights=[];
+// 출발 탑 (빌딩)
+const tower=new THREE.Group();tower.visible=false;scene.add(tower);
+{const bm=new THREE.MeshLambertMaterial({map:facadeTex});const tx=facadeTex.clone();tx.repeat.set(6,40);tx.needsUpdate=true;
+ const col=new THREE.Mesh(new THREE.BoxGeometry(34,TOP-2,34),new THREE.MeshLambertMaterial({map:tx}));col.position.set(0,(TOP-2)/2,-22);tower.add(col);
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(36,2,36),new THREE.MeshLambertMaterial({color:0x2a2f45}));roof.position.set(0,TOP-1,-22);tower.add(roof);
+ const rail=new THREE.Mesh(new THREE.TorusGeometry(16,.25,6,40),neonMat);rail.rotation.x=Math.PI/2;rail.position.set(0,TOP+1,-22);tower.add(rail);
+ const spire=new THREE.Mesh(new THREE.CylinderGeometry(.3,1.2,30,8),new THREE.MeshLambertMaterial({color:0x8b93b5}));spire.position.set(-10,TOP+15,-30);tower.add(spire);
+ const beacon=new THREE.Mesh(new THREE.SphereGeometry(1,8,8),new THREE.MeshBasicMaterial({color:0xff2a55}));beacon.position.set(-10,TOP+30,-30);tower.add(beacon);tower.userData.beacon=beacon}
+
+/* ---------- 밤하늘 + 도시 파노라마 ---------- */
+const night=new THREE.Group();night.visible=false;scene.add(night);
+const starDome=new THREE.Mesh(new THREE.SphereGeometry(3500,32,16),new THREE.MeshBasicMaterial({map:starsTex,side:THREE.BackSide,transparent:true,opacity:0,fog:false}));night.add(starDome);
+const pano=new THREE.Mesh(new THREE.CylinderGeometry(2600,2600,1500,64,1,true),new THREE.MeshBasicMaterial({map:cityPanoTex,side:THREE.BackSide,transparent:true,opacity:0,fog:false}));pano.position.y=560;night.add(pano);
+const moonMesh=new THREE.Mesh(new THREE.SphereGeometry(60,24,16),new THREE.MeshBasicMaterial({color:0xfff6d8,fog:false}));moonMesh.position.set(-1400,1500,1600);night.add(moonMesh);
+
+/* ---------- 빌딩 숲 (인스턴스) ---------- */
+const B_N=420;const POOLX=0,POOLZ=440;
+const bGeo=new THREE.BoxGeometry(1,1,1);bGeo.translate(0,.5,0);
+const bMat=new THREE.MeshLambertMaterial({map:facadeTex});
+const buildings=new THREE.InstancedMesh(bGeo,bMat,B_N);buildings.visible=false;scene.add(buildings);
+const bData=[];
+{let tries=0;while(bData.length<B_N&&tries<30000){tries++;const x=rand(-700,700),z=rand(-500,900);const w=rand(18,46),d=rand(18,46);
+  if(Math.abs(x)<40&&z>-60&&z<60)continue;let ok=true;for(let i=0;i<=NS;i+=12){if(Math.abs(SP[i].x-x)<w/2+R+4&&Math.abs(SP[i].z-z)<d/2+R+4){ok=false;break}}if(!ok)continue;
+  if(Math.hypot(x-POOLX,z-POOLZ)<70)continue;for(const b of bData){if(Math.abs(b.x-x)<(b.w+w)/2+6&&Math.abs(b.z-z)<(b.d+d)/2+6){ok=false;break}}if(!ok)continue;
+  const dist=Math.hypot(x,z-200);const h=rand(40,120)+Math.max(0,200-dist*.3)*rand(.3,1.4)+(Math.random()<.08?rand(80,160):0);bData.push({x,z,w,d,h})}}
+const _m=new THREE.Matrix4(),_q=new THREE.Quaternion(),_s=new THREE.Vector3(),_p=new THREE.Vector3();
+function setBuildings(k){bData.forEach((b,i)=>{const g=Math.max(0,Math.min(1,k*1.5-i/bData.length*.5));const e=g<1?Math.sin(g*Math.PI/2):1;_s.set(b.w,b.h*e+.01,b.d);_p.set(b.x,0,b.z);_m.compose(_p,_q,_s);buildings.setMatrixAt(i,_m)});buildings.instanceMatrix.needsUpdate=true}
+setBuildings(0);
+// 도로 불빛 줄기
+const roadLights=new THREE.Group();roadLights.visible=false;scene.add(roadLights);
+{const geo=new THREE.BufferGeometry();const pos=[],col=[];for(let i=0;i<6000;i++){const lane=Math.floor(rand(0,12));const along=rand(-800,1000);const horiz=lane<6;const base=(lane%6-2.5)*230;const x=horiz?along:base+rand(-3,3),z=horiz?base+rand(-3,3)+200:along;
+  pos.push(x,.5,z);const c=Math.random()<.5?[1,.6,.2]:[1,1,.9];col.push(...c)}
+ geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+ roadLights.add(new THREE.Points(geo,new THREE.PointsMaterial({size:3,vertexColors:true,sizeAttenuation:true,transparent:true,opacity:.9})))}
+
+/* ---------- 라이더 (1인칭: 다리만) ---------- */
+const rider=new THREE.Group();rider.visible=false;scene.add(rider);
+const legs=new THREE.Group();
+{const skin=new THREE.MeshLambertMaterial({color:0xf0b48c}),pants=new THREE.MeshLambertMaterial({color:0x14162b});
+ const cap=(r,l,m)=>new THREE.Mesh(new THREE.CapsuleGeometry(r,l,4,10),m);
+ for(const sx of[-1,1]){const th=cap(.26,.9,pants);th.rotation.x=Math.PI/2;th.position.set(.28*sx,.35,.5);legs.add(th);
+  const sh=cap(.2,1,skin);sh.rotation.x=Math.PI/2+.08;sh.position.set(.3*sx,.33,1.6);legs.add(sh);
+  const foot=new THREE.Mesh(new THREE.BoxGeometry(.3,.18,.5),skin);foot.position.set(.3*sx,.42,2.3);legs.add(foot)}
+ rider.add(legs)}
+
+/* ---------- 코인 ---------- */
+const COIN_N=100;const coins=[];
+const coinGeo=new THREE.CylinderGeometry(.55,.55,.14,20);coinGeo.rotateX(Math.PI/2);
+const coinMat=new THREE.MeshLambertMaterial({color:0xffc928,emissive:0xffa500,emissiveIntensity:.9});
+const coinGroup=new THREE.Group();coinGroup.visible=false;scene.add(coinGroup);
+for(let i=0;i<COIN_N;i++){const s=40+i*(L-70)/COIN_N;const block=Math.floor(i/10);const a=[0,.55,-.55,.75*Math.sin(i*.6),-.7,.7,0,.6*Math.sin(i*.9),-.4,.4][block%10]*(block%3===2?Math.sin(i):1);
+  const f=frameAt(s);const m=new THREE.Mesh(coinGeo,coinMat);const p=f.p.clone().addScaledVector(f.b,(R-1.1)*Math.sin(a)).addScaledVector(f.n,-(R-1.1)*Math.cos(a));
+  m.position.copy(p);m.lookAt(p.clone().add(f.t));coinGroup.add(m);coins.push({s,a,m,got:false})}
+
+/* ---------- 착지 예측 & 옥상 수영장 ---------- */
+const PHY={g:9.8*1.5,mu:.012,drag:.0011,steer:.12};
+function simulateLanding(){let s=0,v=8;const dt=1/120;while(s<L){const f=frameAt(s);v+=(-PHY.g*f.t.y-PHY.mu*PHY.g-PHY.drag*v*v)*dt;v=Math.max(v,4);s+=v*dt}
+  const f=frameAt(L);const p=f.p.clone().addScaledVector(f.n,-(R-.6));const vel=f.t.clone().multiplyScalar(v);vel.y+=3;const floorY=SP[NS].y-6;
+  while(p.y>floorY+.9||vel.y>0){vel.y-=PHY.g*dt;p.addScaledVector(vel,dt)}return{p,vEnd:v,floorY}}
+const landing=simulateLanding();
+const POOL={x:landing.p.x,z:landing.p.z,w:26,l:40,y:landing.floorY+.9};
+const pool=new THREE.Group();pool.visible=false;scene.add(pool);
+{const fy=landing.floorY;const tx=facadeTex.clone();tx.repeat.set(5,3);tx.needsUpdate=true;
+ const bld=new THREE.Mesh(new THREE.BoxGeometry(POOL.w+16,fy,POOL.l+18),new THREE.MeshLambertMaterial({map:tx}));bld.position.y=fy/2;pool.add(bld);
+ const deck=new THREE.Mesh(new THREE.BoxGeometry(POOL.w+16,1,POOL.l+18),new THREE.MeshLambertMaterial({color:0x2a2f45}));deck.position.y=fy+.5;pool.add(deck);
+ const water=new THREE.Mesh(new THREE.PlaneGeometry(POOL.w,POOL.l),new THREE.MeshBasicMaterial({map:poolTex}));water.rotation.x=-Math.PI/2;water.position.y=fy+1.02;pool.add(water);
+ const edge=new THREE.Mesh(new THREE.RingGeometry(1,1.02,4),neonMat);
+ const rim=new THREE.Mesh(new THREE.BoxGeometry(POOL.w+1,.2,POOL.l+1),neonMat);rim.position.y=fy+1.0;pool.add(rim);
+ const ring=(r1,r2,c,y)=>{const m=new THREE.Mesh(new THREE.RingGeometry(r1,r2,48),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.95}));m.rotation.x=-Math.PI/2;m.position.y=y;pool.add(m)};
+ ring(6.2,7,0xff3b8c,fy+1.05);ring(2.6,3.3,0x39d5ff,fy+1.06);
+ pool.position.set(POOL.x,0,POOL.z)}
+
+/* ---------- 번개 ---------- */
+const bolt=new THREE.Group();bolt.visible=false;scene.add(bolt);
+function makeBolt(){bolt.clear();const m=new THREE.LineBasicMaterial({color:0xffffff});let x=rand(-900,900),y=1900,z=rand(600,1600);const pts=[new THREE.Vector3(x,y,z)];
+  while(y>200){x+=rand(-60,60);y-=rand(60,140);z+=rand(-40,40);pts.push(new THREE.Vector3(x,y,z))}
+  bolt.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),m));
+  for(let k=0;k<3;k++){const i=Math.floor(rand(2,pts.length-2));let p=pts[i].clone();const br=[p.clone()];for(let j=0;j<5;j++){p=p.clone().add(new THREE.Vector3(rand(-80,80),rand(-90,-30),rand(-40,40)));br.push(p)}bolt.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(br),m))}}
+
+/* ---------- 상태 ---------- */
+const st={night:0,city:0,slide:0,water:0,rider:0,coin:0,pool:0,sound:0,lightning:0};
+let busy=false,coinsGot=0,maxSpd=0,demoRunning=false,lightningT=0;
+const camLook=new THREE.Vector3(0,1.5,6);
+camera.position.set(0,9,-24);camera.lookAt(camLook);
+function camTo(pos,look,dur=1600){const p0=camera.position.clone(),l0=camLook.clone();return tween(dur,k=>{const e=ease(k);camera.position.lerpVectors(p0,pos,e);camLook.lerpVectors(l0,look,e);camera.lookAt(camLook)})}
+
+/* ---------- 사운드 ---------- */
+let AC=null,master=null,windSrc=null,windGain=null,windFilt=null;
+function audio(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=1.1;const comp=AC.createDynamicsCompressor();master.connect(comp);comp.connect(AC.destination)}if(AC.state==='suspended')AC.resume();return AC}
+function noiseBuf(sec){const b=AC.createBuffer(1,AC.sampleRate*sec,AC.sampleRate);const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b}
+function tone(f,t,dur,vol,type='sine'){const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.05)}
+function noise(t,dur,vol,f0,f1,q=1.2,type='bandpass'){const s=AC.createBufferSource();s.buffer=noiseBuf(dur+.1);const fl=AC.createBiquadFilter();fl.type=type;fl.Q.value=q;fl.frequency.setValueAtTime(f0,t);fl.frequency.exponentialRampToValueAtTime(f1,t+dur);
+  const hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=320;const g=AC.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+dur*.7);g.gain.exponentialRampToValueAtTime(.0001,t+dur);s.connect(fl);fl.connect(hp);hp.connect(g);g.connect(master);s.start(t);s.stop(t+dur+.1)}
+const CHORDS=[[1046,1318,1568],[784,988,1175],[880,1109,1318],[988,1245,1480],[1046,1318,1568,2093]];let chordI=0;
+function sfxAppear(big){if(!st.sound)return;const t=audio().currentTime;noise(t,big?.45:.25,big?.5:.35,500,6000);
+  const c=CHORDS[chordI++%CHORDS.length];tone(900,t+(big?.45:.25),.09,.35,'triangle');c.forEach((f,i)=>{tone(f,t+(big?.45:.25)+i*.06,big?.6:.4,.22);tone(f*2,t+(big?.45:.25)+i*.06,.25,.06)});
+  for(let i=0;i<14;i++)tone(rand(2500,6500),t+(big?.5:.3)+rand(0,.5),.12,.05);if(big)noise(t+.45,.9,.35,9000,3000,.5,'highpass')}
+function sfxCoin(){if(!st.sound)return;const t=audio().currentTime;tone(1568,t,.08,.25,'square');tone(2093,t+.07,.25,.22,'square')}
+function sfxType(){if(!st.sound)return;const t=audio().currentTime;noise(t,.03,.15,3000,2500,2)}
+function sfxSplash(){if(!st.sound)return;const t=audio().currentTime;noise(t,1.1,.8,2500,700,.7,'lowpass');for(let i=0;i<20;i++)tone(rand(800,2400),t+rand(.05,.6),.08,.07)}
+function sfxWin(){if(!st.sound)return;const t=audio().currentTime;[1046,1318,1568,2093].forEach((f,i)=>{tone(f,t+i*.11,.5,.22,'triangle')})}
+function sfxThunder(){if(!st.sound)return;const t=audio().currentTime;noise(t,.12,.9,8000,2000,.5,'highpass');noise(t+.1,1.6,.6,3000,600,.6,'bandpass');for(let i=0;i<6;i++)noise(t+.3+i*.2,.3,.25,2500,900,1,'bandpass')}
+function sfxScream(){if(!st.sound)return;const t=audio().currentTime;noise(t,.6,.3,2200,4000,3,'bandpass')}
+function windStart(){if(!st.sound)return;audio();windSrc=AC.createBufferSource();windSrc.buffer=noiseBuf(2);windSrc.loop=true;windFilt=AC.createBiquadFilter();windFilt.type='bandpass';windFilt.Q.value=.8;windFilt.frequency.value=800;
+  windGain=AC.createGain();windGain.gain.value=0;windSrc.connect(windFilt);windFilt.connect(windGain);windGain.connect(master);windSrc.start()}
+function windStop(){if(windSrc){try{windSrc.stop()}catch(e){}windSrc=null}}
+
+/* ---------- 연출 ---------- */
+const bursts=[],splash=[];
+function burst(big,color='#39d5ff'){bursts.push({t0:performance.now(),big,color});flash(big?.6:.35)}
+function flash(o,ms=350){const fl=$('flash');fl.style.transition='none';fl.style.opacity=o;requestAnimationFrame(()=>{fl.style.transition=`opacity ${ms}ms`;fl.style.opacity=0})}
+function badge(text){const b=$('badge');b.classList.remove('show');void b.offsetWidth;b.textContent=text;b.classList.add('show')}
+let toastT;function toast(msg,ms=2200){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),ms)}
+let speedLines=0;
+function drawFx(now){const w=fxc.width,h=fxc.height,d=devicePixelRatio;fx.clearRect(0,0,w,h);
+  if(speedLines>0){fx.save();fx.strokeStyle='rgba(255,255,255,.55)';fx.lineWidth=2*d;const cx=w/2,cy=h*.45;for(let i=0;i<Math.floor(speedLines*40);i++){const a=rand(0,Math.PI*2);const r0=rand(.25,.5)*Math.min(w,h),r1=r0+rand(60,220)*d*speedLines;fx.globalAlpha=rand(.2,.7);fx.beginPath();fx.moveTo(cx+r0*Math.cos(a),cy+r0*Math.sin(a));fx.lineTo(cx+r1*Math.cos(a),cy+r1*Math.sin(a));fx.stroke()}fx.restore()}
+  for(let i=bursts.length-1;i>=0;i--){const b=bursts[i];const u=(now-b.t0)/1000;if(u>.9){bursts.splice(i,1);continue}const cx=w/2,cy=h*.3;
+    if(u<.55){fx.save();fx.globalAlpha=.55*(1-u/.55);fx.fillStyle=b.color;const L2=(200+1100*u)*d;for(let k=0;k<14;k++){const a=u*1.6+k*Math.PI*2/14;fx.beginPath();fx.moveTo(cx,cy);fx.lineTo(cx+L2*Math.cos(a-.07),cy+L2*Math.sin(a-.07));fx.lineTo(cx+L2*Math.cos(a+.07),cy+L2*Math.sin(a+.07));fx.fill()}fx.restore()}
+    for(const[dl,col]of[[0,'#fff'],[.09,b.color]]){const uu=u-dl;if(uu>0&&uu<.55){const r=(40+(b.big?560:420)*(1-Math.pow(1-uu/.55,2.2)))*d;fx.strokeStyle=col;fx.globalAlpha=1-uu/.55;fx.lineWidth=Math.max(2,18*(1-uu/.55))*d;fx.beginPath();fx.arc(cx,cy,r,0,7);fx.stroke()}}
+    fx.globalAlpha=Math.max(0,1-u/.9);if(!b.parts){b.parts=Array.from({length:b.big?26:16},()=>({a:rand(0,7),v:rand(380,900)*(b.big?1.3:1),s:rand(7,15),c:[b.color,'#fff','#ffd23f'][Math.floor(rand(0,3))]}))}
+    for(const p of b.parts){const x=cx+Math.cos(p.a)*p.v*u*d,y=cy+(Math.sin(p.a)*p.v*u+600*u*u)*d;fx.fillStyle=p.c;fx.beginPath();for(let k=0;k<8;k++){const r=(k%2?p.s*.38:p.s)*(1-u*.5)*d,a=k*Math.PI/4;fx.lineTo(x+r*Math.cos(a),y+r*Math.sin(a))}fx.fill()}fx.globalAlpha=1}
+  for(let i=splash.length-1;i>=0;i--){const s=splash[i];s.life-=1/60;if(s.life<=0){splash.splice(i,1);continue}s.vy+=900/60;s.x+=s.vx/60;s.y+=s.vy/60;fx.globalAlpha=Math.min(1,s.life*2);fx.fillStyle=s.c;fx.beginPath();fx.arc(s.x*d,s.y*d,s.r*d,0,7);fx.fill();fx.globalAlpha=1}}
+function splashFx(){const x=innerWidth/2,y=innerHeight*.6;for(let i=0;i<120;i++)splash.push({x,y,vx:rand(-520,520),vy:rand(-1000,-250),r:rand(3,10),life:rand(.6,1.4),c:Math.random()<.5?'#ffffff':'#9fe6ff'})}
+function strike(){makeBolt();bolt.visible=true;flash(.85,180);moon.intensity=2.5;sfxThunder();setTimeout(()=>{bolt.visible=false;moon.intensity=.5},120);setTimeout(()=>{bolt.visible=true;flash(.5,120)},200);setTimeout(()=>{bolt.visible=false},290)}
+
+/* ---------- 명령 ---------- */
+const CMDS=[
+ {k:/밤|야경|하늘|어둡/,id:'night',run:async()=>{night.visible=true;burst(true,'#7cc3ff');sfxAppear(true);badge('밤이 왔다 🌙');scene.fog=new THREE.Fog(0x070a18,600,3200);
+   await tween(1500,k=>{starDome.material.opacity=k;pano.material.opacity=k;scene.background.lerpColors(BG_EMPTY,BG_NIGHT,k);hemi.intensity=1.1-.85*k;sun.intensity=1.4-1.3*k;moon.intensity=.5*k;
+     groundMat.color.setScalar(1-.85*k)})}},
+ {k:/도시|빌딩|건물/,id:'city',run:async()=>{buildings.visible=roadLights.visible=true;burst(true,'#ffb347');sfxAppear(true);badge('도시 완성 🌆');
+   groundMat.map=null;groundMat.color.set(0x0a0c16);groundMat.needsUpdate=true;await tween(1600,k=>setBuildings(k))}},
+ {k:/슬라이드|미끄럼|워터/,id:'slide',run:async()=>{slide.visible=tower.visible=true;[neonL,neonR,neonB].forEach(m=>m.visible=true);const full=slide.userData.full;[slide,neonL,neonR,neonB].forEach(m=>m.geometry.setDrawRange(0,0));
+   camTo(new THREE.Vector3(-170,TOP*.95,-60),new THREE.Vector3(10,TOP*.6,150),1800);burst(true,'#39d5ff');sfxAppear(true);badge(`${TOP}m 스카이슬라이드 🛝`);
+   await tween(2400,k=>{const e=ease(k);[slide,neonL,neonR,neonB].forEach(m=>m.geometry.setDrawRange(0,Math.floor(m.userData.full*e/6)*6))})}},
+ {k:/물/,id:'water',need:['slide','슬라이드를 먼저 세워주세요'],run:async()=>{waterMesh.visible=true;burst(false,'#4cc9f0');sfxAppear(false);badge('물 콸콸 🌊');const full=waterMesh.userData.full;await tween(1500,k=>waterMesh.geometry.setDrawRange(0,Math.floor(full*k/6)*6))}},
+ {k:/사람|태워|탑승|캐릭터|나/,id:'rider',need:['slide','슬라이드를 먼저 세워주세요'],run:async()=>{rider.visible=true;placeRider(0,0);const f=frameAt(1);
+   await camTo(f.p.clone().addScaledVector(f.t,9).addScaledVector(f.b,-2.5).add(new THREE.Vector3(0,3,0)),rider.position.clone().add(new THREE.Vector3(0,.4,0)),1600);burst(false,'#ff6fae');sfxAppear(false);badge('탑승 완료 🩳')}},
+ {k:/코인|동전|돈/,id:'coin',need:['slide','슬라이드를 먼저 세워주세요'],run:async()=>{coinGroup.visible=true;coins.forEach(c=>c.m.scale.setScalar(.001));burst(false,'#ffd23f');sfxAppear(false);badge(`코인 ${COIN_N}개 💰`);
+   await tween(1200,k=>coins.forEach((c,i)=>{const g=Math.max(0,Math.min(1,k*1.5-i/COIN_N*.5));c.m.scale.setScalar(g<1?Math.sin(g*Math.PI/2)*1.3:1)}))}},
+ {k:/수영장|풀장|착지/,id:'pool',run:async()=>{pool.visible=true;pool.scale.set(1,.01,1);await camTo(new THREE.Vector3(POOL.x+30,landing.floorY+40,POOL.z-50),new THREE.Vector3(POOL.x,landing.floorY,POOL.z),1500);burst(false,'#4cc9f0');sfxAppear(false);badge('옥상 수영장 🏊');
+   await tween(900,k=>pool.scale.y=Math.max(.01,ease(k)))}},
+ {k:/번개|천둥|폭풍/,id:'lightning',run:async()=>{strike();await sleep(400);badge('폭풍 ⚡');st.lightning=1;lightningT=3}},
+ {k:/효과음|소리|사운드/,id:'sound',run:async()=>{setSound(true);burst(false,'#ff6fae');sfxAppear(false);badge('소리 ON 🔊')}},
+];
+function setSound(on){st.sound=on?1:0;$('snd').textContent=on?'소리 켜짐':'소리 꺼짐';if(on)audio()}
+async function handle(text){text=text.trim();if(!text||busy)return;
+  if(/처음|리셋|초기화|reset/i.test(text)){location.reload();return}
+  if(/출발|시작|고고|go|ㄱㄱ/i.test(text)){return startRide()}
+  if(/다시/.test(text)){if(st.rider)return startRide()}
+  const c=CMDS.find(c=>c.k.test(text));
+  if(!c){toast('아직 그건 못 만들어요 🙏  예: "밤으로 바꿔줘", "도시 세워줘"');return}
+  if(st[c.id]&&c.id!=='sound'&&c.id!=='lightning'){toast('이미 만들었어요! 다른 걸 시켜보세요');return}
+  if(c.need&&!st[c.need[0]]){toast(c.need[1]);return}
+  busy=true;$('send').disabled=true;try{await c.run();st[c.id]=1}finally{busy=false;$('send').disabled=false}}
+$('f').addEventListener('submit',e=>{e.preventDefault();audio();const v=$('q').value;$('q').value='';handle(v);if(innerWidth<700)$('q').blur()});
+$('q').addEventListener('keydown',()=>sfxType());
+$('snd').onclick=()=>{setSound(!st.sound)};
+
+/* ---------- 라이딩 (1인칭) ---------- */
+const ride={s:0,v:0,a:0,phase:'idle',vel:new THREE.Vector3(),steer:0,fov:60};
+function placeRider(s,a){const f=frameAt(s);const up=f.n.clone().multiplyScalar(Math.cos(a)).addScaledVector(f.b,-Math.sin(a));
+  rider.position.copy(f.p).addScaledVector(up,-(R-.55));
+  const z=f.t.clone(),y=up.clone(),x=new THREE.Vector3().crossVectors(y,z).normalize();y.crossVectors(z,x);rider.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x,y,z));return{f,up}}
+async function startRide(){
+  if(!st.rider){toast(st.slide?'사람을 먼저 태워주세요':'슬라이드부터 세워주세요');return}
+  if(ride.phase==='ride'||ride.phase==='air'||busy)return;
+  $('result').classList.remove('on');busy=true;$('send').disabled=true;
+  coins.forEach(c=>{c.got=false;c.m.visible=true});coinsGot=0;maxSpd=0;$('cnv').textContent=0;
+  ride.s=0;ride.v=0;ride.a=0;ride.steer=0;ride.fov=60;placeRider(0,0);
+  // 1인칭 시점으로 전환: 눈 위치에서 발끝 너머 아래를 내려다봄
+  const {f,up}=placeRider(0,0);const eye=rider.position.clone().addScaledVector(up,1.4).addScaledVector(f.t,-.6);
+  await camTo(eye,eye.clone().addScaledVector(f.t,6).addScaledVector(up,-2.2),1400);
+  $('vig').style.opacity=1;burst(true,'#ffffff');sfxAppear(true);badge('출발! 🚀');if(!demoRunning){$('hint').classList.add('on');setTimeout(()=>$('hint').classList.remove('on'),3500)}
+  await sleep(500);ride.v=6;windStart();ride.phase='ride';sfxScream()}
+const keys={};addEventListener('keydown',e=>{keys[e.key]=1});addEventListener('keyup',e=>{keys[e.key]=0});
+let dragX=null;canvas.addEventListener('pointerdown',e=>{dragX=e.clientX});addEventListener('pointerup',()=>{dragX=null;ride.steer=0});
+addEventListener('pointermove',e=>{if(dragX!==null&&ride.phase==='ride'){ride.steer=Math.max(-1,Math.min(1,(e.clientX-dragX)/90))}});
+const eyeP=new THREE.Vector3(),eyeL=new THREE.Vector3();
+function updateRide(dt){
+  if(ride.phase==='ride'){const f=frameAt(ride.s);
+    let steer=ride.steer;if(keys.ArrowLeft||keys.a||keys.A)steer=-1;if(keys.ArrowRight||keys.d||keys.D)steer=1;
+    if(demoRunning){const nxt=coins.find(c=>!c.got&&c.s>ride.s+2);const target=nxt&&nxt.s-ride.s<40?nxt.a:0;steer=Math.max(-1,Math.min(1,(target-ride.a)*4))}
+    ride.a+=steer*1.8*dt;ride.a+=-ride.a*.6*dt;ride.a=Math.max(-1.1,Math.min(1.1,ride.a));
+    ride.v+=(-PHY.g*f.t.y-PHY.mu*PHY.g-PHY.steer*ride.a*ride.a*PHY.g-PHY.drag*ride.v*ride.v)*dt;ride.v=Math.max(4,ride.v);ride.s+=ride.v*dt;
+    const {up}=placeRider(Math.min(ride.s,L),ride.a);
+    for(const c of coins){if(!c.got&&Math.abs(c.s-ride.s)<1.6&&Math.abs(c.a-ride.a)<.28){c.got=true;c.m.visible=false;coinsGot++;$('cnv').textContent=coinsGot;sfxCoin()}}
+    const kmh=ride.v*3.6;maxSpd=Math.max(maxSpd,kmh);$('spdv').textContent=Math.round(kmh);$('altv').textContent=Math.round(rider.position.y);$('progi').style.width=(ride.s/L*100)+'%';
+    if(windGain){windGain.gain.value=Math.min(.4,ride.v/120);windFilt.frequency.value=500+ride.v*35}
+    // 1인칭 카메라: 머리 위치, 앞을 봄. 속도 따라 FOV 확대 + 미세 진동(흔들림 아님, 질감용 아주 작게)
+    eyeP.copy(rider.position).addScaledVector(up,1.35).addScaledVector(f.t,-.5);
+    const ahead=frameAt(Math.min(L,ride.s+10));eyeL.copy(ahead.p).addScaledVector(up,-.6);
+    camera.position.lerp(eyeP,1-Math.pow(.00001,dt));camLook.lerp(eyeL,1-Math.pow(.0005,dt));camera.lookAt(camLook);
+    camera.rotateZ(-ride.a*.25);
+    const tf=Math.min(1,ride.v/45);ride.fov+=((60+30*tf)-ride.fov)*Math.min(1,dt*3);camera.fov=ride.fov;camera.updateProjectionMatrix();speedLines=Math.max(0,tf-.35)*1.2;
+    if(st.lightning){lightningT-=dt;if(lightningT<=0){strike();lightningT=rand(2.5,5)}}
+    if(ride.s>=L){ride.phase='air';ride.vel.copy(f.t).multiplyScalar(ride.v);ride.vel.y+=3;badge('점프! 🤸');sfxScream()}}
+  else if(ride.phase==='air'){ride.vel.y-=PHY.g*dt;rider.position.addScaledVector(ride.vel,dt);
+    camera.position.copy(rider.position).add(new THREE.Vector3(0,1.3,0));camLook.copy(rider.position).add(ride.vel.clone().normalize().multiplyScalar(8)).add(new THREE.Vector3(0,-3,0));camera.lookAt(camLook);
+    const inPool=pool.visible&&Math.abs(rider.position.x-POOL.x)<POOL.w/2&&Math.abs(rider.position.z-POOL.z)<POOL.l/2;const fy=landing.floorY;
+    if(rider.position.y<=(inPool?fy+1.05:fy+.6)){rider.position.y=inPool?fy+1.05:fy+.6;finish(inPool)}}}
+function finish(inPool){ride.phase='done';windStop();speedLines=0;$('spdv').textContent=0;$('vig').style.opacity=0;
+  const dist=Math.hypot(rider.position.x-POOL.x,rider.position.z-POOL.z);let title,bonus=0;
+  if(!pool.visible){title='수영장이 없어요 😅'}else if(!inPool){title='옥상 밖! 😵'}else if(dist<3.3){title='정중앙!!';bonus=100}else if(dist<7){title='나이스!';bonus=50}else{title='풍덩!';bonus=10}
+  if(inPool){splashFx();sfxSplash();flash(.9,600)}badge(title);if(bonus>=50){burst(true,'#ff6fae');setTimeout(sfxWin,300)}
+  const score=coinsGot*10+bonus;camera.fov=60;camera.updateProjectionMatrix();
+  setTimeout(()=>{$('rt').textContent=title;$('rl').innerHTML=`<li>최고 속도 <b>${Math.round(maxSpd)}</b> km/h</li><li>코인 <b>${coinsGot}</b> / ${COIN_N}</li><li>착지 보너스 <b>${bonus}</b></li><li>총점 <b>${score}</b></li>`;$('result').classList.add('on');busy=false;$('send').disabled=false},1800);
+  camTo(rider.position.clone().add(new THREE.Vector3(22,16,-22)),rider.position.clone(),1600)}
+$('again').onclick=()=>{audio();startRide()};$('reset').onclick=()=>location.reload();
+
+/* ---------- 자동 데모 ---------- */
+const DEMO=['밤으로 바꿔줘','도시 세워줘','워터슬라이드 세워줘','물 흘려줘','나 태워줘','코인 뿌려줘','수영장 놔줘','번개 쳐줘','효과음 넣어줘','출발'];
+async function typeAndSend(text){const q=$('q');q.value='';q.focus({preventScroll:true});for(const ch of text){q.value+=ch;sfxType();await sleep(rand(70,130))}await sleep(350);q.value='';await handle(text)}
+$('demo').onclick=async()=>{audio();if(demoRunning)return;demoRunning=true;$('demo').textContent='데모 중…';
+  for(const cmd of DEMO){const id=(CMDS.find(c=>c.k.test(cmd))||{}).id;if(id&&st[id]&&id!=='lightning')continue;if(cmd==='출발'&&ride.phase==='done')break;await typeAndSend(cmd);while(busy&&ride.phase!=='ride')await sleep(100);await sleep(500)}
+  while(ride.phase==='ride'||ride.phase==='air')await sleep(200);demoRunning=false;$('demo').textContent='자동 데모';$('q').blur()};
+
+/* ---------- 루프 ---------- */
+let last=performance.now();const TS=+new URLSearchParams(location.search).get('ts')||1;
+function loop(now){const dt=Math.min(.1,(now-last)/1000);last=now;
+  for(let i=tweens.length-1;i>=0;i--){const t=tweens[i];const k=Math.min(1,(now-t.t0)/t.dur);t.fn(k);if(k>=1){tweens.splice(i,1);t.res()}}
+  if(waterMesh.visible)waterTex.offset.y-=dt*2.5;if(pool.visible)poolTex.offset.x+=dt*.03;
+  if(coinGroup.visible)coins.forEach(c=>{if(c.m.visible)c.m.rotateZ(dt*3)});
+  if(tower.visible)tower.userData.beacon.material.color.setScalar(.5+.5*Math.sin(now/300));
+  if(night.visible)pano.rotation.y+=dt*.002;
+  {const d2=dt*TS,n=Math.ceil(d2/(1/60));for(let i=0;i<n;i++)updateRide(d2/n)}
+  renderer.render(scene,camera);drawFx(now);requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+window.__game={handle,st,ride,L,landing,POOL,bursts};
+</script>
+</body>
+</html>
