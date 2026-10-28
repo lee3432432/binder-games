@@ -48,6 +48,14 @@ html,body{height:100%;overflow:hidden;background:#0b0d1a;font-family:"Noto Sans 
 #hint{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);color:#fff;font-weight:900;text-shadow:0 0 8px var(--neon);font-size:14px;opacity:0;transition:opacity .3s;z-index:5;pointer-events:none;white-space:nowrap}
 #hint.on{opacity:1}
 @media (max-width:520px){.stat b{font-size:20px}.btn{font-size:12px;padding:5px 9px}#prog{top:60px;width:60vw}}
+
+#start{position:fixed;inset:0;display:grid;place-items:center;z-index:9;background:rgba(0,0,0,.35)}
+#start.off{display:none}
+#start .box{text-align:center}
+#start h1{font-family:"Black Han Sans",sans-serif;font-size:clamp(40px,9vw,80px);color:#fff;-webkit-text-stroke:3px #1b1b2f;paint-order:stroke fill;text-shadow:0 6px 0 #1b1b2f;margin-bottom:18px}
+#start p{color:#fff;font-weight:700;text-shadow:0 2px 0 #1b1b2f;margin-bottom:22px;font-size:15px}
+#go{font-family:"Black Han Sans",sans-serif;font-size:34px;padding:12px 44px;border-radius:999px;border:4px solid #1b1b2f;background:#ffd23f;color:#1b1b2f;box-shadow:0 6px 0 #1b1b2f;cursor:pointer}
+#go:active{transform:translateY(4px);box-shadow:0 2px 0 #1b1b2f}
 </style>
 </head>
 <body>
@@ -63,6 +71,7 @@ html,body{height:100%;overflow:hidden;background:#0b0d1a;font-family:"Noto Sans 
 <div id="hint">← → 또는 화면을 좌우로 드래그해서 코인을 모으세요</div>
 <div id="bar"><form id="f" autocomplete="off"><input id="q" placeholder="무엇을 만들까요?" maxlength="40" enterkeyhint="send"></form>
   <div class="row"><span class="ic">+</span><span class="ic">✎</span><button id="send" form="f" type="submit" aria-label="보내기">↑</button></div></div>
+<div id="start"><div class="box"><h1>야경 스카이슬라이드</h1><p>← → 키 또는 화면을 좌우로 드래그해 코인을 모으고<br>수영장 정중앙에 착지하세요</p><button id="go">출발!</button></div></div>
 <div id="result"><div class="card"><h2 id="rt">정중앙!!</h2><ul id="rl"></ul><button class="btn" id="again">다시 타기</button><button class="btn" id="reset">처음부터</button></div></div>
 
 <script type="module">
@@ -360,6 +369,17 @@ function loop(now){const dt=Math.min(.1,(now-last)/1000);last=now;
   renderer.render(scene,camera);drawFx(now);requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 window.__game={handle,st,ride,L,landing,POOL,bursts};
+/* ---------- 완성 버전: 처음부터 다 만들어진 상태 ---------- */
+night.visible=true;starDome.material.opacity=1;pano.material.opacity=1;scene.background.copy(BG_NIGHT);hemi.intensity=.25;sun.intensity=.1;moon.intensity=.5;scene.fog=new THREE.Fog(0x070a18,600,3200);
+buildings.visible=roadLights.visible=true;groundMat.map=null;groundMat.color.set(0x0a0c16);groundMat.needsUpdate=true;setBuildings(1);
+slide.visible=tower.visible=true;[neonL,neonR,neonB].forEach(m=>{m.visible=true;m.geometry.setDrawRange(0,m.userData.full)});slide.geometry.setDrawRange(0,slide.userData.full);
+waterMesh.visible=true;waterMesh.geometry.setDrawRange(0,waterMesh.userData.full);
+rider.visible=true;placeRider(0,0);coinGroup.visible=true;pool.visible=true;
+Object.assign(st,{night:1,city:1,slide:1,water:1,rider:1,coin:1,pool:1,lightning:1});lightningT=3;
+{const f=frameAt(1);camera.position.copy(f.p.clone().addScaledVector(f.t,9).addScaledVector(f.b,-2.5).add(new THREE.Vector3(0,3,0)));camLook.copy(rider.position);camera.lookAt(camLook)}
+$("bar").style.display="none";$("demo").style.display="none";
+$("go").onclick=()=>{audio();setSound(true);$("start").classList.add("off");startRide()};
+$("reset").onclick=()=>{$("result").classList.remove("on");$("start").classList.remove("off")};
 </script>
 </body>
 </html>
