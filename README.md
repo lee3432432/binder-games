@@ -13,3 +13,7 @@ binder-games.vercel.app 에 배포되는 게임 모음 사이트입니다. (Verc
 
 - 게임 주소: `binder-games.vercel.app/games/게임이름`
 - 되돌리기: Vercel → Deployments → 이전 버전 → Promote
+
+## 내 폰 찾기 (games/find-my-phone)
+- 웹 푸시(VAPID)로 폰에 알림을 보내고, 위치는 ntfy.sh 공개 채널(코드별)로 주고받음
+- 서버 함수: `api/ring.js` — Vercel 환경변수 `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` 필요
