@@ -1,0 +1,10 @@
+[
+  {
+    "id": "mega-waterslide",
+    "title": "메가 워터슬라이드",
+    "desc": "말 한마디로 만든 초대형 워터슬라이드. 시속 160km로 내려가 수영장 정중앙에 착지하세요!",
+    "thumb": "assets/thumbs/mega-waterslide.jpg",
+    "tags": ["3D", "레이싱"],
+    "new": true
+  }
+]
