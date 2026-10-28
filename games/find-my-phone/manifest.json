@@ -1,0 +1,10 @@
+{
+  "name": "내 폰 찾기",
+  "short_name": "폰찾기",
+  "start_url": "/games/find-my-phone/?mode=phone",
+  "scope": "/games/find-my-phone/",
+  "display": "standalone",
+  "background_color": "#fff8e7",
+  "theme_color": "#ffd23f",
+  "icons": [{ "src": "icon.png", "sizes": "512x512", "type": "image/png" }]
+}

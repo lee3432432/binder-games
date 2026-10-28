@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>내 폰 찾기 · 커맨드 플레이</title>
+<meta name="description" content="웹에서 버튼 하나 누르면 내 폰이 소리치고 위치를 알려줘요.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffd23f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#fff8e7;--ink:#1b1b2f;--sub:#5b5b72;--card:#fff;--yellow:#ffd23f;--pink:#ff6fae;--sky:#4cc9f0;--green:#7bd389;--red:#ff4f6a}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",system-ui,sans-serif;
+  background-image:radial-gradient(var(--sub) 1px,transparent 1px);background-size:22px 22px;background-position:-11px -11px}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px 60px}
+header{display:flex;align-items:center;justify-content:space-between;padding:8px 0 18px}
+.logo{font-family:"Black Han Sans",sans-serif;font-size:30px;line-height:1}
+.logo span{background:var(--yellow);padding:0 .15em;border:3px solid var(--ink);border-radius:10px;display:inline-block;transform:rotate(-2deg)}
+.btn{border:3px solid var(--ink);background:#fff;color:var(--ink);font:inherit;font-weight:900;font-size:15px;border-radius:14px;padding:10px 16px;box-shadow:0 4px 0 var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.btn.sm{font-size:13px;padding:6px 12px;box-shadow:0 3px 0 var(--ink)}
+.btn.big{width:100%;justify-content:center;font-family:"Black Han Sans",sans-serif;font-size:30px;padding:22px;border-radius:22px;box-shadow:0 7px 0 var(--ink);background:var(--yellow)}
+.btn.big:active{transform:translateY(5px);box-shadow:0 2px 0 var(--ink)}
+.btn.pink{background:var(--pink);color:#fff}.btn.sky{background:var(--sky)}.btn.green{background:var(--green)}.btn.red{background:var(--red);color:#fff}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tab{flex:1;text-align:center;border:3px solid var(--ink);border-radius:14px;padding:10px;font-weight:900;background:#fff;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.card{background:var(--card);border:3px solid var(--ink);border-radius:18px;box-shadow:6px 6px 0 var(--ink);padding:18px;margin-bottom:16px}
+.card h2{font-size:20px;font-weight:900;margin-bottom:8px}
+.card p{color:var(--sub);font-size:14px;line-height:1.6}
+.step{display:flex;gap:12px;align-items:flex-start;margin:12px 0}
+.num{flex:none;width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:900}
+.code{font-family:"Black Han Sans",sans-serif;font-size:56px;letter-spacing:.18em;text-align:center;background:var(--yellow);border:3px solid var(--ink);border-radius:14px;padding:10px;margin:12px 0}
+input.code-in{width:100%;font:inherit;font-family:"Black Han Sans",sans-serif;font-size:36px;letter-spacing:.2em;text-align:center;text-transform:uppercase;border:3px solid var(--ink);border-radius:14px;padding:10px;background:#fff;outline:none}
+input.code-in:focus{border-color:var(--pink)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.status{font-size:14px;font-weight:700;padding:10px 12px;border-radius:12px;background:#f1efe6;margin-top:10px;white-space:pre-line}
+.status.ok{background:#e4f8e8}.status.err{background:#ffe3e8}
+#map{height:280px;border:3px solid var(--ink);border-radius:14px;margin-top:12px;background:#dfe9f3}
+.hide{display:none!important}
+/* 알람 화면 */
+#alarm{position:fixed;inset:0;display:none;place-items:center;z-index:50;background:var(--red);color:#fff;text-align:center;padding:24px;animation:blink .5s steps(1) infinite}
+#alarm.on{display:grid}
+@keyframes blink{50%{background:var(--yellow);color:var(--ink)}}
+#alarm h1{font-family:"Black Han Sans",sans-serif;font-size:clamp(44px,13vw,90px);line-height:1.05}
+#alarm p{font-weight:900;font-size:18px;margin:14px 0 28px}
+#alarm .btn{font-size:22px;padding:16px 30px}
+.pulse{display:inline-block;animation:pulse .7s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.25)}}
+footer{color:var(--sub);font-size:12px;text-align:center;margin-top:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><div class="logo">내 폰 <span>찾기</span></div><a class="btn sm" href="/">🏠</a></header>
+
+  <div class="tabs" role="tablist"><div class="tab" id="tabFind" role="tab">🔍 폰 찾기</div><div class="tab" id="tabPhone" role="tab">📱 이 폰 등록</div></div>
+
+  <!-- 찾기 모드 -->
+  <section id="find">
+    <div class="card" id="pairCard">
+      <h2>찾을 폰 연결</h2>
+      <p>폰에서 "이 폰 등록"을 하면 6자리 코드가 떠요. 그 코드를 넣어주세요.</p>
+      <input class="code-in" id="codeIn" maxlength="6" placeholder="ABC123" autocomplete="off">
+      <div class="row"><button class="btn sky" id="pairBtn">연결하기</button></div>
+      <div class="status hide" id="pairStatus"></div>
+    </div>
+    <div class="card hide" id="findCard">
+      <h2>연결된 폰: <span id="pairedCode"></span></h2>
+      <p>버튼을 누르면 폰이 소리치고, 폰에서 알림을 누르면 위치가 아래 지도에 떠요.</p>
+      <div class="row" style="margin:10px 0 14px"><label style="font-weight:700;font-size:14px">소리</label>
+        <select id="soundSel" style="font:inherit;font-weight:700;border:2px solid var(--ink);border-radius:10px;padding:4px 8px"><option value="siren">🚨 사이렌</option><option value="cat">🐱 고양이</option><option value="talk">🗣️ "저 여기 있어요"</option></select></div>
+      <button class="btn big" id="ringBtn">📣 내 폰 찾기</button>
+      <div class="status hide" id="ringStatus"></div>
+      <div id="map"></div>
+      <div class="row"><a class="btn sm hide" id="mapLink" target="_blank">🗺️ 구글 지도에서 열기</a><button class="btn sm" id="unpairBtn">연결 끊기</button></div>
+    </div>
+  </section>
+
+  <!-- 폰 모드 -->
+  <section id="phone" class="hide">
+    <div class="card">
+      <h2>이 폰을 찾을 수 있게 등록</h2>
+      <div class="step"><div class="num">1</div><div><b>홈 화면에 추가</b><p id="installTip">아이폰: 공유 버튼 → "홈 화면에 추가" → 추가된 아이콘으로 다시 열기<br>안드로이드: 브라우저 메뉴 → "홈 화면에 추가" (크롬은 그냥 진행해도 돼요)</p></div></div>
+      <div class="step"><div class="num">2</div><div><b>알림 허용</b><p>아래 버튼을 누르고 알림을 허용하면 코드가 나와요.</p></div></div>
+      <div class="row"><button class="btn pink" id="regBtn">🔔 알림 허용하고 등록</button></div>
+      <div class="status hide" id="regStatus"></div>
+      <div id="codeBox" class="hide"><p style="margin-top:14px">찾는 쪽 화면에 이 코드를 넣으세요</p><div class="code" id="codeOut"></div>
+        <p>이 화면을 닫아도 돼요. 폰을 찾을 때 알림이 와요.</p>
+        <div class="row"><button class="btn sm" id="testBtn">🔔 나한테 테스트 알림</button><button class="btn sm" id="unregBtn">등록 해제</button></div></div>
+    </div>
+  </section>
+  <footer>생산성 0% 앱 #003 · 커맨드 플레이</footer>
+</div>
+
+<div id="alarm"><div><div class="pulse" style="font-size:80px">📱</div><h1>저 여기<br>있어요!!</h1><p id="alarmMsg">위치 보내는 중…</p><button class="btn" id="stopBtn">찾았어요 ✋</button></div></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const VAPID='BIcOjpNPNdcPRV7nFGXKMMrboaNxhu3gqYsHwokZ2Jkeq05AvWt7clWeTR51ZIKVfyjvODrTVEEHVuhtPOSz3qQ';
+const API=(location.protocol==='file:'?'https://binder-games.vercel.app':'')+'/api/ring';
+const NTFY='https://ntfy.sh/';
+const $=id=>document.getElementById(id);
+const q=new URLSearchParams(location.search);
+const LS=k=>{try{return localStorage.getItem(k)}catch(e){return null}};const LSs=(k,v)=>{try{v===null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}};
+function status(id,msg,cls){const el=$(id);el.textContent=msg;el.className='status '+(cls||'');el.classList.remove('hide')}
+function setMode(m){$('find').classList.toggle('hide',m!=='find');$('phone').classList.toggle('hide',m!=='phone');$('tabFind').setAttribute('aria-selected',m==='find');$('tabPhone').setAttribute('aria-selected',m==='phone');LSs('fmp_mode',m)}
+$('tabFind').onclick=()=>setMode('find');$('tabPhone').onclick=()=>setMode('phone');
+const mode=q.get('mode')||LS('fmp_mode')||(/Android|iPhone|iPad/i.test(navigator.userAgent)?'phone':'find');setMode(mode);
+const b64=s=>{const p='='.repeat((4-s.length%4)%4);const r=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(r,c=>c.charCodeAt(0))};
+const genCode=()=>{const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>A[Math.floor(Math.random()*A.length)]).join('')};
+
+/* ---------- 소리 ---------- */
+let AC=null,alarmTimer=null,alarmOn=false;
+function audio(){if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC}
+function siren(){const ac=audio();const o=ac.createOscillator(),g=ac.createGain();o.type='sawtooth';const t=ac.currentTime;o.frequency.setValueAtTime(600,t);o.frequency.linearRampToValueAtTime(1200,t+.5);o.frequency.linearRampToValueAtTime(600,t+1);g.gain.value=.5;o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+1)}
+function meow(){const ac=audio();const o=ac.createOscillator(),g=ac.createGain();const t=ac.currentTime;o.type='triangle';o.frequency.setValueAtTime(700,t);o.frequency.exponentialRampToValueAtTime(1100,t+.15);o.frequency.exponentialRampToValueAtTime(500,t+.6);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.6,t+.05);g.gain.exponentialRampToValueAtTime(.001,t+.7);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+.75)}
+function talk(){try{const u=new SpeechSynthesisUtterance('저 여기 있어요! 저 여기 있어요!');u.lang='ko-KR';u.rate=1.1;u.volume=1;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){siren()}}
+function startAlarm(sound){if(alarmOn)return;alarmOn=true;$('alarm').classList.add('on');const f={siren,cat:meow,talk}[sound]||siren;f();alarmTimer=setInterval(f,sound==='talk'?2500:1100);if(navigator.vibrate)navigator.vibrate([500,200,500,200,500]);
+  try{if(navigator.wakeLock)navigator.wakeLock.request('screen').catch(()=>{})}catch(e){}}
+function stopAlarm(){alarmOn=false;clearInterval(alarmTimer);$('alarm').classList.remove('on');try{speechSynthesis.cancel()}catch(e){};history.replaceState(null,'',location.pathname+'?mode=phone')}
+$('stopBtn').onclick=stopAlarm;
+
+/* ---------- 폰 모드: 등록 ---------- */
+async function getReg(){if(!('serviceWorker' in navigator))throw new Error('이 브라우저는 알림을 지원하지 않아요');return navigator.serviceWorker.register('sw.js',{scope:'./'})}
+async function register(){try{
+  if(!('PushManager' in window)){status('regStatus','이 브라우저는 푸시 알림을 지원하지 않아요.\n아이폰은 홈 화면에 추가한 뒤 그 아이콘으로 열어야 돼요.','err');return}
+  const perm=await Notification.requestPermission();if(perm!=='granted'){status('regStatus','알림이 허용되지 않았어요. 설정에서 알림을 켜주세요.','err');return}
+  const reg=await getReg();await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(VAPID)});
+  const code=LS('fmp_code')||genCode();LSs('fmp_code',code);LSs('fmp_sub',JSON.stringify(sub));
+  // 코드 채널에 구독 정보 올리기 (찾는 쪽이 가져감)
+  const r=await fetch(NTFY+'fmp-pair-'+code,{method:'POST',body:JSON.stringify({sub,ua:navigator.userAgent.slice(0,60),t:Date.now()}),headers:{'Cache':'yes'}});
+  if(!r.ok)throw new Error('연결 서버 응답 오류 '+r.status);
+  $('codeOut').textContent=code;$('codeBox').classList.remove('hide');status('regStatus','등록 완료! 이 폰은 이제 찾을 수 있어요.','ok');
+}catch(e){status('regStatus','등록 실패: '+(e.message||e),'err')}}
+$('regBtn').onclick=register;
+$('unregBtn').onclick=async()=>{try{const reg=await navigator.serviceWorker.getRegistration('./');const s=reg&&await reg.pushManager.getSubscription();if(s)await s.unsubscribe()}catch(e){}LSs('fmp_code',null);LSs('fmp_sub',null);$('codeBox').classList.add('hide');status('regStatus','등록을 해제했어요.')};
+$('testBtn').onclick=async()=>{const sub=JSON.parse(LS('fmp_sub')||'null');if(!sub)return;status('regStatus','테스트 알림 보내는 중…');const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub,code:LS('fmp_code'),sound:'siren'})});const j=await r.json().catch(()=>({}));status('regStatus',j.ok?'보냈어요! 잠시 후 알림이 와요.':'실패: '+(j.error||r.status),j.ok?'ok':'err')};
+if(LS('fmp_code')&&LS('fmp_sub')){$('codeOut').textContent=LS('fmp_code');$('codeBox').classList.remove('hide')}
+if(/iPhone|iPad/.test(navigator.userAgent)&&!navigator.standalone){$('installTip').innerHTML='<b style="color:var(--red)">아이폰은 꼭 홈 화면에 추가한 뒤, 그 아이콘으로 열어서 등록해야 알림이 와요.</b><br>사파리 공유 버튼 → "홈 화면에 추가"'}
+
+/* ---------- 폰 모드: 알람 + 위치 보내기 ---------- */
+let watchId=null;
+async function phoneAlarm(sound){setMode('phone');startAlarm(sound||'siren');const code=LS('fmp_code')||q.get('code')||'';
+  if(!navigator.geolocation){$('alarmMsg').textContent='이 기기는 위치를 못 가져와요';return}
+  const send=pos=>{const d={lat:pos.coords.latitude,lng:pos.coords.longitude,acc:Math.round(pos.coords.accuracy),t:Date.now()};
+    fetch(NTFY+'fmp-loc-'+code,{method:'POST',body:JSON.stringify(d)}).then(()=>{$('alarmMsg').textContent=`위치 보냈어요 (오차 ${d.acc}m)`}).catch(()=>{$('alarmMsg').textContent='위치 전송 실패 (인터넷 확인)'})};
+  if(watchId!==null)navigator.geolocation.clearWatch(watchId);
+  watchId=navigator.geolocation.watchPosition(send,err=>{$('alarmMsg').textContent='위치 권한이 없어요: '+err.message},{enableHighAccuracy:true,maximumAge:0,timeout:20000})}
+if(q.get('alarm')==='1'){document.addEventListener('click',function once(){audio();document.removeEventListener('click',once)});phoneAlarm(q.get('sound'))}
+if('serviceWorker' in navigator){navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.type==='ALARM')phoneAlarm(e.data.sound)});if(LS('fmp_code'))getReg().catch(()=>{})}
+
+/* ---------- 찾기 모드 ---------- */
+let map=null,marker=null,circle=null,es=null;
+function showPaired(){const code=LS('fmp_find_code');$('pairCard').classList.toggle('hide',!!code);$('findCard').classList.toggle('hide',!code);if(code){$('pairedCode').textContent=code;initMap();listenLoc(code)}}
+async function pair(){const code=$('codeIn').value.trim().toUpperCase();if(code.length<6){status('pairStatus','6자리 코드를 넣어주세요','err');return}
+  status('pairStatus','연결 중…');try{const r=await fetch(NTFY+'fmp-pair-'+code+'/json?poll=1&since=all');const txt=await r.text();const lines=txt.trim().split('\n').filter(Boolean).map(l=>JSON.parse(l)).filter(m=>m.event==='message');
+    if(!lines.length)throw new Error('코드를 찾을 수 없어요. 폰에서 등록을 다시 해주세요 (코드는 12시간 뒤 만료)');
+    const last=JSON.parse(lines[lines.length-1].message);LSs('fmp_find_code',code);LSs('fmp_find_sub',JSON.stringify(last.sub));status('pairStatus','연결됐어요!','ok');showPaired()}
+  catch(e){status('pairStatus','연결 실패: '+(e.message||e),'err')}}
+$('pairBtn').onclick=pair;$('codeIn').addEventListener('keydown',e=>{if(e.key==='Enter')pair()});
+$('unpairBtn').onclick=()=>{LSs('fmp_find_code',null);LSs('fmp_find_sub',null);if(es){es.close();es=null}showPaired()};
+async function ring(){const sub=JSON.parse(LS('fmp_find_sub')||'null');if(!sub)return;$('ringBtn').disabled=true;status('ringStatus','폰 부르는 중… 📡');
+  try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub,code:LS('fmp_find_code'),sound:$('soundSel').value})});const j=await r.json().catch(()=>({}));
+    if(j.ok)status('ringStatus','폰에 알림을 보냈어요! 폰에서 알림을 누르면 위치가 지도에 떠요.','ok');
+    else if(j.statusCode===410||j.statusCode===404)status('ringStatus','이 폰의 등록이 만료됐어요. 폰에서 다시 등록해 주세요.','err');
+    else status('ringStatus','실패: '+(j.error||r.status),'err')}
+  catch(e){status('ringStatus','서버에 연결 못 했어요: '+e.message,'err')}
+  setTimeout(()=>$('ringBtn').disabled=false,3000)}
+$('ringBtn').onclick=ring;
+function initMap(){if(map||!window.L)return;map=L.map('map',{zoomControl:true}).setView([37.5665,126.978],11);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map)}
+function showLoc(d){if(!map)return;const ll=[d.lat,d.lng];if(!marker){marker=L.marker(ll).addTo(map);circle=L.circle(ll,{radius:d.acc||30,color:'#ff6fae'}).addTo(map)}else{marker.setLatLng(ll);circle.setLatLng(ll).setRadius(d.acc||30)}
+  map.setView(ll,17);marker.bindPopup(`📱 여기! (오차 ${d.acc}m)<br>${new Date(d.t).toLocaleTimeString('ko-KR')}`).openPopup();
+  const a=$('mapLink');a.href=`https://www.google.com/maps?q=${d.lat},${d.lng}`;a.classList.remove('hide');status('ringStatus',`위치 받았어요! 오차 약 ${d.acc}m · ${new Date(d.t).toLocaleTimeString('ko-KR')}`,'ok')}
+function listenLoc(code){if(es)es.close();es=new EventSource(NTFY+'fmp-loc-'+code+'/sse?since=10m');es.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.event==='message')showLoc(JSON.parse(m.message))}catch(err){}}}
+showPaired();
+</script>
+</body>
+</html>
