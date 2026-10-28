@@ -163,7 +163,7 @@ if('serviceWorker' in navigator){navigator.serviceWorker.addEventListener('messa
 let map=null,marker=null,circle=null,es=null;
 function showPaired(){const code=LS('fmp_find_code');$('pairCard').classList.toggle('hide',!!code);$('findCard').classList.toggle('hide',!code);if(code){$('pairedCode').textContent=code;initMap();listenLoc(code)}}
 async function pair(){const code=$('codeIn').value.trim().toUpperCase();if(code.length<6){status('pairStatus','6자리 코드를 넣어주세요','err');return}
-  status('pairStatus','연결 중…');try{const r=await fetch(NTFY+'fmp-pair-'+code+'/json?poll=1&since=all');const txt=await r.text();const lines=txt.trim().split('\n').filter(Boolean).map(l=>JSON.parse(l)).filter(m=>m.event==='message');
+  status('pairStatus','연결 중…');try{let lines=[];for(let i=0;i<4&&!lines.length;i++){if(i)await new Promise(r=>setTimeout(r,1200));const r=await fetch(NTFY+'fmp-pair-'+code+'/json?poll=1&since=all');const txt=await r.text();lines=txt.trim().split('\n').filter(Boolean).map(l=>JSON.parse(l)).filter(m=>m.event==='message')}
     if(!lines.length)throw new Error('코드를 찾을 수 없어요. 폰에서 등록을 다시 해주세요 (코드는 12시간 뒤 만료)');
     const last=JSON.parse(lines[lines.length-1].message);LSs('fmp_find_code',code);LSs('fmp_find_sub',JSON.stringify(last.sub));status('pairStatus','연결됐어요!','ok');showPaired()}
   catch(e){status('pairStatus','연결 실패: '+(e.message||e),'err')}}
