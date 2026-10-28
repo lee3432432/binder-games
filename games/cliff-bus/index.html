@@ -117,9 +117,9 @@ const pts=[];{let x=0,y=2,z=0;pts.push(new THREE.Vector3(0,2,-10));
 const curve=new THREE.CatmullRomCurve3(pts,false,'catmullrom',.5);
 const NS=2400;const L=curve.getLength();
 const SP=[],ST=[],SB=[];
-for(let i=0;i<=NS;i++){const u=i/NS;const p=curve.getPointAt(u),t=curve.getTangentAt(u).normalize();const b=new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0),t).normalize();SP.push(p);ST.push(t);SB.push(b)}
+for(let i=0;i<=NS;i++){const u=i/NS;const p=curve.getPointAt(u),t=curve.getTangentAt(u).normalize();const b=new THREE.Vector3().crossVectors(t,new THREE.Vector3(0,1,0)).normalize();SP.push(p);ST.push(t);SB.push(b)}
 function frameAt(s){const f=Math.max(0,Math.min(NS,s/L*NS));const i=Math.min(NS-1,Math.floor(f)),k=f-i;return{p:SP[i].clone().lerp(SP[i+1],k),t:ST[i].clone().lerp(ST[i+1],k).normalize(),b:SB[i].clone().lerp(SB[i+1],k).normalize()}}
-const RW=9;// 도로 폭 (좌=절벽 아래 바다, 우=암벽)
+const RW=9;// 도로 폭 (양쪽 모두 절벽 아래 바다)
 function ribbon(off0,off1,y0,y1,segA,vRep,mat,uvw=1){const pos=[],uv=[],idx=[];
   for(let i=0;i<=NS;i++){for(let j=0;j<=segA;j++){const k=j/segA;const off=off0+(off1-off0)*k,yy=y0+(y1-y0)*k;const p=SP[i].clone().addScaledVector(SB[i],off);p.y+=yy;pos.push(p.x,p.y,p.z);uv.push(k*uvw,i/NS*vRep)}}
   for(let i=0;i<NS;i++)for(let j=0;j<segA;j++){const a=i*(segA+1)+j,b=a+segA+1;idx.push(a,b,a+1,b,b+1,a+1)}
@@ -129,12 +129,12 @@ const road=ribbon(-RW/2,RW/2,.06,.06,4,L/12,new THREE.MeshLambertMaterial({map:r
 // 절벽: 도로 바다쪽 가장자리에서 아래로, 산쪽에서 위로
 const cliffMat=new THREE.MeshLambertMaterial({map:rockTex,side:THREE.DoubleSide});
 const cliffDown=ribbon(-RW/2,-RW/2-14,0,-90,6,L/25,cliffMat,2);
-const cliffUp=ribbon(RW/2,RW/2+10,0,60,4,L/25,cliffMat,1.5);
-const cliffTop=ribbon(RW/2+10,RW/2+60,60,70,2,L/25,cliffMat,2);
+const cliffUp=ribbon(RW/2,RW/2+14,0,-90,6,L/25,cliffMat,2);
+const cliffTop=ribbon(-RW/2-14,RW/2+14,-90,-90,2,L/25,cliffMat,2);
 [cliffDown,cliffUp,cliffTop].forEach(m=>{m.visible=false;scene.add(m)});
 // 가드레일 기둥(바다쪽) 드문드문
 const posts=new THREE.Group();posts.visible=false;scene.add(posts);
-{const pm=new THREE.MeshLambertMaterial({color:0xf2f2f2});for(let i=0;i<=NS;i+=24){const p=SP[i].clone().addScaledVector(SB[i],-RW/2+.3);const c=new THREE.Mesh(new THREE.BoxGeometry(.25,1,.25),pm);c.position.set(p.x,p.y+.5,p.z);posts.add(c)}}
+{const pm=new THREE.MeshLambertMaterial({color:0xf2f2f2});for(let i=0;i<=NS;i+=24)for(const sd of[-1,1]){const p=SP[i].clone().addScaledVector(SB[i],sd*(RW/2-.3));const c=new THREE.Mesh(new THREE.BoxGeometry(.25,1,.25),pm);c.position.set(p.x,p.y+.5,p.z);posts.add(c)}}
 // 바다·하늘
 const sea=new THREE.Mesh(new THREE.PlaneGeometry(8000,8000),new THREE.MeshLambertMaterial({map:seaTex}));sea.rotation.x=-Math.PI/2;sea.position.y=-88;sea.visible=false;scene.add(sea);
 const sky=new THREE.Mesh(new THREE.SphereGeometry(2500,32,16),new THREE.MeshBasicMaterial({map:skyTex,side:THREE.BackSide,fog:false,transparent:true,opacity:0}));sky.visible=false;scene.add(sky);
@@ -144,7 +144,7 @@ const palms=new THREE.Group();palms.visible=false;scene.add(palms);
  for(let i=40;i<NS;i+=rand(60,120)|0){const side=Math.random()<.5?-RW/2-1.5:RW/2+1.2;const p=SP[i].clone().addScaledVector(SB[i],side);const g=new THREE.Group();
   const h=rand(5,9);const tr=new THREE.Mesh(new THREE.CylinderGeometry(.18,.3,h,6),tm);tr.position.y=h/2;tr.rotation.z=rand(-.15,.15);g.add(tr);
   for(let k=0;k<7;k++){const leaf=new THREE.Mesh(new THREE.PlaneGeometry(3.2,.9),lm);leaf.position.y=h;leaf.rotation.y=k*Math.PI*2/7;leaf.rotation.z=-.5;leaf.position.x=Math.cos(k*Math.PI*2/7)*1.4;leaf.position.z=Math.sin(k*Math.PI*2/7)*1.4;leaf.rotation.y=-k*Math.PI*2/7;g.add(leaf)}
-  g.position.copy(p);g.position.y=p.y-(side<0?1.5:0);g.userData.s=1;g.scale.setScalar(.001);palms.add(g)}}
+  g.position.copy(p);g.position.y=p.y-1.5;g.userData.s=1;g.scale.setScalar(.001);palms.add(g)}}
 
 /* ---------- 버스 ---------- */
 function makeBus(color,len=10,w=3,h=3.2){const g=new THREE.Group();
@@ -217,7 +217,7 @@ function debrisFx(){const x=innerWidth/2,y=innerHeight*.55;for(let i=0;i<70;i++)
 const CMDS=[
  {k:/하늘|바다|해안/,id:'sky',run:async()=>{sky.visible=sea.visible=true;burst(true,'#7cc3ff');sfxAppear(true);badge('바다와 하늘 🌊');scene.fog=new THREE.Fog(0xd9efff,300,1600);
    ground.visible=false;await tween(900,k=>{sky.material.opacity=k;scene.background.lerpColors(BG_EMPTY,new THREE.Color(0xd9efff),k)})}},
- {k:/절벽|산|바위/,id:'cliff',run:async()=>{[cliffDown,cliffUp,cliffTop].forEach(m=>{m.visible=true;m.geometry.setDrawRange(0,0)});camTo(new THREE.Vector3(-60,40,40),new THREE.Vector3(0,20,220),1600);burst(true,'#c9c9c9');sfxAppear(true);badge('절벽 완성 🪨');
+ {k:/절벽|산|바위/,id:'cliff',run:async()=>{[cliffDown,cliffUp,cliffTop].forEach(m=>{m.visible=true;m.geometry.setDrawRange(0,0)});camTo(new THREE.Vector3(60,40,40),new THREE.Vector3(0,20,220),1600);burst(true,'#c9c9c9');sfxAppear(true);badge('절벽 완성 🪨');
    await tween(2200,k=>{const e=ease(k);[cliffDown,cliffUp,cliffTop].forEach(m=>m.geometry.setDrawRange(0,Math.floor(m.userData.full*e/6)*6))})}},
  {k:/도로|길|산길/,id:'road',run:async()=>{road.visible=posts.visible=true;road.geometry.setDrawRange(0,0);burst(false,'#ffd23f');sfxAppear(false);badge(`${Math.round(L)}m 절벽 산길 🛣️`);
    await tween(2000,k=>road.geometry.setDrawRange(0,Math.floor(road.userData.full*ease(k)/6)*6))}},
@@ -269,9 +269,8 @@ function updateRide(dt){
   const f=frameAt(ride.s);const slope=f.t.y;
   ride.v+=(thr*6-slope*9-ride.v*.12)*dt;ride.v=Math.max(0,Math.min(26,ride.v));ride.s+=ride.v*dt;
   ride.lane+=steer*6*dt;
-  const edge=RW/2-1.2;
-  if(ride.lane<-edge-0.4){ride.phase='fall';ride.fall={vy:0,t:0};engStop();sfxScream();badge('으아악! 추락 😱');setTimeout(()=>finish('fall'),1800);return}
-  if(ride.lane>edge){ride.lane=edge;ride.v*=.6;sfxCrash();flash(.3,200)}
+  const edge=RW/2-1.0;
+  if(Math.abs(ride.lane)>edge+0.4){ride.phase='fall';ride.fall={vy:0,t:0};engStop();sfxScream();badge('으아악! 추락 😱');setTimeout(()=>finish('fall'),1800);return}
   placeOn(bus,ride.s,ride.lane,true);bus.rotateZ(-steer*.06);ride.tilt+=(steer*.05-ride.tilt)*Math.min(1,dt*6);
   // 승객 흔들림
   if(passengers.visible){const sw=Math.sin(performance.now()/160)*.05;PAS.forEach((p,i)=>{p.rotation.z=sw*(1+i%3)+ride.tilt*2})}
@@ -287,7 +286,7 @@ function updateRide(dt){
   chaseP.copy(bus.position).addScaledVector(f.t,-15).add(new THREE.Vector3(0,8+Math.max(0,-slope*4),0));chaseL.copy(bus.position).addScaledVector(f.t,14).add(new THREE.Vector3(0,1,0));
   camera.position.lerp(chaseP,1-Math.pow(.001,dt));camLook.lerp(chaseL,1-Math.pow(.001,dt));camera.lookAt(camLook);
   if(ride.s>=L-100){ride.phase='done';engStop();finish('goal')}}
-function updateFall(dt){if(ride.phase!=='fall')return;ride.fall.vy-=30*dt;bus.position.y+=ride.fall.vy*dt;bus.position.x+=frameAt(ride.s).b.x*-6*dt;bus.position.z+=frameAt(ride.s).b.z*-6*dt;bus.rotateZ(1.5*dt);camLook.lerp(bus.position,.1);camera.lookAt(camLook)}
+function updateFall(dt){if(ride.phase!=='fall')return;ride.fall.vy-=30*dt;bus.position.y+=ride.fall.vy*dt;bus.position.x+=frameAt(ride.s).b.x*Math.sign(ride.lane)*6*dt;bus.position.z+=frameAt(ride.s).b.z*Math.sign(ride.lane)*6*dt;bus.rotateZ(1.5*dt);camLook.lerp(bus.position,.1);camera.lookAt(camLook)}
 function finish(kind){ride.phase='done';engStop();$('pad').classList.remove('on');
   let title,score=Math.round(ride.s)+(kind==='goal'?500:0)+(kind==='goal'?ride.alive*20:0);
   title=kind==='goal'?'무사 도착!! 🎉':kind==='crash'?'정면충돌 💥':'절벽 추락 😱';
