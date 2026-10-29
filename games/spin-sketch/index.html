@@ -34,8 +34,8 @@ label.opt{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px
 input[type=range]{width:120px}
 #stage{position:relative;aspect-ratio:1;background:#1b1b2f;border:3px solid var(--ink);border-radius:18px;box-shadow:6px 6px 0 var(--ink);overflow:hidden;touch-action:none;display:none}
 #stage.on{display:block}
-#stage canvas{position:absolute;left:50%;top:50%;width:72%;height:72%;transform:translate(-50%,-50%) rotate(0deg);transition:transform .25s;box-shadow:0 14px 40px rgba(0,0,0,.5);cursor:grab}
-#stage canvas.drag{transition:none;cursor:grabbing}
+#stage canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab}
+#stage canvas.drag{cursor:grabbing}
 #deg{position:absolute;right:12px;top:10px;color:#fff;font-weight:900;font-family:"Black Han Sans",sans-serif;font-size:22px;text-shadow:0 2px 0 #000}
 #hint{position:absolute;left:12px;bottom:10px;color:#fff;font-size:12px;font-weight:700;text-shadow:0 1px 0 #000}
 .hide{display:none!important}
@@ -60,7 +60,7 @@ input[type=range]{width:120px}
   <header><div class="logo">돌리면 바뀌는 <span>스케치</span></div><a class="btn sm" href="/">🏠</a></header>
 
   <div class="card step on" id="s1">
-    <h2>1. 사진 두 장</h2><p>똑바로 봤을 때 보일 사진과, 90° 돌렸을 때 보일 사진. 얼굴이나 윤곽이 뚜렷한 사진이 잘 돼요.</p>
+    <h2>1. 사진 두 장</h2><p>똑바로 봤을 때 보일 사진(A)과, 90° 돌리면 나타날 사진(B). 돌리는 동안 A가 사라지고 B가 나타나요. 얼굴이나 윤곽이 뚜렷한 사진이 잘 돼요.</p>
     <div class="drops">
       <label class="drop" id="dropA"><span class="lbl">A · 똑바로</span><span id="phA">📷 사진 A<br><small>누르거나 끌어다 놓기</small></span><input type="file" accept="image/*" id="fileA"></label>
       <label class="drop" id="dropB"><span class="lbl">B · 90° 돌리면</span><span id="phB">📷 사진 B<br><small>누르거나 끌어다 놓기</small></span><input type="file" accept="image/*" id="fileB"></label>
@@ -84,7 +84,7 @@ input[type=range]{width:120px}
 
   <div class="card step on" id="s3">
     <h2>3. 돌려보기</h2><p>그림을 끌어서 돌리거나 버튼으로 돌려요. 저장하면 사진 한 장으로 나와요.</p>
-    <div id="stage"><canvas id="out"></canvas><div id="deg">0°</div><div id="hint">끌어서 돌려보세요</div></div>
+    <div id="stage"><canvas id="out"></canvas><div id="deg">0°</div><div id="hint">끌어서 돌려보세요 — 0° A, 90° B</div></div>
     <div class="row"><button class="btn s" id="rotL">↶ 90°</button><button class="btn s" id="rotR">↷ 90°</button><button class="btn p" id="spinBtn">🔄 자동 회전</button><button class="btn g" id="saveBtn">💾 저장</button><button class="btn sm" id="shareBtn">📤 공유</button></div>
   </div>
 </div>
@@ -133,34 +133,43 @@ function sketch(src,edge,dark){const w=SIZE,h=SIZE;const c=document.createElemen
   return out}
 /* ---------- 합치기 ---------- */
 function rotateArr(a,ccw){const w=SIZE,h=SIZE;const o=new Float32Array(w*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++){o[y*w+x]=ccw?a[(w-1-x)*w+y]:a[x*w+(h-1-y)]}return o}
+let skA=null,skB=null;
+function toCanvas(arr){const c=document.createElement('canvas');c.width=c.height=SIZE;const g=c.getContext('2d');const d=g.createImageData(SIZE,SIZE);for(let i=0;i<SIZE*SIZE;i++){const v=arr[i];d.data[i*4]=d.data[i*4+1]=d.data[i*4+2]=v;d.data[i*4+3]=255}g.putImageData(d,0,0);return c}
 function merge(){if(!imgA||!imgB){toast('사진 두 장을 먼저 올려주세요');return}
-  const edge=+$('edge').value,dark=+$('dark').value,mix=+$('mix').value/100;
-  const sa=sketch(imgA,edge,dark);let sb=sketch(imgB,edge,dark);sb=rotateArr(sb,$('flipB').checked);
-  const w=SIZE,h=SIZE;const c=$('out');c.width=w;c.height=h;const g=c.getContext('2d');const d=g.createImageData(w,h);const p=d.data;
-  const pal=$('palette').value;const OR=[255,154,60],BL=[43,47,168];
-  for(let i=0;i<w*h;i++){const x=i%w;
-    // 곱하기 블렌드(둘 다 선이면 더 진하게), B 비중
-    const a=sa[i]/255,b=1-(1-sb[i]/255)*mix*2*(mix<=.5?1:1);const bb=1-(1-sb[i]/255)*(mix/.5);const aa=1-(1-a)*((1-mix)/.5);
-    let v=Math.max(0,Math.min(1,aa*bb));// 0=선, 1=종이
-    let col;if(pal==='pencil'){col=[v*255,v*255,v*255]}
-    else if(pal==='blue'){col=[BL[0]+(255-BL[0])*v,BL[1]+(255-BL[1])*v,BL[2]+(255-BL[2])*v]}
+  const edge=+$('edge').value,dark=+$('dark').value;
+  skA=toCanvas(sketch(imgA,edge,dark));skB=toCanvas(sketch(imgB,edge,dark));
+  result=true;$('stage').classList.add('on');step(3);setAngle(0);st.sketch=st.merge=st.color=1;badge('완성! 돌려보세요 🔄');$('stage').scrollIntoView({behavior:'smooth',block:'center'})}
+const work=document.createElement('canvas');
+function render(target,size,ang){if(!skA)return;target.width=target.height=size;const g=target.getContext('2d');work.width=work.height=size;const w=work.getContext('2d');
+  const th=ang*Math.PI/180;const mix=+$('mix').value/100;// 0°=A, 90°=B
+  const fa=Math.pow(Math.cos(th),2),fb=Math.pow(Math.sin(th),2);
+  const wa=Math.min(1,fa*(1-mix)/.5),wb=Math.min(1,fb*mix/.5);const dirB=$('flipB').checked?-1:1;
+  w.setTransform(1,0,0,1,0,0);w.globalCompositeOperation='source-over';w.globalAlpha=1;w.fillStyle='#fff';w.fillRect(0,0,size,size);
+  const draw=(img,rot,alpha)=>{if(alpha<=0.005)return;w.save();w.translate(size/2,size/2);w.rotate(rot);w.globalCompositeOperation='multiply';w.globalAlpha=alpha;const sc=size/SIZE*0.78;w.drawImage(img,-SIZE*sc/2,-SIZE*sc/2,SIZE*sc,SIZE*sc);w.restore()};
+  draw(skA,th,wa);draw(skB,th-dirB*Math.PI/2,wb);
+  // 듀오톤(화면 기준 좌우 반반 고정)
+  const d=w.getImageData(0,0,size,size);const px=d.data;const pal=$('palette').value;const OR=[255,154,60],BL=[43,47,168];
+  for(let i=0;i<size*size;i++){const v=px[i*4]/255;const x=i%size;let col;
+    if(pal==='pencil'){col=[v*255,v*255,v*255]}else if(pal==='blue'){col=[BL[0]+(255-BL[0])*v,BL[1]+(255-BL[1])*v,BL[2]+(255-BL[2])*v]}
     else if(pal==='orange'){col=[BL[0]+(OR[0]-BL[0])*v,BL[1]+(OR[1]-BL[1])*v,BL[2]+(OR[2]-BL[2])*v]}
-    else{const left=x<w/2;const paper=left?OR:BL,ink=left?BL:OR;col=[ink[0]+(paper[0]-ink[0])*v,ink[1]+(paper[1]-ink[1])*v,ink[2]+(paper[2]-ink[2])*v]}
-    p[i*4]=col[0];p[i*4+1]=col[1];p[i*4+2]=col[2];p[i*4+3]=255}
-  g.putImageData(d,0,0);result=c;$('stage').classList.add('on');step(3);setAngle(0);st.sketch=st.merge=st.color=1;badge('완성! 돌려보세요 🔄');$('stage').scrollIntoView({behavior:'smooth',block:'center'})}
-$('makeBtn').onclick=merge;
+    else{const left=x<size/2;const paper=left?OR:BL,ink=left?BL:OR;col=[ink[0]+(paper[0]-ink[0])*v,ink[1]+(paper[1]-ink[1])*v,ink[2]+(paper[2]-ink[2])*v]}
+    px[i*4]=col[0];px[i*4+1]=col[1];px[i*4+2]=col[2]}
+  g.putImageData(d,0,0);
+  // 돌아가는 종이 테두리
+  g.save();g.translate(size/2,size/2);g.rotate(th);g.strokeStyle='rgba(80,140,255,.9)';g.lineWidth=Math.max(2,size/300);const e=size*0.78;g.strokeRect(-e/2,-e/2,e,e);g.restore()}
+$('makeBtn').onclick=merge;for(const id of['mix','palette','flipB'])$(id).addEventListener('input',()=>{if(skA)setAngle(angle)});
 
 /* ---------- 회전 ---------- */
-function setAngle(a){angle=a;$('out').style.transform=`translate(-50%,-50%) rotate(${a}deg)`;$('deg').textContent=Math.round(((a%360)+360)%360)+'°'}
+let raf=null;function setAngle(a){angle=a;$('deg').textContent=Math.round(((a%360)+360)%360)+'°';if(!raf)raf=requestAnimationFrame(()=>{raf=null;render($('out'),Math.min(640,$('stage').clientWidth*Math.min(2,devicePixelRatio)),angle)})}
 $('rotL').onclick=()=>setAngle(Math.round(angle/90)*90-90);$('rotR').onclick=()=>setAngle(Math.round(angle/90)*90+90);
 $('spinBtn').onclick=()=>{if(spinT){clearInterval(spinT);spinT=null;$('spinBtn').textContent='🔄 자동 회전';$('out').classList.remove('drag');return}
-  $('out').classList.add('drag');let t=0;$('spinBtn').textContent='⏹ 멈춤';spinT=setInterval(()=>{t+=1/60;const ph=t%4;const e=ph<2?Math.min(1,ph):1-Math.min(1,ph-2);const ease=e<.5?2*e*e:1-Math.pow(-2*e+2,2)/2;$('out').style.transform=`translate(-50%,-50%) rotate(${ease*90}deg)`;$('deg').textContent=Math.round(ease*90)+'°'},1000/60)};
+  $('out').classList.add('drag');let t=0;$('spinBtn').textContent='⏹ 멈춤';spinT=setInterval(()=>{t+=1/30;const ph=t%4;const e=ph<2?Math.min(1,ph):1-Math.min(1,ph-2);const ease=e<.5?2*e*e:1-Math.pow(-2*e+2,2)/2;setAngle(ease*90)},1000/30)};
 {const el=$('stage');let drag=false,a0=0,ang0=0;const ang=(e)=>{const r=el.getBoundingClientRect();return Math.atan2(e.clientY-(r.top+r.height/2),e.clientX-(r.left+r.width/2))*180/Math.PI};
   el.addEventListener('pointerdown',e=>{if(spinT)$('spinBtn').click();drag=true;a0=ang(e);ang0=angle;$('out').classList.add('drag');el.setPointerCapture(e.pointerId)});
   el.addEventListener('pointermove',e=>{if(drag)setAngle(ang0+ang(e)-a0)});
-  const up=()=>{if(!drag)return;drag=false;$('out').classList.remove('drag');setAngle(Math.round(angle/90)*90)};el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up)}
+  const up=()=>{if(!drag)return;drag=false;$('out').classList.remove('drag');const from=angle,to=Math.round(angle/90)*90;const t0=performance.now();const an=()=>{const k=Math.min(1,(performance.now()-t0)/250);setAngle(from+(to-from)*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(an)};an()};el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up)}
 /* ---------- 저장 ---------- */
-function exportBlob(){return new Promise(r=>{const c=document.createElement('canvas');c.width=c.height=SIZE;const g=c.getContext('2d');g.translate(SIZE/2,SIZE/2);g.rotate(Math.round(angle/90)*90*Math.PI/180);g.drawImage(result,-SIZE/2,-SIZE/2);c.toBlob(r,'image/png')})}
+function exportBlob(){return new Promise(r=>{const c=document.createElement('canvas');render(c,SIZE,angle);c.toBlob(r,'image/png')})}
 $('saveBtn').onclick=async()=>{if(!result)return;const b=await exportBlob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='spin_sketch.png';a.click();toast('저장했어요')};
 $('shareBtn').onclick=async()=>{if(!result)return;const b=await exportBlob();const f=new File([b],'spin_sketch.png',{type:'image/png'});if(navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f],title:'돌리면 바뀌는 스케치'}).catch(()=>{});else toast('이 브라우저는 공유를 지원하지 않아요. 저장을 눌러주세요')};
 
