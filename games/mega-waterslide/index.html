@@ -200,6 +200,8 @@ const rider=new THREE.Group();rider.visible=false;scene.add(rider);
 
 /* ---------- 코인 ---------- */
 const COIN_N=100;const coins=[];
+const bumpers=[];const bumpGeo=new THREE.CylinderGeometry(.5,.6,.9,12);const bumpMat=new THREE.MeshLambertMaterial({color:0xff2a55,emissive:0x550011});const bumpHitMat=new THREE.MeshLambertMaterial({color:0x777777});
+const bumpGroup=new THREE.Group();bumpGroup.visible=false;
 const coinGeo=new THREE.CylinderGeometry(.55,.55,.14,20);coinGeo.rotateX(Math.PI/2);
 const coinMat=new THREE.MeshLambertMaterial({color:0xffc928,emissive:0x8a5a00,emissiveIntensity:.55});
 const coinGroup=new THREE.Group();coinGroup.visible=false;scene.add(coinGroup);
@@ -207,8 +209,11 @@ for(let i=0;i<COIN_N;i++){const s=25+i*(L-45)/COIN_N;const block=Math.floor(i/10
   const f=frameAt(s);const m=new THREE.Mesh(coinGeo,coinMat);const p=f.p.clone().addScaledVector(f.b,(R-1.1)*Math.sin(a)).addScaledVector(f.n,-(R-1.1)*Math.cos(a));
   m.position.copy(p);m.lookAt(p.clone().add(f.t));coinGroup.add(m);coins.push({s,a,m,got:false})}
 
+scene.add(bumpGroup);
+for(let i=0;i<14;i++){const s=120+i*(L-200)/14+rand(-15,15);const a=[-.55,.55,0,-.75,.75,.3,-.3][i%7];const f=frameAt(s);const m=new THREE.Mesh(bumpGeo,bumpMat);
+  const up=f.n.clone().multiplyScalar(Math.cos(a)).addScaledVector(f.b,-Math.sin(a));m.position.copy(f.p).addScaledVector(up,-(R-.45));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),up);bumpGroup.add(m);bumpers.push({s,a,m,hit:false})}
 /* ---------- 수영장 (착지 예측 위치) ---------- */
-const PHY={g:9.8*1.5,mu:.012,drag:.0011,steer:.12};
+const PHY={g:9.8*1.5,mu:.012,drag:.0011,steer:.03};
 function simulateLanding(){let s=0,v=8,a=0;const dt=1/120;while(s<L){const f=frameAt(s);v+=(-PHY.g*f.t.y-PHY.mu*PHY.g-PHY.drag*v*v)*dt;v=Math.max(v,4);s+=v*dt}
   const f=frameAt(L);const p=f.p.clone().addScaledVector(f.n,-(R-.6));const vel=f.t.clone().multiplyScalar(v);vel.y+=3;
   while(p.y>0.9||vel.y>0){vel.y-=PHY.g*dt;p.addScaledVector(vel,dt)}return{p,vEnd:v}}
@@ -241,6 +246,7 @@ const CHORDS=[[1046,1318,1568],[784,988,1175],[880,1109,1318],[988,1245,1480],[1
 function sfxAppear(big){if(!st.sound)return;const t=audio().currentTime;noise(t,big?.45:.25,big?.5:.35,500,6000);
   const c=CHORDS[chordI++%CHORDS.length];tone(900,t+(big?.45:.25),.09,.35,'triangle');c.forEach((f,i)=>{tone(f,t+(big?.45:.25)+i*.06,big?.6:.4,.22);tone(f*2,t+(big?.45:.25)+i*.06,.25,.06)});
   for(let i=0;i<14;i++)tone(rand(2500,6500),t+(big?.5:.3)+rand(0,.5),.12,.05);if(big)noise(t+.45,.9,.35,9000,3000,.5,'highpass')}
+function sfxCrash(){if(!st.sound)return;const t=audio().currentTime;noise(t,.5,.8,4000,900,.6,'bandpass');for(let i=0;i<8;i++)tone(rand(1500,4500),t+rand(0,.25),.08,.1,'square')}
 function sfxCoin(){if(!st.sound)return;const t=audio().currentTime;tone(1568,t,.08,.25,'square');tone(2093,t+.07,.25,.22,'square')}
 function sfxType(){if(!st.sound)return;const t=audio().currentTime;noise(t,.03,.15,3000,2500,2)}
 function sfxSplash(){if(!st.sound)return;const t=audio().currentTime;noise(t,1.1,.8,2500,700,.7,'lowpass');for(let i=0;i<20;i++)tone(rand(800,2400),t+rand(.05,.6),.08,.07)}
@@ -252,6 +258,7 @@ function windStop(){if(windSrc){try{windSrc.stop()}catch(e){}windSrc=null}}
 /* ---------- 연출 ---------- */
 const bursts=[];
 function burst(big,color='#ffd23f'){bursts.push({t0:performance.now(),big,color});const fl=$('flash');fl.style.transition='none';fl.style.opacity=big?.6:.35;requestAnimationFrame(()=>{fl.style.transition='opacity .35s';fl.style.opacity=0})}
+function flash(o,ms=350){const fl=$('flash');fl.style.transition='none';fl.style.opacity=o;requestAnimationFrame(()=>{fl.style.transition=`opacity ${ms}ms`;fl.style.opacity=0})}
 function badge(text){const b=$('badge');b.classList.remove('show');void b.offsetWidth;b.textContent=text;b.classList.add('show')}
 let toastT;function toast(msg,ms=2200){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),ms)}
 function drawFx(now){const w=fxc.width,h=fxc.height,d=devicePixelRatio;fx.clearRect(0,0,w,h);
@@ -273,7 +280,7 @@ const CMDS=[
    hills.children.forEach(h=>h.userData.y=h.scale.y);await tween(900,k=>hills.children.forEach(h=>h.scale.y=h.userData.y*ease(k)+.01))}},
  {k:/호수|연못|강/,id:'lake',run:async()=>{lakes.visible=true;burst(false,'#4cc9f0');sfxAppear(false);badge('호수 완성 💧');await tween(800,k=>lakes.children.forEach(m=>m.scale.set(m.userData.s.x*ease(k)+.01,m.userData.s.y*ease(k)+.01,1)))}},
  {k:/나무|숲/,id:'tree',run:async()=>{trunkM.visible=leafM.visible=true;burst(false,'#7bd389');sfxAppear(false);badge('숲 완성 🌳');await tween(1300,k=>setTrees(k))}},
- {k:/슬라이드|미끄럼|워터/,id:'slide',run:async()=>{slide.visible=tower.visible=pillarGroup.visible=true;const full=slide.userData.full;slide.geometry.setDrawRange(0,0);
+ {k:/슬라이드|미끄럼|워터/,id:'slide',run:async()=>{bumpGroup.visible=true;slide.visible=tower.visible=pillarGroup.visible=true;const full=slide.userData.full;slide.geometry.setDrawRange(0,0);
    pillarGroup.children.forEach(c=>{c.scale.y=.001;c.position.y=0});
    camTo(new THREE.Vector3(-150,95,-120),new THREE.Vector3(5,45,110),1800);burst(true,'#ffd23f');sfxAppear(true);badge(`${Math.round(TOP)}m 슬라이드 완성 🛝`);
    await tween(2200,k=>{const e=ease(k);slide.geometry.setDrawRange(0,Math.floor(full*e/6)*6);pillarGroup.children.forEach((c,i)=>{const g=Math.max(0,Math.min(1,e*1.3-i/pillarGroup.children.length*.3));c.scale.y=g+.001;c.position.y=c.userData.h*g/2})})}},
@@ -312,7 +319,7 @@ async function startRide(){
   if(!st.rider){toast(st.slide?'사람을 먼저 태워주세요':'워터슬라이드부터 세워주세요');return}
   if(ride.phase==='ride'||ride.phase==='air'||busy)return;
   $('result').classList.remove('on');busy=true;$('send').disabled=true;
-  coins.forEach(c=>{c.got=false;c.m.visible=true});coinsGot=0;maxSpd=0;$('cnv').textContent=0;
+  coins.forEach(c=>{c.got=false;c.m.visible=true});bumpers.forEach(o=>{o.hit=false;o.m.material=bumpMat});ride.flung=false;coinsGot=0;maxSpd=0;$('cnv').textContent=0;
   ride.s=0;ride.v=8;ride.a=0;ride.steer=0;placeRider(0,0);
   const f=frameAt(0);await camTo(f.p.clone().addScaledVector(f.t,-10).add(new THREE.Vector3(0,4.5,0)),f.p.clone().addScaledVector(f.t,10),900);
   burst(true,'#ffffff');sfxAppear(true);badge('출발! 🚀');if(!demoRunning){$('hint').classList.add('on');setTimeout(()=>$('hint').classList.remove('on'),3500)}
@@ -325,7 +332,10 @@ function updateRide(dt){
   if(ride.phase==='ride'){const f=frameAt(ride.s);
     let steer=ride.steer;if(keys.ArrowLeft||keys.a||keys.A)steer=-1;if(keys.ArrowRight||keys.d||keys.D)steer=1;
     if(demoRunning){const nxt=coins.find(c=>!c.got&&c.s>ride.s+2);const target=nxt&&nxt.s-ride.s<40?nxt.a:0;steer=Math.max(-1,Math.min(1,(target-ride.a)*4))}
-    ride.a+=steer*1.8*dt;ride.a+=-ride.a*.6*dt;ride.a=Math.max(-1.1,Math.min(1.1,ride.a));
+    {const f2=frameAt(Math.min(L,ride.s+3));const dtv=f2.t.clone().sub(f.t);const kap=dtv.dot(f.b)/3;ride.a+=Math.max(-1.6,Math.min(1.6,kap*ride.v*0.75))*dt}
+    ride.a+=steer*2.4*dt;ride.a+=-ride.a*.15*dt;
+    if(Math.abs(ride.a)>1.3){ride.flung=true;ride.phase='air';const {up}=placeRider(Math.min(ride.s,L),ride.a);ride.vel.copy(f.t).multiplyScalar(ride.v*.8).addScaledVector(f.b,Math.sign(ride.a)*ride.v*.35).addScaledVector(up,ride.v*.2);badge('튕겨나감!! 😱');sfxCrash();flash(.5,250);return}
+    for(const o of bumpers){if(!o.hit&&Math.abs(o.s-ride.s)<1.6&&Math.abs(o.a-ride.a)<.32){o.hit=true;ride.v*=.45;sfxCrash();flash(.35,200);badge('쿵! 범퍼 💢');o.m.material=bumpHitMat}}
     ride.v+=(-PHY.g*f.t.y-PHY.mu*PHY.g-PHY.steer*ride.a*ride.a*PHY.g-PHY.drag*ride.v*ride.v)*dt;ride.v=Math.max(4,ride.v);ride.s+=ride.v*dt;
     const {up}=placeRider(Math.min(ride.s,L),ride.a);
     for(const c of coins){if(!c.got&&Math.abs(c.s-ride.s)<1.6&&Math.abs(c.a-ride.a)<.28){c.got=true;c.m.visible=false;coinsGot++;$('cnv').textContent=coinsGot;sfxCoin()}}
@@ -341,7 +351,7 @@ function updateRide(dt){
     if(rider.position.y<=(inPool?1.05:.6)){rider.position.y=inPool?1.05:.6;finish(inPool)}}}
 function finish(inPool){ride.phase='done';windStop();$('spdv').textContent=0;
   const dist=Math.hypot(rider.position.x-POOL.x,rider.position.z-POOL.z);let title,bonus=0;
-  if(!pool.visible){title='수영장이 없어요 😅'}else if(!inPool){title='수영장 밖! 😵'}else if(dist<3.3){title='정중앙!!';bonus=100}else if(dist<7){title='나이스!';bonus=50}else{title='풍덩!';bonus=10}
+  if(ride.flung){title='슬라이드 밖으로 추락 😵'}else if(!pool.visible){title='수영장이 없어요 😅'}else if(!inPool){title='수영장 밖! 😵'}else if(dist<3.3){title='정중앙!!';bonus=100}else if(dist<7){title='나이스!';bonus=50}else{title='풍덩!';bonus=10}
   if(inPool){splashFx();sfxSplash()}badge(title);if(bonus>=50){burst(true,'#ff6fae');setTimeout(sfxWin,300)}
   const score=coinsGot*10+bonus;
   setTimeout(()=>{$('rt').textContent=title;$('rl').innerHTML=`<li>최고 속도 <b>${Math.round(maxSpd)}</b> km/h</li><li>코인 <b>${coinsGot}</b> / ${COIN_N}</li><li>착지 보너스 <b>${bonus}</b></li><li>총점 <b>${score}</b></li>`;$('result').classList.add('on');busy=false;$('send').disabled=false},1800);
@@ -369,7 +379,7 @@ window.__game={handle,st,ride,L,landing,POOL,bursts};
 /* ---------- 완성 버전: 처음부터 다 만들어진 상태 ---------- */
 sky.visible=true;sky.material.opacity=1;scene.background.set(0xd9efff);scene.fog=new THREE.Fog(0xd9efff,350,1800);
 groundMat.map=grassTex;groundMat.needsUpdate=true;hills.visible=true;lakes.visible=true;trunkM.visible=leafM.visible=true;setTrees(1);
-slide.visible=tower.visible=pillarGroup.visible=true;slide.geometry.setDrawRange(0,slide.userData.full);
+bumpGroup.visible=true;slide.visible=tower.visible=pillarGroup.visible=true;slide.geometry.setDrawRange(0,slide.userData.full);
 waterMesh.visible=true;waterMesh.geometry.setDrawRange(0,waterMesh.userData.full);
 rider.visible=true;placeRider(0,0);coinGroup.visible=true;pool.visible=true;
 Object.assign(st,{sky:1,grass:1,lake:1,tree:1,slide:1,water:1,rider:1,coin:1,pool:1});
