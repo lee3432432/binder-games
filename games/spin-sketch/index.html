@@ -62,10 +62,10 @@ input[type=range]{width:120px}
   <div class="card step on" id="s1">
     <h2>1. 사진 두 장</h2><p>똑바로 봤을 때 보일 사진(A)과, 90° 돌리면 나타날 사진(B). 돌리는 동안 A가 사라지고 B가 나타나요. 얼굴이나 윤곽이 뚜렷한 사진이 잘 돼요.</p>
     <div class="drops">
-      <label class="drop" id="dropA"><span class="lbl">A · 똑바로</span><span id="phA">📷 사진 A<br><small>누르거나 끌어다 놓기</small></span><input type="file" accept="image/*" id="fileA"></label>
-      <label class="drop" id="dropB"><span class="lbl">B · 90° 돌리면</span><span id="phB">📷 사진 B<br><small>누르거나 끌어다 놓기</small></span><input type="file" accept="image/*" id="fileB"></label>
+      <div class="drop" id="dropA" onclick="document.getElementById('fileA').click()"><span class="lbl">A · 똑바로</span><span id="phA">📷 사진 A<br><small>누르거나 끌어다 놓기</small></span><input type="file" accept="image/*" id="fileA"></div>
+      <div class="drop" id="dropB" onclick="document.getElementById('fileB').click()"><span class="lbl">B · 90° 돌리면</span><span id="phB">📷 사진 B<br><small>누르거나 끌어다 놓기</small></span><input type="file" accept="image/*" id="fileB"></div>
     </div>
-    <div class="row"><button class="btn sm" id="sampleBtn">🎨 샘플 사진으로 해보기</button></div>
+    <div class="row"><button class="btn s sm" id="pickA">📷 A 사진 선택</button><button class="btn s sm" id="pickB">📷 B 사진 선택</button><button class="btn sm" id="sampleBtn">🎨 샘플로 해보기</button></div><p style="margin-top:8px">사진을 복사해서 이 페이지에 붙여넣기(Ctrl+V)해도 돼요 — 첫 번째는 A, 두 번째는 B.</p>
   </div>
 
   <div class="card step on" id="s2">
@@ -114,7 +114,8 @@ function sample(){const mk=draw=>{const c=document.createElement('canvas');c.wid
   const a=mk(g=>{g.fillStyle='#333';g.beginPath();g.ellipse(520,520,300,170,-.3,0,7);g.fill();g.beginPath();g.moveTo(760,440);g.lineTo(960,300);g.lineTo(930,560);g.closePath();g.fill();g.fillStyle='#fff';g.beginPath();g.arc(330,470,28,0,7);g.fill();g.strokeStyle='#333';g.lineWidth=6;for(let i=0;i<9;i++){g.beginPath();g.arc(420+i*40,560,70,2.6,3.9);g.stroke()}});
   const b=mk(g=>{g.fillStyle='#333';g.beginPath();g.arc(512,420,230,0,7);g.fill();g.fillRect(400,600,224,300);g.beginPath();g.ellipse(512,860,300,120,0,0,7);g.fill();g.fillStyle='#fff';g.beginPath();g.arc(430,400,30,0,7);g.arc(600,400,30,0,7);g.fill();g.strokeStyle='#fff';g.lineWidth=10;g.beginPath();g.arc(512,470,80,.3,2.8);g.stroke();for(let i=0;i<7;i++){g.fillStyle='#333';g.beginPath();g.moveTo(300+i*70,230);g.lineTo(330+i*70,90);g.lineTo(370+i*70,230);g.fill()}});
   setImg(a,'A');setImg(b,'B');toast('샘플: A=물고기, B=얼굴')}
-$('sampleBtn').onclick=sample;
+$('sampleBtn').onclick=sample;$('pickA').onclick=e=>{e.preventDefault();$('fileA').click()};$('pickB').onclick=e=>{e.preventDefault();$('fileB').click()};
+document.addEventListener('paste',e=>{const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'));if(it){loadFile(it.getAsFile(),imgA?'B':'A');toast(imgA?'B 사진 붙여넣음':'A 사진 붙여넣음')}});
 
 /* ---------- 스케치 변환 (그레이 → 반전 블러 → 컬러닷지) ---------- */
 function sketch(src,edge,dark){const w=SIZE,h=SIZE;const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');
