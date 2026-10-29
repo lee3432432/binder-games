@@ -78,7 +78,7 @@ footer{color:var(--sub);font-size:12px;text-align:center;margin-top:30px}
         <select id="soundSel" style="font:inherit;font-weight:700;border:2px solid var(--ink);border-radius:10px;padding:4px 8px"><option value="siren">🚨 사이렌</option><option value="cat">🐱 고양이</option><option value="talk">🗣️ "저 여기 있어요"</option><option value="satoori">🧓 "아이고, 내 여기 있다 아이가"</option><option value="wakeup">😤 "야! 니 정신 좀 차려라!"</option></select></div>
       <button class="btn big" id="ringBtn">📣 내 폰 찾기</button>
       <div class="status hide" id="ringStatus"></div>
-      <div class="row"><button class="btn sm" id="unpairBtn">연결 끊기</button></div>
+      <div class="row"><button class="btn sm" id="unpairBtn">연결 끊기</button><button class="btn sm" id="resetAll2">🧹 전체 초기화</button></div>
     </div>
   </section>
 
@@ -92,7 +92,7 @@ footer{color:var(--sub);font-size:12px;text-align:center;margin-top:30px}
       <div class="status hide" id="regStatus"></div>
       <div id="codeBox" class="hide"><p style="margin-top:14px">찾는 쪽 화면에 이 코드를 넣으세요</p><div class="code" id="codeOut"></div>
         <p>이 화면을 닫아도 돼요. 폰을 찾을 때 알림이 와요.</p>
-        <div class="row"><button class="btn sm" id="testBtn">🔔 나한테 테스트 알림</button><button class="btn sm" id="unregBtn">등록 해제</button></div></div>
+        <div class="row"><button class="btn sm" id="testBtn">🔔 나한테 테스트 알림</button><button class="btn sm" id="unregBtn">등록 해제</button><button class="btn sm" id="resetAll1">🧹 전체 초기화</button></div></div>
     </div>
   </section>
   <footer>생산성 0% 앱 #003 · 커맨드 플레이</footer>
@@ -133,7 +133,7 @@ async function register(){try{
   if(!('PushManager' in window)){status('regStatus','이 브라우저는 푸시 알림을 지원하지 않아요.\n아이폰은 홈 화면에 추가한 뒤 그 아이콘으로 열어야 돼요.','err');return}
   const perm=await Notification.requestPermission();if(perm!=='granted'){status('regStatus','알림이 허용되지 않았어요. 설정에서 알림을 켜주세요.','err');return}
   const reg=await getReg();await navigator.serviceWorker.ready;
-  let sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(VAPID)});
+  let sub=await reg.pushManager.getSubscription();if(sub){try{await sub.unsubscribe()}catch(e){}}sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(VAPID)});
   const code=LS('fmp_code')||genCode();LSs('fmp_code',code);LSs('fmp_sub',JSON.stringify(sub));
   // 코드 채널에 구독 정보 올리기 (찾는 쪽이 가져감)
   const r=await fetch(NTFY+'fmp-pair-'+code,{method:'POST',body:JSON.stringify({sub,ua:navigator.userAgent.slice(0,60),t:Date.now()}),headers:{'Cache':'yes'}});
@@ -141,6 +141,9 @@ async function register(){try{
   $('codeOut').textContent=code;$('codeBox').classList.remove('hide');status('regStatus','등록 완료! 이 폰은 이제 찾을 수 있어요.','ok');
 }catch(e){status('regStatus','등록 실패: '+(e.message||e),'err')}}
 $('regBtn').onclick=register;
+async function resetAll(){try{const reg=await navigator.serviceWorker.getRegistration('./');if(reg){const su=await reg.pushManager.getSubscription();if(su)await su.unsubscribe();await reg.unregister()}}catch(e){}
+  for(const k of['fmp_code','fmp_sub','fmp_find_code','fmp_find_sub','fmp_mode'])LSs(k,null);toast('초기화했어요. 새로 등록해 주세요.');setTimeout(()=>location.href=location.pathname,800)}
+$('resetAll1').onclick=resetAll;$('resetAll2').onclick=resetAll;
 $('unregBtn').onclick=async()=>{try{const reg=await navigator.serviceWorker.getRegistration('./');const s=reg&&await reg.pushManager.getSubscription();if(s)await s.unsubscribe()}catch(e){}LSs('fmp_code',null);LSs('fmp_sub',null);$('codeBox').classList.add('hide');status('regStatus','등록을 해제했어요.')};
 $('testBtn').onclick=async()=>{const sub=JSON.parse(LS('fmp_sub')||'null');if(!sub)return;status('regStatus','테스트 알림 보내는 중…');const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub,code:LS('fmp_code'),sound:'siren'})});const j=await r.json().catch(()=>({}));status('regStatus',j.ok?'보냈어요! 잠시 후 알림이 와요.':'실패: '+(j.error||r.status),j.ok?'ok':'err')};
 if(LS('fmp_code')&&LS('fmp_sub')){$('codeOut').textContent=LS('fmp_code');$('codeBox').classList.remove('hide')}
@@ -149,7 +152,11 @@ if(/iPhone|iPad/.test(navigator.userAgent)&&!navigator.standalone){$('installTip
 /* ---------- 폰 모드: 알람 + 위치 보내기 ---------- */
 async function phoneAlarm(sound){setMode('phone');startAlarm(sound||'siren')}
 if(q.get('alarm')==='1'){document.addEventListener('click',function once(){audio();document.removeEventListener('click',once)});phoneAlarm(q.get('sound'))}
-if('serviceWorker' in navigator){navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.type==='ALARM')phoneAlarm(e.data.sound)});if(LS('fmp_code'))getReg().catch(()=>{})}
+if('serviceWorker' in navigator){navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.type==='ALARM')phoneAlarm(e.data.sound)});if(LS('fmp_code'))refreshSub()}
+async function refreshSub(){try{const reg=await getReg();await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
+  if(!sub&&Notification.permission==='granted')sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(VAPID)});
+  if(!sub){status('regStatus','등록이 풀려 있어요. 다시 등록해 주세요.','err');return}
+  LSs('fmp_sub',JSON.stringify(sub));fetch(NTFY+'fmp-pair-'+LS('fmp_code'),{method:'POST',body:JSON.stringify({sub,ua:navigator.userAgent.slice(0,60),t:Date.now()})}).catch(()=>{})}catch(e){}}
 
 /* ---------- 찾기 모드 ---------- */
 function showPaired(){const code=LS('fmp_find_code');$('pairCard').classList.toggle('hide',!!code);$('findCard').classList.toggle('hide',!code);if(code){$('pairedCode').textContent=code}}
@@ -160,10 +167,11 @@ async function pair(){const code=$('codeIn').value.trim().toUpperCase();if(code.
   catch(e){status('pairStatus','연결 실패: '+(e.message||e),'err')}}
 $('pairBtn').onclick=pair;$('codeIn').addEventListener('keydown',e=>{if(e.key==='Enter')pair()});
 $('unpairBtn').onclick=()=>{LSs('fmp_find_code',null);LSs('fmp_find_sub',null);showPaired()};
-async function ring(){const sub=JSON.parse(LS('fmp_find_sub')||'null');if(!sub)return;$('ringBtn').disabled=true;status('ringStatus','폰 부르는 중… 📡');
+async function latestSub(code){try{const r=await fetch(NTFY+'fmp-pair-'+code+'/json?poll=1&since=all');const lines=(await r.text()).trim().split('\n').filter(Boolean).map(l=>JSON.parse(l)).filter(m=>m.event==='message');if(lines.length){const last=JSON.parse(lines[lines.length-1].message);if(last.sub&&last.sub.endpoint){LSs('fmp_find_sub',JSON.stringify(last.sub));return last.sub}}}catch(e){}return JSON.parse(LS('fmp_find_sub')||'null')}
+async function ring(){$('ringBtn').disabled=true;status('ringStatus','폰 부르는 중… 📡');const sub=await latestSub(LS('fmp_find_code'));if(!sub){status('ringStatus','폰 등록 정보가 없어요. 폰에서 다시 등록해 주세요.','err');$('ringBtn').disabled=false;return}
   try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub,code:LS('fmp_find_code'),sound:$('soundSel').value})});const j=await r.json().catch(()=>({}));
     if(j.ok)status('ringStatus','폰에 알림을 보냈어요! 알림을 누르면 폰이 소리쳐요.','ok');
-    else if(j.statusCode===410||j.statusCode===404)status('ringStatus','이 폰의 등록이 만료됐어요. 폰에서 다시 등록해 주세요.','err');
+    else if(j.statusCode===410||j.statusCode===404){LSs('fmp_find_sub',null);status('ringStatus','이 폰의 등록이 만료됐어요. 폰에서 "이 폰 등록"을 다시 눌러주세요 (코드는 그대로 써도 돼요).','err')}
     else status('ringStatus','실패: '+(j.error||r.status),'err')}
   catch(e){status('ringStatus','서버에 연결 못 했어요: '+e.message,'err')}
   setTimeout(()=>$('ringBtn').disabled=false,3000)}
