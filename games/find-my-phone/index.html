@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>내 폰 찾기 · 커맨드 플레이</title>
-<meta name="description" content="웹에서 버튼 하나 누르면 내 폰이 소리치고 위치를 알려줘요.">
+<meta name="description" content="웹에서 버튼 하나 누르면 내 폰이 소리쳐요.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
@@ -13,7 +13,6 @@
 <meta name="theme-color" content="#ffd23f">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#fff8e7;--ink:#1b1b2f;--sub:#5b5b72;--card:#fff;--yellow:#ffd23f;--pink:#ff6fae;--sky:#4cc9f0;--green:#7bd389;--red:#ff4f6a}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -44,7 +43,6 @@ input.code-in:focus{border-color:var(--pink)}
 .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .status{font-size:14px;font-weight:700;padding:10px 12px;border-radius:12px;background:#f1efe6;margin-top:10px;white-space:pre-line}
 .status.ok{background:#e4f8e8}.status.err{background:#ffe3e8}
-#map{height:280px;border:3px solid var(--ink);border-radius:14px;margin-top:12px;background:#dfe9f3}
 .hide{display:none!important}
 /* 알람 화면 */
 #alarm{position:fixed;inset:0;display:none;place-items:center;z-index:50;background:var(--red);color:#fff;text-align:center;padding:24px;animation:blink .5s steps(1) infinite}
@@ -75,13 +73,12 @@ footer{color:var(--sub);font-size:12px;text-align:center;margin-top:30px}
     </div>
     <div class="card hide" id="findCard">
       <h2>연결된 폰: <span id="pairedCode"></span></h2>
-      <p>버튼을 누르면 폰이 소리치고, 폰에서 알림을 누르면 위치가 아래 지도에 떠요.</p>
+      <p>버튼을 누르면 폰에 알림이 가고, 알림을 누르면 폰이 소리쳐요.</p>
       <div class="row" style="margin:10px 0 14px"><label style="font-weight:700;font-size:14px">소리</label>
         <select id="soundSel" style="font:inherit;font-weight:700;border:2px solid var(--ink);border-radius:10px;padding:4px 8px"><option value="siren">🚨 사이렌</option><option value="cat">🐱 고양이</option><option value="talk">🗣️ "저 여기 있어요"</option><option value="satoori">🧓 "아이고, 내 여기 있다 아이가"</option><option value="wakeup">😤 "야! 니 정신 좀 차려라!"</option></select></div>
       <button class="btn big" id="ringBtn">📣 내 폰 찾기</button>
       <div class="status hide" id="ringStatus"></div>
-      <div id="map"></div>
-      <div class="row"><a class="btn sm hide" id="mapLink" target="_blank">🗺️ 구글 지도에서 열기</a><button class="btn sm" id="unpairBtn">연결 끊기</button></div>
+      <div class="row"><button class="btn sm" id="unpairBtn">연결 끊기</button></div>
     </div>
   </section>
 
@@ -101,9 +98,8 @@ footer{color:var(--sub);font-size:12px;text-align:center;margin-top:30px}
   <footer>생산성 0% 앱 #003 · 커맨드 플레이</footer>
 </div>
 
-<div id="alarm"><div><div class="pulse" style="font-size:80px">📱</div><h1>저 여기<br>있어요!!</h1><p id="alarmMsg">위치 보내는 중…</p><button class="btn" id="stopBtn">찾았어요 ✋</button></div></div>
+<div id="alarm"><div><div class="pulse" style="font-size:80px">📱</div><h1>저 여기<br>있어요!!</h1><p id="alarmMsg">찾으면 아래 버튼을 눌러주세요</p><button class="btn" id="stopBtn">찾았어요 ✋</button></div></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const VAPID='BIcOjpNPNdcPRV7nFGXKMMrboaNxhu3gqYsHwokZ2Jkeq05AvWt7clWeTR51ZIKVfyjvODrTVEEHVuhtPOSz3qQ';
 const API=(location.protocol==='file:'?'https://binder-games.vercel.app':'')+'/api/ring';
@@ -151,39 +147,27 @@ if(LS('fmp_code')&&LS('fmp_sub')){$('codeOut').textContent=LS('fmp_code');$('cod
 if(/iPhone|iPad/.test(navigator.userAgent)&&!navigator.standalone){$('installTip').innerHTML='<b style="color:var(--red)">아이폰은 꼭 홈 화면에 추가한 뒤, 그 아이콘으로 열어서 등록해야 알림이 와요.</b><br>사파리 공유 버튼 → "홈 화면에 추가"'}
 
 /* ---------- 폰 모드: 알람 + 위치 보내기 ---------- */
-let watchId=null;
-async function phoneAlarm(sound){setMode('phone');startAlarm(sound||'siren');const code=LS('fmp_code')||q.get('code')||'';
-  if(!navigator.geolocation){$('alarmMsg').textContent='이 기기는 위치를 못 가져와요';return}
-  const send=pos=>{const d={lat:pos.coords.latitude,lng:pos.coords.longitude,acc:Math.round(pos.coords.accuracy),t:Date.now()};
-    fetch(NTFY+'fmp-loc-'+code,{method:'POST',body:JSON.stringify(d)}).then(()=>{$('alarmMsg').textContent=`위치 보냈어요 (오차 ${d.acc}m)`}).catch(()=>{$('alarmMsg').textContent='위치 전송 실패 (인터넷 확인)'})};
-  if(watchId!==null)navigator.geolocation.clearWatch(watchId);
-  watchId=navigator.geolocation.watchPosition(send,err=>{$('alarmMsg').textContent='위치 권한이 없어요: '+err.message},{enableHighAccuracy:true,maximumAge:0,timeout:20000})}
+async function phoneAlarm(sound){setMode('phone');startAlarm(sound||'siren')}
 if(q.get('alarm')==='1'){document.addEventListener('click',function once(){audio();document.removeEventListener('click',once)});phoneAlarm(q.get('sound'))}
 if('serviceWorker' in navigator){navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.type==='ALARM')phoneAlarm(e.data.sound)});if(LS('fmp_code'))getReg().catch(()=>{})}
 
 /* ---------- 찾기 모드 ---------- */
-let map=null,marker=null,circle=null,es=null;
-function showPaired(){const code=LS('fmp_find_code');$('pairCard').classList.toggle('hide',!!code);$('findCard').classList.toggle('hide',!code);if(code){$('pairedCode').textContent=code;initMap();listenLoc(code)}}
+function showPaired(){const code=LS('fmp_find_code');$('pairCard').classList.toggle('hide',!!code);$('findCard').classList.toggle('hide',!code);if(code){$('pairedCode').textContent=code}}
 async function pair(){const code=$('codeIn').value.trim().toUpperCase();if(code.length<6){status('pairStatus','6자리 코드를 넣어주세요','err');return}
   status('pairStatus','연결 중…');try{let lines=[];for(let i=0;i<4&&!lines.length;i++){if(i)await new Promise(r=>setTimeout(r,1200));const r=await fetch(NTFY+'fmp-pair-'+code+'/json?poll=1&since=all');const txt=await r.text();lines=txt.trim().split('\n').filter(Boolean).map(l=>JSON.parse(l)).filter(m=>m.event==='message')}
     if(!lines.length)throw new Error('코드를 찾을 수 없어요. 폰에서 등록을 다시 해주세요 (코드는 12시간 뒤 만료)');
     const last=JSON.parse(lines[lines.length-1].message);LSs('fmp_find_code',code);LSs('fmp_find_sub',JSON.stringify(last.sub));status('pairStatus','연결됐어요!','ok');showPaired()}
   catch(e){status('pairStatus','연결 실패: '+(e.message||e),'err')}}
 $('pairBtn').onclick=pair;$('codeIn').addEventListener('keydown',e=>{if(e.key==='Enter')pair()});
-$('unpairBtn').onclick=()=>{LSs('fmp_find_code',null);LSs('fmp_find_sub',null);if(es){es.close();es=null}showPaired()};
+$('unpairBtn').onclick=()=>{LSs('fmp_find_code',null);LSs('fmp_find_sub',null);showPaired()};
 async function ring(){const sub=JSON.parse(LS('fmp_find_sub')||'null');if(!sub)return;$('ringBtn').disabled=true;status('ringStatus','폰 부르는 중… 📡');
   try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub,code:LS('fmp_find_code'),sound:$('soundSel').value})});const j=await r.json().catch(()=>({}));
-    if(j.ok)status('ringStatus','폰에 알림을 보냈어요! 폰에서 알림을 누르면 위치가 지도에 떠요.','ok');
+    if(j.ok)status('ringStatus','폰에 알림을 보냈어요! 알림을 누르면 폰이 소리쳐요.','ok');
     else if(j.statusCode===410||j.statusCode===404)status('ringStatus','이 폰의 등록이 만료됐어요. 폰에서 다시 등록해 주세요.','err');
     else status('ringStatus','실패: '+(j.error||r.status),'err')}
   catch(e){status('ringStatus','서버에 연결 못 했어요: '+e.message,'err')}
   setTimeout(()=>$('ringBtn').disabled=false,3000)}
 $('ringBtn').onclick=ring;
-function initMap(){if(map||!window.L)return;map=L.map('map',{zoomControl:true}).setView([37.5665,126.978],11);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map)}
-function showLoc(d){if(!map)return;const ll=[d.lat,d.lng];if(!marker){marker=L.marker(ll).addTo(map);circle=L.circle(ll,{radius:d.acc||30,color:'#ff6fae'}).addTo(map)}else{marker.setLatLng(ll);circle.setLatLng(ll).setRadius(d.acc||30)}
-  map.setView(ll,17);marker.bindPopup(`📱 여기! (오차 ${d.acc}m)<br>${new Date(d.t).toLocaleTimeString('ko-KR')}`).openPopup();
-  const a=$('mapLink');a.href=`https://www.google.com/maps?q=${d.lat},${d.lng}`;a.classList.remove('hide');status('ringStatus',`위치 받았어요! 오차 약 ${d.acc}m · ${new Date(d.t).toLocaleTimeString('ko-KR')}`,'ok')}
-function listenLoc(code){if(es)es.close();es=new EventSource(NTFY+'fmp-loc-'+code+'/sse?since=10m');es.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.event==='message')showLoc(JSON.parse(m.message))}catch(err){}}}
 showPaired();
 </script>
 </body>
