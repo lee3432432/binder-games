@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>수학을 예술로 · 커맨드 플레이</title>
+<meta name="description" content="함수 하나 고르면 네온 그래프가 그려지고, 그래프 모양대로 소리가 나요.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#000;color:#fff;font-family:"Noto Sans KR",system-ui,sans-serif;overflow:hidden;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+header{text-align:center;padding:14px 10px 4px}
+h1{font-family:"Black Han Sans",sans-serif;font-size:clamp(28px,7vw,46px);line-height:1.05;color:#ff5ad9;text-shadow:0 0 8px #ff5ad9,0 0 22px #c21fbd,0 0 40px #8a0e8a}
+h1 .l2{color:#c74bff;text-shadow:0 0 8px #c74bff,0 0 22px #8a2be2}
+#cap{text-align:center;color:#8dff6a;font-weight:900;font-size:clamp(13px,3.6vw,18px);text-shadow:0 0 6px #8dff6a,0 0 14px #3fbf2a;padding:6px 10px;min-height:30px}
+#stage{position:relative;flex:1;min-height:0}
+#c{position:absolute;inset:0;width:100%;height:100%;display:block}
+#wm{position:absolute;right:12px;bottom:8px;color:#444;font-size:12px;font-family:serif}
+#formula{text-align:center;min-height:54px;padding:6px 10px;font-size:clamp(15px,3.8vw,22px);color:var(--fc,#fff);text-shadow:0 0 6px var(--fc,#fff);overflow:hidden;white-space:nowrap}
+#formula .katex{color:inherit}
+#picker{display:flex;gap:8px;overflow-x:auto;padding:8px 10px 14px;scrollbar-width:none}
+#picker::-webkit-scrollbar{display:none}
+.fn{flex:none;border:2px solid #333;background:#0a0a0f;color:#ddd;border-radius:14px;padding:10px 12px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;text-align:left;min-width:132px}
+.fn b{display:block;font-size:15px;color:var(--c)}
+.fn small{display:block;color:#888;font-size:11px;margin-top:2px}
+.fn[aria-pressed="true"]{border-color:var(--c);box-shadow:0 0 14px var(--c)}
+.top-r{position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:5}
+.btn{border:2px solid #444;background:rgba(0,0,0,.7);color:#fff;font:inherit;font-weight:900;font-size:12px;border-radius:10px;padding:5px 10px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+#tap{position:absolute;inset:0;display:grid;place-items:center;z-index:9;background:rgba(0,0,0,.6)}
+#tap.off{display:none}
+#tap button{font-family:"Black Han Sans",sans-serif;font-size:30px;padding:14px 40px;border-radius:999px;border:3px solid #ff5ad9;background:#000;color:#fff;box-shadow:0 0 24px #ff5ad9;cursor:pointer}
+#tap p{color:#aaa;font-weight:700;margin-top:14px;font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+<div id="app">
+  <header><h1>수학을 예술로<br><span class="l2">승화 시켜버림;;</span></h1></header>
+  <div id="cap"></div>
+  <div id="stage"><canvas id="c"></canvas><div id="wm">@commandplay</div>
+    <div class="top-r"><a class="btn" href="/">🏠</a><button class="btn" id="rep">↻ 다시</button><button class="btn" id="auto">▶ 전부 재생</button></div>
+    <div id="tap"><div><button id="go">시작</button><p>소리가 나요 🔊 볼륨을 올리세요</p></div></div>
+  </div>
+  <div id="formula"></div>
+  <div id="picker"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const cv=$('c'),g=cv.getContext('2d');let W=0,H=0,DPR=1;
+function resize(){DPR=Math.min(2,devicePixelRatio||1);const r=$('stage').getBoundingClientRect();W=r.width;H=r.height;cv.width=W*DPR;cv.height=H*DPR;g.setTransform(DPR,0,0,DPR,0,0);drawFrame(cur,prog)}
+addEventListener('resize',resize);
+const gcd=(a,b)=>{a=Math.abs(Math.round(a));b=Math.abs(Math.round(b));while(b){[a,b]=[b,a%b]}return a};
+const sq=x=>{const s=Math.sin(x);return s>=0?Math.sqrt(s):NaN};
+
+/* ---------- 함수 목록 ---------- */
+const FUNCS=[
+ {id:'heart',name:'하트',cap:'* 귀신이 사랑한다고 속삭임;; *',tex:'f(x)=x^{\\frac23}+\\sqrt{3-x^2}\\,\\sin(16\\pi x)',col:'#ff5ad9',range:[-3.2,3.2],yr:[-4,4],dur:7,
+  f:x=>Math.cbrt(x*x)+Math.sqrt(Math.max(0,3-x*x))*Math.sin(16*Math.PI*x),labels:[['(사랑해!)',.78,.2],['(사랑한다고!)',.08,.72]],tone:'buzz'},
+ {id:'mosq',name:'모기',cap:'* 노래 잘하는 모기랄까...? *',tex:'f(x)=5\\cos x-\\cos 5x',col:'#c74bff',range:[-9,9],yr:[-7,7],dur:6,f:x=>5*Math.cos(x)-Math.cos(5*x),tone:'sine'},
+ {id:'gcd',name:'최대공약수',cap:'*땅땅 따라라라 똥똥 띵똥 *',tex:'f(x)=\\gcd(x,\\,8)',col:'#7ec8ff',range:[-14,14],yr:[-2,10],dur:5,f:x=>gcd(x,8),discrete:true,tone:'pluck'},
+ {id:'square',name:'구급차',cap:'*어.. 구급차?*',tex:'f(x)=5\\sum_{k=1}^{12}\\frac{1}{2k+1}\\sin((2k+1)x)',col:'#ff5a8a',range:[-10,10],yr:[-7,7],dur:6,f:x=>{let s=0;for(let k=1;k<=12;k++)s+=Math.sin((2*k+1)*x)/(2*k+1);return 5*s},tone:'saw'},
+ {id:'puppy',name:'휴게소 강아지',cap:'*정답 !! 휴게소 강아지인형*',tex:'f(x)=10\\sqrt{\\sin(5x)}',col:'#8dff6a',range:[-10,10],yr:[-3,12],dur:5,f:x=>{const v=sq(5*x);return isNaN(v)?NaN:10*v},tone:'sine'},
+ {id:'abs',name:'절댓값',cap:'*세번째 소리 뭔지 아시는분?*',tex:'f(x)=|x|',col:'#8dff6a',range:[-8,8],yr:[-2,10],dur:4,f:x=>Math.abs(x),tone:'sine'},
+ {id:'sinc',name:'물결',cap:'*물 떨어지는 소리 같은데*',tex:'f(x)=8\\,\\frac{\\sin(4x)}{x}',col:'#4cc9f0',range:[-12,12],yr:[-8,34],dur:6,f:x=>x===0?32:8*Math.sin(4*x)/x,tone:'sine'},
+ {id:'saw',name:'톱니',cap:'*공사장 소리 ㅋㅋ*',tex:'f(x)=4\\,(x\\bmod 2)-4',col:'#ffd23f',range:[-10,10],yr:[-6,6],dur:5,f:x=>4*(((x%2)+2)%2)-4,tone:'saw'},
+ {id:'spiral',name:'소용돌이',cap:'*빨려들어감...*',tex:'f(x)=x\\,\\sin(x^2/2)',col:'#ff9a3c',range:[-8,8],yr:[-9,9],dur:7,f:x=>x*Math.sin(x*x/2),tone:'sine'},
+ {id:'cat',name:'고양이',cap:'*야옹?*',tex:'f(x)=\\sqrt{9-x^2}+\\max(0,\\,3-4\\,|\\,|x|-2\\,|)',col:'#c74bff',range:[-5,5],yr:[-4,7],dur:6,
+  f:x=>{const a=Math.abs(x);if(a>3)return NaN;return Math.sqrt(9-x*x)+Math.max(0,3-4*Math.abs(a-2))},tone:'buzz'},
+];
+
+/* ---------- 오디오 ---------- */
+let AC=null,master=null,osc=null,oscG=null,filt=null;
+function audio(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=1.4;const comp=AC.createDynamicsCompressor();comp.threshold.value=-16;master.connect(comp);comp.connect(AC.destination)}if(AC.state==='suspended')AC.resume();return AC}
+function startVoice(tone){stopVoice();const ac=audio();osc=ac.createOscillator();osc.type=tone==='saw'?'sawtooth':tone==='buzz'?'square':tone==='pluck'?'triangle':'sine';osc.frequency.value=440;
+  filt=ac.createBiquadFilter();filt.type='lowpass';filt.frequency.value=tone==='sine'?3000:1800;filt.Q.value=2;
+  oscG=ac.createGain();oscG.gain.value=0;osc.connect(filt);filt.connect(oscG);oscG.connect(master);osc.start();
+  // 약간의 비브라토 (영상의 흔들리는 톤)
+  const lfo=ac.createOscillator(),lg=ac.createGain();lfo.frequency.value=6;lg.gain.value=4;lfo.connect(lg);lg.connect(osc.frequency);lfo.start();osc._lfo=lfo}
+function stopVoice(){if(osc){try{oscG.gain.setTargetAtTime(0,AC.currentTime,.02);const o=osc,l=osc._lfo;setTimeout(()=>{try{o.stop();l.stop()}catch(e){}},200)}catch(e){}osc=null}}
+let lastY=null;
+function voice(y,yr,on,discrete){if(!osc)return;const t=AC.currentTime;if(!on||isNaN(y)){oscG.gain.setTargetAtTime(0,t,.01);lastY=null;return}
+  const n=(y-yr[0])/(yr[1]-yr[0]);const f=180*Math.pow(2,n*3.2);// 3옥타브 범위
+  if(discrete){if(lastY!==y){osc.frequency.setValueAtTime(f,t);oscG.gain.cancelScheduledValues(t);oscG.gain.setValueAtTime(.001,t);oscG.gain.exponentialRampToValueAtTime(.7,t+.01);oscG.gain.exponentialRampToValueAtTime(.08,t+.25)}lastY=y;return}
+  osc.frequency.setTargetAtTime(f,t,.008);oscG.gain.setTargetAtTime(.55,t,.02);lastY=y}
+function sfxDone(col){const ac=audio();[880,1108,1318,1760].forEach((f,i)=>{const o=ac.createOscillator(),gn=ac.createGain();o.type='triangle';o.frequency.value=f;const t=ac.currentTime+i*.07;gn.gain.setValueAtTime(0,t);gn.gain.linearRampToValueAtTime(.25,t+.01);gn.gain.exponentialRampToValueAtTime(.0001,t+.5);o.connect(gn);gn.connect(master);o.start(t);o.stop(t+.6)})}
+
+/* ---------- 그리기 ---------- */
+let cur=FUNCS[0],prog=0,playing=false,raf=null,t0=0,autoMode=false,autoIdx=0;
+function toPx(x,y,fn){const [x0,x1]=fn.range,[y0,y1]=fn.yr;const px=(x-x0)/(x1-x0)*W;const py=H-(y-y0)/(y1-y0)*H;return [px,py]}
+function drawFrame(fn,p){g.clearRect(0,0,W,H);
+  // 축
+  const [ox,oy]=toPx(0,0,fn);g.strokeStyle='#777';g.lineWidth=1;g.beginPath();g.moveTo(0,oy);g.lineTo(W,oy);g.moveTo(ox,0);g.lineTo(ox,H);g.stroke();
+  // 화살촉
+  g.fillStyle='#777';g.beginPath();g.moveTo(W-1,oy);g.lineTo(W-9,oy-4);g.lineTo(W-9,oy+4);g.fill();g.beginPath();g.moveTo(ox,1);g.lineTo(ox-4,9);g.lineTo(ox+4,9);g.fill();
+  // 눈금
+  const [x0,x1]=fn.range,[y0,y1]=fn.yr;for(let x=Math.ceil(x0);x<=x1;x++){const [px]=toPx(x,0,fn);g.beginPath();g.moveTo(px,oy-3);g.lineTo(px,oy+3);g.stroke()}
+  for(let y=Math.ceil(y0);y<=y1;y++){const [,py]=toPx(0,y,fn);g.beginPath();g.moveTo(ox-3,py);g.lineTo(ox+3,py);g.stroke()}
+  // 그래프
+  const N=fn.discrete?Math.round(x1-x0):2400;const upto=Math.floor(N*p);
+  g.strokeStyle=fn.col;g.fillStyle=fn.col;g.shadowColor=fn.col;g.shadowBlur=14;g.lineWidth=2.2;g.lineJoin='round';g.lineCap='round';
+  if(fn.discrete){for(let i=0;i<=upto;i++){const x=x0+i;const y=fn.f(x);if(isNaN(y))continue;const [px,py]=toPx(x,y,fn);g.beginPath();g.arc(px,py,3.5,0,7);g.fill()}}
+  else{g.beginPath();let pen=false;for(let i=0;i<=upto;i++){const x=x0+(x1-x0)*i/N;const y=fn.f(x);if(isNaN(y)||!isFinite(y)){pen=false;continue}const [px,py]=toPx(x,y,fn);if(!pen){g.moveTo(px,py);pen=true}else g.lineTo(px,py)}g.stroke();
+    // 펜 끝 점
+    if(p>0&&p<1){const x=x0+(x1-x0)*upto/N;const y=fn.f(x);if(!isNaN(y)){const [px,py]=toPx(x,y,fn);g.shadowBlur=24;g.beginPath();g.arc(px,py,4,0,7);g.fill()}}}
+  g.shadowBlur=0;
+  // 라벨
+  if(fn.labels&&p>.5){g.fillStyle='#fff';g.font='700 14px "Noto Sans KR"';g.shadowColor='#fff';g.shadowBlur=6;for(const [t,lx,ly] of fn.labels)g.fillText(t,W*lx,H*ly);g.shadowBlur=0}}
+function tick(now){if(!playing)return;const el=(now-t0)/1000;prog=Math.min(1,el/cur.dur);drawFrame(cur,prog);
+  const [x0,x1]=cur.range;const x=cur.discrete?x0+Math.round((x1-x0)*prog):x0+(x1-x0)*prog;const y=cur.f(x);voice(y,cur.yr,true,cur.discrete);
+  if(prog>=1){playing=false;stopVoice();sfxDone(cur.col);if(autoMode){setTimeout(()=>{autoIdx=(autoIdx+1)%FUNCS.length;if(autoIdx===0){autoMode=false;$('auto').textContent='▶ 전부 재생';return}play(FUNCS[autoIdx])},900)}return}
+  raf=requestAnimationFrame(tick)}
+function play(fn){cur=fn;prog=0;playing=true;t0=performance.now();lastY=null;
+  document.documentElement.style.setProperty('--fc',fn.col);$('cap').textContent=fn.cap;$('cap').style.color=fn.col==='#8dff6a'?'#8dff6a':'#8dff6a';
+  try{if(window.katex)katex.render(fn.tex,$('formula'),{throwOnError:false,displayMode:false});else throw 0}catch(e){$('formula').textContent=fn.tex.replace(/\\\\(frac|sqrt|sin|cos|gcd|sum|max|text|pi|cdots)/g,'$1').replace(/[{}\\\\]/g,'')}
+  [...$('picker').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===fn.id));
+  audio();startVoice(fn.tone);cancelAnimationFrame(raf);raf=requestAnimationFrame(tick)}
+/* ---------- UI ---------- */
+for(const fn of FUNCS){const b=document.createElement('button');b.className='fn';b.dataset.id=fn.id;b.style.setProperty('--c',fn.col);b.innerHTML=`<b></b><small></small>`;b.querySelector('b').textContent=fn.name;b.querySelector('small').textContent=fn.cap.replace(/\*/g,'').trim();b.onclick=()=>{autoMode=false;$('auto').textContent='▶ 전부 재생';play(fn)};$('picker').appendChild(b)}
+$('rep').onclick=()=>play(cur);
+$('auto').onclick=()=>{if(autoMode){autoMode=false;$('auto').textContent='▶ 전부 재생';return}autoMode=true;autoIdx=0;$('auto').textContent='⏹ 멈춤';play(FUNCS[0])};
+$('go').onclick=()=>{audio();$('tap').classList.add('off');play(FUNCS[0])};
+resize();drawFrame(cur,0);
+window.__app={play,FUNCS,get prog(){return prog},get playing(){return playing}};
+</script>
+</body>
+</html>
