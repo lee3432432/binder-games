@@ -1,0 +1,8 @@
+CC0 sound effects from Openverse (freesound.org previews):
+g01.mp3   "Glitch 01"            freesound 237607
+gs1.mp3   "glitched sound 1"     freesound 424375
+vhs.mp3   "VHS Glitch"           freesound 264935
+corr.mp3  "Glitch Corruption"    freesound 348585
+noise.mp3 "Glitch Noise 1"       freesound 369145
+odd.mp3   "Odd glitch"           freesound 371603
+All CC0 1.0 (public domain). Re-encoded/normalized.

@@ -59,13 +59,22 @@ addEventListener('resize',resize);
 const rand=(a,b)=>a+Math.random()*(b-a);
 const lerp=(a,b,t)=>a+(b-a)*t;
 
-/* ---------- 사운드 ---------- */
-let AC=null,master=null,sound=false;
-function audio(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=.9;master.connect(AC.destination)}if(AC.state==='suspended')AC.resume();return AC}
+/* ---------- 사운드 (Openverse CC0 글리치 샘플) ---------- */
+let AC=null,master=null,sound=false;const BUF={};
+const SFX={g01:'sfx/g01.mp3',gs1:'sfx/gs1.mp3',vhs:'sfx/vhs.mp3',corr:'sfx/corr.mp3',noise:'sfx/noise.mp3',odd:'sfx/odd.mp3'};
+function audio(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=1.6;const comp=AC.createDynamicsCompressor();comp.threshold.value=-18;comp.ratio.value=6;master.connect(comp);comp.connect(AC.destination);
+  for(const [k,u] of Object.entries(SFX))fetch(u).then(r=>r.arrayBuffer()).then(b=>AC.decodeAudioData(b)).then(d=>BUF[k]=d).catch(()=>{})}if(AC.state==='suspended')AC.resume();return AC}
+function play(k,{vol=1,rate=1,off=0,dur=0,pan=0}={}){if(!sound||!AC||!BUF[k])return;const s=AC.createBufferSource();s.buffer=BUF[k];s.playbackRate.value=rate;const g=AC.createGain();g.gain.value=vol;let node=s;if(AC.createStereoPanner){const p=AC.createStereoPanner();p.pan.value=Math.max(-1,Math.min(1,pan));s.connect(p);node=p}node.connect(g);g.connect(master);const t=AC.currentTime;s.start(t,off,dur||undefined);}
 function tone(f,dur,vol,type='sine',t0=0){if(!sound)return;const ac=audio();const o=ac.createOscillator(),gn=ac.createGain();const t=ac.currentTime+t0;o.type=type;o.frequency.value=f;gn.gain.setValueAtTime(0,t);gn.gain.linearRampToValueAtTime(vol,t+.005);gn.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(gn);gn.connect(master);o.start(t);o.stop(t+dur+.05)}
-function sfxEat(){tone(rand(1400,2200),.08,.18,'square');tone(rand(2600,3600),.12,.08,'triangle',.04)}
-function sfxBad(){tone(220,.25,.25,'sawtooth');tone(180,.35,.2,'sawtooth',.08)}
-function sfxWin(){[1046,1318,1568,2093].forEach((f,i)=>tone(f,.4,.2,'triangle',i*.1))}
+const panOf=x=>(x/W-.5)*1.6;
+// 먹기: 짧은 글리치 두 겹 + 피치 랜덤
+function sfxEat(x){play('g01',{vol:1.2,rate:rand(.9,1.6),pan:panOf(x)});play('gs1',{vol:.9,rate:rand(1.2,2.2),off:0,dur:.25,pan:panOf(x)});if(Math.random()<.4)play('corr',{vol:.6,rate:rand(1.5,2.5),off:rand(0,.6),dur:.2,pan:panOf(x)})}
+// 글자 스침: 아주 짧은 조각을 빠르게 (타이핑 느낌)
+function sfxGraze(x){play(Math.random()<.5?'gs1':'g01',{vol:rand(.35,.7),rate:rand(1.6,3.2),off:rand(0,.2),dur:.09,pan:panOf(x)})}
+function sfxBad(x){play('odd',{vol:1.3,rate:.7,dur:1.2,pan:panOf(x)});play('noise',{vol:.9,rate:.8,dur:.8,pan:panOf(x)})}
+function sfxWin(){play('vhs',{vol:1.2,rate:1});[1046,1318,1568,2093].forEach((f,i)=>tone(f,.4,.25,'triangle',i*.1+.3))}
+// 움직임 소리: 속도에 비례해 노이즈 조각을 뿌림
+let moveAcc=0;function sfxMove(speed,x){moveAcc+=speed;if(moveAcc>90){moveAcc=0;play('noise',{vol:Math.min(.5,.12+speed/900),rate:rand(1.8,3.5),off:rand(0,1.2),dur:.07,pan:panOf(x)})}}
 $('snd').onclick=()=>{sound=!sound;$('snd').textContent=sound?'소리 켜짐':'소리 꺼짐';if(sound)audio()};
 
 /* ---------- 백과사전 텍스트 ---------- */
@@ -87,7 +96,7 @@ function layoutText(){lines=[];tokens=[];FS=W<600?12:14;LH=FS*1.6;g.font=`${FS}p
     if(Math.random()<.12){t.kind='good';t.col=['#39d5ff','#7bff8a','#ffd23f','#ff6fae','#b14cff'][Math.floor(rand(0,5))]}else if(Math.random()<.025){t.kind='bad';t.col='#ff3b3b'}else t.kind='';t.eaten=false;tokens.push(t)}}
 
 /* ---------- 생물 ---------- */
-const KIND={centipede:{n:34,sp:.26,legs:true,col:'#7bff8a',col2:'#ffd23f'},spider:{n:12,sp:.34,legs:'spider',col:'#39d5ff',col2:'#ff6fae'},jelly:{n:22,sp:.18,legs:false,col:'#b14cff',col2:'#39d5ff'}};
+const KIND={centipede:{n:34,sp:.42,legs:true,col:'#7bff8a',col2:'#ffd23f'},spider:{n:12,sp:.5,legs:'spider',col:'#39d5ff',col2:'#ff6fae'},jelly:{n:22,sp:.24,legs:false,col:'#b14cff',col2:'#39d5ff'}};
 let kind='centipede',segs=[],mouse={x:innerWidth/2,y:innerHeight/2},head={x:innerWidth/2,y:innerHeight/2,a:0},eaten=0,timeLeft=60,running=false,particles=[],bursts=[],lastT=0,wiggle=0;
 function initCreature(){const k=KIND[kind];segs=[];for(let i=0;i<k.n;i++)segs.push({x:head.x-i*12,y:head.y});$('len').textContent=segs.length}
 addEventListener('pointermove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});
@@ -100,17 +109,17 @@ function update(dt){const k=KIND[kind];wiggle+=dt*8;
   // 머리가 마우스를 쫓아감 (관성)
   const dx=mouse.x-head.x,dy=mouse.y-head.y,d=Math.hypot(dx,dy);
   if(d>2){const sp=Math.min(d,900*k.sp*dt*60/60);head.x+=dx/d*Math.min(d,sp*dt*60);head.y+=dy/d*Math.min(d,sp*dt*60)}
-  head.a=Math.atan2(dy,dx);
+  head.a=Math.atan2(dy,dx);if(running)sfxMove(Math.min(d,40),head.x);
   // 몸통 체인 (각 마디가 앞 마디를 따라감)
   let px=head.x,py=head.y;const gap=kind==='spider'?8:12;
   for(const s of segs){const ddx=px-s.x,ddy=py-s.y,dd=Math.hypot(ddx,ddy)||1;if(dd>gap){s.x+=ddx/dd*(dd-gap);s.y+=ddy/dd*(dd-gap)}px=s.x;py=s.y}
   // 지나가는 자리의 글자가 흰색으로 흩날림
   for(const t of tokens){if(t.eaten||t.kind||t.flew)continue;if(Math.abs(head.x-t.cx)<t.hw+6&&Math.abs(head.y-t.cy)<FS*.7){t.flew=true;t.eaten=true;const a=head.a+rand(-.6,.6);const sp=rand(120,260);
-    flyers.push({w:t.w,x:t.cx,y:t.cy,vx:Math.cos(a)*sp+rand(-60,60),vy:Math.sin(a)*sp-rand(40,140),va:rand(-4,4),a:rand(-.3,.3),life:rand(1.2,2.2),t:0,sz:FS});if(Math.random()<.5)tone(rand(3000,5000),.03,.03,'square')}}
+    flyers.push({w:t.w,x:t.cx,y:t.cy,vx:Math.cos(a)*sp+rand(-60,60),vy:Math.sin(a)*sp-rand(40,140),va:rand(-4,4),a:rand(-.3,.3),life:rand(1.2,2.2),t:0,sz:FS});sfxGraze(t.cx)}}
   // 먹기
   for(const t of tokens){if(t.eaten||!t.kind)continue;if(Math.abs(head.x-t.cx)<t.hw+8&&Math.abs(head.y-t.cy)<FS*.8){t.eaten=true;
-    if(t.kind==='good'){eaten++;$('eat').textContent=eaten;burst(t.cx,t.cy,t.col,t.w.replace(/[^a-zA-Z]/g,''));for(const ch of t.w){flyers.push({w:ch,x:t.cx+rand(-t.hw,t.hw),y:t.cy,vx:rand(-220,220),vy:rand(-260,-60),va:rand(-8,8),a:0,life:rand(.8,1.6),t:0,sz:FS+2,col:'#fff'})}sfxEat();for(let i=0;i<2;i++){const l=segs[segs.length-1];segs.push({x:l.x,y:l.y})}$('len').textContent=segs.length;if(eaten%10===0)badge(eaten+'개! 🔥')}
-    else{burst(t.cx,t.cy,'#ff3b3b');sfxBad();const cut=Math.min(segs.length-6,6);if(cut>0)segs.splice(segs.length-cut,cut);$('len').textContent=segs.length;badge('독! 😵');timeLeft=Math.max(0,timeLeft-5)}}}
+    if(t.kind==='good'){eaten++;$('eat').textContent=eaten;burst(t.cx,t.cy,t.col,t.w.replace(/[^a-zA-Z]/g,''));sfxEat(t.cx);for(const ch of t.w){flyers.push({w:ch,x:t.cx+rand(-t.hw,t.hw),y:t.cy,vx:rand(-220,220),vy:rand(-260,-60),va:rand(-8,8),a:0,life:rand(.8,1.6),t:0,sz:FS+2,col:'#fff'})}for(let i=0;i<2;i++){const l=segs[segs.length-1];segs.push({x:l.x,y:l.y})}$('len').textContent=segs.length;if(eaten%10===0)badge(eaten+'개! 🔥')}
+    else{burst(t.cx,t.cy,'#ff3b3b');sfxBad(t.cx);const cut=Math.min(segs.length-6,6);if(cut>0)segs.splice(segs.length-cut,cut);$('len').textContent=segs.length;badge('독! 😵');timeLeft=Math.max(0,timeLeft-5)}}}
   for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;p.vy+=500*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.life<=0)particles.splice(i,1)}
   for(let i=bursts.length-1;i>=0;i--){bursts[i].t+=dt;if(bursts[i].t>.6)bursts.splice(i,1)}
   for(let i=labels.length-1;i>=0;i--)if(labels[i].t>11)labels.splice(i,1);
