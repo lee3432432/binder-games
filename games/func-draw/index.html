@@ -81,6 +81,9 @@ function blur(d,w,h){const o=new Uint8ClampedArray(d);for(let y=1;y<h-1;y++)for(
 function mergeClose(cs,th){const out=[];for(const c of cs){if(!out.some(o=>Math.hypot(o[0]-c[0],o[1]-c[1],o[2]-c[2])<th))out.push(c)}return out}
 function killSmall(lab,w,h,minA){const seen=new Int32Array(w*h).fill(-1);let comp=0;const stack=[];for(let i=0;i<w*h;i++){if(seen[i]>=0)continue;const v=lab[i];const px=[];stack.push(i);seen[i]=comp;const nb={};while(stack.length){const j=stack.pop();px.push(j);const x=j%w,y=(j/w)|0;for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=w||ny>=h)continue;const k=ny*w+nx;if(lab[k]===v){if(seen[k]<0){seen[k]=comp;stack.push(k)}}else nb[lab[k]]=(nb[lab[k]]||0)+1}}
   if(px.length<minA){let bk=-1,bc=0;for(const k in nb)if(nb[k]>bc){bc=nb[k];bk=+k}if(bk>=0)for(const j of px){lab[j]=bk;seen[j]=-1}}comp++}}
+function thin(m,w,h){// Zhang-Suen
+  const g=(x,y)=>(x<0||y<0||x>=w||y>=h)?0:m[y*w+x];let changed=true,it=0;
+  while(changed&&it++<60){changed=false;for(let step=0;step<2;step++){const del=[];for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){if(!m[y*w+x])continue;const p2=g(x,y-1),p3=g(x+1,y-1),p4=g(x+1,y),p5=g(x+1,y+1),p6=g(x,y+1),p7=g(x-1,y+1),p8=g(x-1,y),p9=g(x-1,y-1);const B=p2+p3+p4+p5+p6+p7+p8+p9;if(B<2||B>6)continue;const seq=[p2,p3,p4,p5,p6,p7,p8,p9,p2];let A=0;for(let i=0;i<8;i++)if(seq[i]===0&&seq[i+1]===1)A++;if(A!==1)continue;if(step===0){if(p2*p4*p6!==0||p4*p6*p8!==0)continue}else{if(p2*p4*p8!==0||p2*p6*p8!==0)continue}del.push(y*w+x)}for(const i of del)m[i]=0;if(del.length)changed=true}}return m}
 function edges(lab,w,h){const e=new Uint8Array(w*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const v=lab[y*w+x];if((x<w-1&&lab[y*w+x+1]!==v)||(y<h-1&&lab[(y+1)*w+x]!==v))e[y*w+x]=1}return e}
 function trace(e,w,h){const vis=new Uint8Array(w*h);const paths=[];const N8=[[1,0],[0,1],[-1,0],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
   const deg=i=>{let c=0;const x=i%w,y=(i/w)|0;for(const[dx,dy]of N8){const nx=x+dx,ny=y+dy;if(nx>=0&&ny>=0&&nx<w&&ny<h&&e[ny*w+nx])c++}return c};
@@ -97,11 +100,17 @@ function fitBezier(pts,tol,out){const n=pts.length;if(n<2)return;const P0=pts[0]
   if((me>tol||far)&&n>=4){fitBezier(pts.slice(0,mi+1),tol,out);fitBezier(pts.slice(mi),tol,out)}else if(far||(me>tol&&n<4)){for(let i=1;i<n;i++)fitBezier([pts[i-1],pts[i]],tol,out)}else out.push([P0,P1,P2,P3])}
 
 let curves=[],colors=null,labMap=null,imgW=0,imgH=0,bgColor='#fff',scale=1,offx=0,offy=0;
-function process(img){const maxD=260;const r=Math.min(1,maxD/Math.max(img.width,img.height));imgW=Math.round(img.width*r);imgH=Math.round(img.height*r);const c=document.createElement('canvas');c.width=imgW;c.height=imgH;const g=c.getContext('2d');g.drawImage(img,0,0,imgW,imgH);const raw=g.getImageData(0,0,imgW,imgH);blur(raw.data,imgW,imgH);blur(raw.data,imgW,imgH);const data=raw.data;
-  colors=mergeClose(kmeans(data,8),42);labMap=labelImg(data,imgW,imgH,colors);killSmall(labMap,imgW,imgH,Math.max(12,imgW*imgH*0.002));
+function process(img){const maxD=380;const r=Math.min(1,maxD/Math.max(img.width,img.height));imgW=Math.round(img.width*r);imgH=Math.round(img.height*r);const c=document.createElement('canvas');c.width=imgW;c.height=imgH;const g=c.getContext('2d');g.drawImage(img,0,0,imgW,imgH);const raw=g.getImageData(0,0,imgW,imgH);blur(raw.data,imgW,imgH);const data=raw.data;
+  colors=mergeClose(kmeans(data,10),30);labMap=labelImg(data,imgW,imgH,colors);killSmall(labMap,imgW,imgH,Math.max(10,imgW*imgH*0.0005));
   // 배경색: 테두리 최빈 라벨
   const cnt={};for(let x=0;x<imgW;x++){cnt[labMap[x]]=(cnt[labMap[x]]||0)+1;cnt[labMap[(imgH-1)*imgW+x]]=(cnt[labMap[(imgH-1)*imgW+x]]||0)+1}let bk=0,bc=0;for(const k in cnt)if(cnt[k]>bc){bc=cnt[k];bk=+k}const bcol=colors[bk];bgColor=`rgb(${bcol.join(',')})`;
-  const e=edges(labMap,imgW,imgH);const paths=trace(e,imgW,imgH);
+  // 검정 외곽선이 있는 그림이면: 선의 중심선을 따고, 색 경계는 선 근처를 제외
+  const dark=new Uint8Array(imgW*imgH);let dc=0;for(let i=0;i<imgW*imgH;i++){const o=i*4;if(data[o+3]>=128&&(data[o]*.3+data[o+1]*.59+data[o+2]*.11)<80){dark[i]=1;dc++}}
+  let e=edges(labMap,imgW,imgH),paths;
+  if(dc>imgW*imgH*0.015){const near=new Uint8Array(imgW*imgH);for(let y=0;y<imgH;y++)for(let x=0;x<imgW;x++){if(!dark[y*imgW+x])continue;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const nx=x+dx,ny=y+dy;if(nx>=0&&ny>=0&&nx<imgW&&ny<imgH)near[ny*imgW+nx]=1}}
+    for(let i=0;i<imgW*imgH;i++)if(near[i])e[i]=0;
+    const sk=thin(new Uint8Array(dark),imgW,imgH);for(let i=0;i<imgW*imgH;i++)if(sk[i])e[i]=1;
+    paths=trace(e,imgW,imgH)}else paths=trace(e,imgW,imgH);
   // 이미지 px → 좌표(-8..8)
   scale=16/Math.max(imgW,imgH);offx=-imgW*scale/2;offy=imgH*scale/2;
   const toC=p=>[+(p[0]*scale+offx).toFixed(2),+(offy-p[1]*scale).toFixed(2)];
@@ -122,11 +131,11 @@ function drawBase(filled){gb.clearRect(0,0,S,S);if(filled){gb.fillStyle=bgColor;
 function drawFill(){if(!labMap)return;const c=document.createElement('canvas');c.width=imgW;c.height=imgH;const g=c.getContext('2d');const id=g.createImageData(imgW,imgH);for(let i=0;i<imgW*imgH;i++){const col=colors[labMap[i]];id.data[i*4]=col[0];id.data[i*4+1]=col[1];id.data[i*4+2]=col[2];id.data[i*4+3]=255}g.putImageData(id,0,0);
   gb.imageSmoothingEnabled=true;const x0=px(offx),y0=py(offy),w=imgW*scale/RANGE*(S/2),h=imgH*scale/RANGE*(S/2);gb.drawImage(c,x0,y0,w,h)}
 const done=document.createElement('canvas'),gd=done.getContext('2d');
-function strokeCurve(g,b,t1,color){g.strokeStyle=color;g.lineWidth=1.9;g.lineCap='round';g.lineJoin='round';g.beginPath();const n=24;for(let i=0;i<=n;i++){const[x,y]=bez(b,t1*i/n);if(i===0)g.moveTo(px(x),py(y));else g.lineTo(px(x),py(y))}g.stroke()}
+function strokeCurve(g,b,t1,color){g.strokeStyle=color;g.lineWidth=2.3;g.lineCap='round';g.lineJoin='round';g.beginPath();const n=24;for(let i=0;i<=n;i++){const[x,y]=bez(b,t1*i/n);if(i===0)g.moveTo(px(x),py(y));else g.lineTo(px(x),py(y))}g.stroke()}
 let playing=false,idx=0,raf=0,finished=false;
 function addEq(i){const b=curves[i];const d=document.createElement('div');d.className='eq';d.innerHTML=`<span class="n">${i+1}</span><span class="sw"><i></i></span><span class="tex"></span>`;const tx=d.querySelector('.tex');try{katex.render(texOf(b),tx,{throwOnError:false})}catch(e){tx.textContent=desmosOf(b)}$('list').prepend(d);while($('list').children.length>60)$('list').lastChild.remove()}
 function play(){if(playing||finished)return;playing=true;let t=0,start=performance.now(),dur=0,started=false;
-  function step(now){if(!playing)return;if(idx>=curves.length){finish();return}const b=curves[idx];if(!started){started=true;const L=blen(b);dur=Math.max(40,Math.min(320,L*60))/(+$('spd').value/4);start=now;addEq(idx);scratch(dur/1000);$('count').textContent=`함수 ${idx+1}개`}
+  function step(now){if(!playing)return;if(idx>=curves.length){finish();return}const b=curves[idx];if(!started){started=true;const L=blen(b);dur=Math.max(90,Math.min(520,L*110))/(+$('spd').value/4);start=now;addEq(idx);scratch(dur/1000);$('count').textContent=`함수 ${idx+1}개`}
     t=Math.min(1,(now-start)/dur);
     gf.clearRect(0,0,S,S);gf.drawImage(done,0,0,S,S);strokeCurve(gf,b,t,'#2d70b3');const[hx,hy]=bez(b,t);gf.fillStyle='#2d70b3';gf.beginPath();gf.arc(px(hx),py(hy),4,0,7);gf.fill();
     if(t>=1){const sd=done.getContext('2d');strokeCurve(sd,b,1,'#222');idx++;t=0;started=false}
