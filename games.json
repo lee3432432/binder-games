@@ -1,5 +1,17 @@
 [
   {
+    "id": "math-ecg",
+    "title": "수학 심전도",
+    "desc": "함수가 환자예요. 모니터로 흐르는 그래프 높이 그대로 소리가 나고, 전기충격·진정제·산소 차단 버튼으로 환자를 살리거나 보냅니다.",
+    "thumb": "assets/thumbs/math-ecg.jpg",
+    "tags": [
+      "수학",
+      "사운드",
+      "병맛"
+    ],
+    "new": true
+  },
+  {
     "id": "math-art",
     "title": "수학을 예술로",
     "desc": "함수 하나 고르면 네온 그래프가 왼쪽부터 그려지고, 그래프 높이 그대로 소리가 나요. 하트·모기·구급차·최대공약수… 10가지.",
@@ -9,7 +21,7 @@
       "소리",
       "네온"
     ],
-    "new": true
+    "new": false
   },
   {
     "id": "crawlpedia",
@@ -21,7 +33,7 @@
       "네온",
       "아케이드"
     ],
-    "new": true
+    "new": false
   },
   {
     "id": "find-my-phone",
@@ -32,7 +44,7 @@
       "도구",
       "모바일"
     ],
-    "new": true
+    "new": false
   },
   {
     "id": "cliff-bus",
@@ -44,7 +56,7 @@
       "운전",
       "스릴"
     ],
-    "new": true
+    "new": false
   },
   {
     "id": "night-slide",
@@ -56,7 +68,7 @@
       "1인칭",
       "스릴"
     ],
-    "new": true
+    "new": false
   },
   {
     "id": "taxi-meter",
@@ -67,7 +79,7 @@
       "모바일",
       "재미"
     ],
-    "new": true
+    "new": false
   },
   {
     "id": "mega-waterslide",
@@ -78,6 +90,6 @@
       "3D",
       "레이싱"
     ],
-    "new": true
+    "new": false
   }
 ]
