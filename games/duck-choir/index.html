@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>꽥꽥 리듬게임 · 커맨드 플레이</title>
+<meta name="description" content="오리 합창단의 지휘자가 되어보세요. 떨어지는 음표를 탭할 때마다 오리가 음정 맞춰 꽥! 한 곡을 완성하세요.">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&display=swap" rel="stylesheet">
+<style>
+:root{--shell:#f7c6d6;--shell2:#f2b2c6;--lane0:#c27bff;--lane1:#45bdf5;--lane2:#ffc928;--lane3:#ff8a3c}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#fbe9ef;font-family:"Jua",system-ui,sans-serif;color:#4a2b38;-webkit-user-select:none;user-select:none;touch-action:none}
+#ds{position:fixed;inset:0;margin:0 auto;max-width:460px;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--shell),var(--shell2));padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+.head{text-align:center;padding:2px 0 8px;position:relative}
+.head h1{font-family:"Black Han Sans",sans-serif;font-size:24px;color:#fff;text-shadow:0 2px 0 #d9789a,0 0 1px #000;letter-spacing:.02em}
+.head small{display:block;font-size:12px;color:#b85a7c;margin-top:-2px}
+.head .tl{position:absolute;left:0;top:4px;display:flex;gap:6px}.head .tr{position:absolute;right:0;top:4px;display:flex;gap:6px}
+.chip{border:0;background:#fff;color:#c2557d;font:inherit;font-size:13px;border-radius:999px;padding:5px 10px;box-shadow:0 2px 0 #d98aa6;cursor:pointer;text-decoration:none}
+.screen{position:relative;border-radius:10px;background:#222;padding:6px;box-shadow:inset 0 0 0 3px #e4a3b9,0 3px 0 #d98aa6}
+.screen canvas{display:block;width:100%;border-radius:4px;background:#000}
+#top{flex:none}
+#top canvas{aspect-ratio:16/10}
+.hinge{height:16px;margin:6px 10px;border-radius:8px;background:linear-gradient(180deg,#e7a2ba,#f5c0d2);box-shadow:inset 0 2px 3px rgba(0,0,0,.12);flex:none}
+.lower{flex:1;display:flex;gap:10px;min-height:0}
+.side{width:34px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;flex:none}
+.dpad{width:30px;height:30px;position:relative;opacity:.8}
+.dpad:before,.dpad:after{content:"";position:absolute;background:#fff;border-radius:3px;box-shadow:0 2px 0 #d98aa6}
+.dpad:before{left:10px;top:0;width:10px;height:30px}.dpad:after{top:10px;left:0;width:30px;height:10px}
+.abtn{width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 2px 0 #d98aa6}
+.stk{font-size:18px}
+#bot{flex:1;min-height:0;display:flex}
+#bot canvas{height:100%;width:100%}
+/* 오버레이 */
+.ov{position:absolute;inset:6px;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(255,240,246,.96);z-index:5;padding:12px;text-align:center}
+.ov.off{display:none}
+.ov h2{font-family:"Black Han Sans",sans-serif;font-size:22px;color:#c2557d}
+.song{width:100%;max-width:300px;border:0;border-radius:14px;padding:10px 12px;background:#fff;font:inherit;font-size:17px;color:#4a2b38;box-shadow:0 3px 0 #e2a0b8;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.song small{font-size:12px;color:#c2557d}
+.song:active{transform:translateY(2px);box-shadow:0 1px 0 #e2a0b8}
+.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.tog{border:2px solid #e2a0b8;background:#fff;color:#c2557d;border-radius:999px;padding:5px 12px;font:inherit;font-size:14px;cursor:pointer}
+.tog[aria-pressed="true"]{background:#c2557d;color:#fff;border-color:#c2557d}
+#res .big{font-family:"Black Han Sans",sans-serif;font-size:64px;line-height:1;color:#ff8a3c;text-shadow:0 3px 0 #c2557d}
+#res .st{font-size:15px;line-height:1.6}
+.hint{font-size:12px;color:#b85a7c}
+</style>
+</head>
+<body>
+<div id="ds">
+  <div class="head">
+    <div class="tl"><a class="chip" href="/">🏠</a></div>
+    <h1>🦆 꽥꽥 리듬게임 🦆</h1><small>Duck Choir Rhythm Game</small>
+    <div class="tr"><button class="chip" id="mute">🔊</button></div>
+  </div>
+  <div class="screen" id="top"><canvas id="tc"></canvas></div>
+  <div class="hinge"></div>
+  <div class="lower">
+    <div class="side"><div class="dpad"></div><div class="stk">⭐</div></div>
+    <div class="screen" id="bot"><canvas id="bc"></canvas>
+      <div class="ov" id="menu">
+        <h2>노래를 골라주세요</h2>
+        <div id="songs" style="display:flex;flex-direction:column;gap:8px;width:100%;align-items:center"></div>
+        <div class="row"><button class="tog" id="fast" aria-pressed="false">⚡ 빠르게</button><button class="tog" id="auto" aria-pressed="false">🤖 자동연주</button></div>
+        <div class="hint">떨어지는 음표가 동그라미에 닿을 때 탭!<br>키보드: D F J K</div>
+      </div>
+      <div class="ov off" id="res">
+        <div class="big" id="rank">S</div>
+        <div class="st" id="rstat"></div>
+        <div class="row"><button class="tog" id="retry">🔁 다시</button><button class="tog" id="back">🎵 노래 선택</button></div>
+      </div>
+    </div>
+    <div class="side"><div class="abtn"></div><div class="abtn"></div><div class="abtn"></div></div>
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const LC=['#c27bff','#45bdf5','#ffc928','#ff8a3c'];
+const KEYS=['KeyD','KeyF','KeyJ','KeyK'];
+/* ---------- 노래 (퍼블릭 도메인 멜로디) [박자, 길이, midi] ---------- */
+function seq(list){let t=0;return list.map(([m,d])=>{const n={b:t,m};t+=d;return n})}
+const SONGS=[
+ {id:'star',name:'반짝반짝 작은 별',lv:'★',bpm:104,notes:seq([[60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],[65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2],[67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],[67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],[60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],[65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2]])},
+ {id:'bday',name:'생일 축하합니다',lv:'★★',bpm:112,notes:seq([[67,.75],[67,.25],[69,1],[67,1],[72,1],[71,2],[67,.75],[67,.25],[69,1],[67,1],[74,1],[72,2],[67,.75],[67,.25],[79,1],[76,1],[72,1],[71,1],[69,2],[77,.75],[77,.25],[76,1],[72,1],[74,1],[72,3]])},
+ {id:'joy',name:'환희의 송가',lv:'★★',bpm:132,notes:seq([[64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[64,1.5],[62,.5],[62,2],[64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[62,1.5],[60,.5],[60,2],[62,1],[62,1],[64,1],[60,1],[62,1],[64,.5],[65,.5],[64,1],[60,1],[62,1],[64,.5],[65,.5],[64,1],[62,1],[60,1],[62,1],[55,2],[64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[62,1.5],[60,.5],[60,2]])},
+ {id:'cancan',name:'캉캉',lv:'★★★',bpm:150,notes:seq([[60,2],[62,.5],[65,.5],[64,.5],[62,.5],[67,1],[67,1],[67,.5],[69,.5],[64,.5],[65,.5],[62,1],[62,1],[62,.5],[65,.5],[64,.5],[62,.5],[60,.5],[72,.5],[71,.5],[69,.5],[67,.5],[65,.5],[64,.5],[62,.5],[60,2],[62,.5],[65,.5],[64,.5],[62,.5],[67,1],[67,1],[67,.5],[69,.5],[64,.5],[65,.5],[62,1],[62,1],[62,.5],[65,.5],[64,.5],[62,.5],[60,.5],[67,.5],[62,.5],[64,.5],[60,2]])},
+];
+for(const s of SONGS){const ps=[...new Set(s.notes.map(n=>n.m))].sort((a,b)=>a-b);s.notes.forEach(n=>{n.lane=Math.min(3,Math.floor(ps.indexOf(n.m)*4/ps.length))});
+  // 같은 레인이 3번 이상 연속이면 다음 음은 옆 레인과 섞지 않음 (멜로디 유지)
+  const last=s.notes[s.notes.length-1];s.len=last.b+2}
+
+/* ---------- 오디오 ---------- */
+let AC=null,master=null,buf={},muted=false;
+async function audioInit(){if(AC)return;AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=1.4;const comp=AC.createDynamicsCompressor();comp.threshold.value=-14;master.connect(comp);comp.connect(AC.destination);
+  for(const n of['quack1','quack2','quack3','toyduck']){try{const r=await fetch('sfx/'+n+'.mp3');buf[n]=await AC.decodeAudioData(await r.arrayBuffer())}catch(e){}}}
+const BASE=70.1,OFF=.06;
+function quack(midi,when,vol=1,name='quack1'){if(muted||!buf[name])return;const s=AC.createBufferSource();s.buffer=buf[name];const g=AC.createGain();g.gain.value=vol;s.playbackRate.value=name==='quack1'?Math.pow(2,(midi+12-BASE)/12):midi;s.connect(g);g.connect(master);s.start(when||0,name==='quack1'?OFF:0)}
+function hat(when,v=.05){if(muted)return;const n=AC.sampleRate*.04,b=AC.createBuffer(1,n,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);const s=AC.createBufferSource();s.buffer=b;const f=AC.createBiquadFilter();f.type='highpass';f.frequency.value=7000;const g=AC.createGain();g.gain.value=v;s.connect(f);f.connect(g);g.connect(master);s.start(when)}
+function pluck(midi,when,dur,v=.05){if(muted)return;const o=AC.createOscillator(),g=AC.createGain();o.type='triangle';o.frequency.value=440*Math.pow(2,(midi-69)/12);g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.01);g.gain.exponentialRampToValueAtTime(.001,when+dur);o.connect(g);g.connect(master);o.start(when);o.stop(when+dur+.05)}
+
+/* ---------- 캔버스 ---------- */
+const tc=$('tc'),bc=$('bc'),tg=tc.getContext('2d'),bg=bc.getContext('2d');let TW,TH,BW,BH,DPR=1;
+const stage=new Image();stage.src='stage.jpg';
+// 오리 영역 (stage.jpg 1280x720 기준)
+const DUCK=[{x:70,y:150,w:330,h:500},{x:355,y:150,w:310,h:490},{x:630,y:170,w:305,h:470},{x:890,y:170,w:330,h:470}];
+const DIMG=DUCK.map((d,i)=>{const im=new Image();im.src='duck'+i+'.png';return im});
+function resize(){DPR=Math.min(2,devicePixelRatio||1);let r=tc.getBoundingClientRect();TW=r.width;TH=r.height;tc.width=TW*DPR;tc.height=TH*DPR;tg.setTransform(DPR,0,0,DPR,0,0);r=bc.getBoundingClientRect();BW=r.width;BH=r.height;bc.width=BW*DPR;bc.height=BH*DPR;bg.setTransform(DPR,0,0,DPR,0,0)}
+addEventListener('resize',resize);
+
+/* ---------- 게임 상태 ---------- */
+let song=null,notes=[],t0=0,spb=.5,playing=false,auto=false,fast=false,score=0,combo=0,maxCombo=0,cnt={p:0,g:0,m:0},sing=[0,0,0,0],sad=[0,0,0,0],fx=[],judge=null,lyricIdx=0,ended=false,press=[0,0,0,0];
+const FALL=1.5,PERF=.075,GOOD=.15;
+function now(){return AC?AC.currentTime-t0:0}
+function start(s){song=s;spb=60/(s.bpm*(fast?1.3:1));notes=s.notes.map(n=>({...n,t:n.b*spb,hit:0}));score=0;combo=0;maxCombo=0;cnt={p:0,g:0,m:0};fx=[];judge=null;ended=false;sing=[0,0,0,0];sad=[0,0,0,0];
+  $('menu').classList.add('off');$('res').classList.add('off');
+  const lead=4*spb+.3;t0=AC.currentTime+lead;playing=true;
+  for(let i=0;i<4;i++)quack(i===3?2.2:1.6,AC.currentTime+.3+i*spb,.7,'quack2');// 카운트인 꽥꽥꽥꽥
+  // 반주: 하이햇 + 낮은 베이스음
+  const beats=Math.ceil(s.len);for(let b=0;b<beats;b++){hat(t0+b*spb,b%2?.035:.06);hat(t0+(b+.5)*spb,.02)}
+  for(const n of notes){if(n.b%2===0)pluck(n.m-24,t0+n.t,spb*1.6,.045)}
+  if(auto)for(const n of notes){n.auto=true}}
+function hitLane(l){if(!playing)return;press[l]=performance.now();const tn=now();let best=null,bd=9;for(const n of notes){if(n.hit||n.lane!==l)continue;const d=Math.abs(n.t-tn);if(d<bd){bd=d;best=n}if(n.t-tn>GOOD)break}
+  if(best&&bd<=GOOD){best.hit=bd<=PERF?2:1;quack(best.m,0,1);if(best.hit===2){score+=100;cnt.p++;judge={txt:'PERFECT',c:'#ff5fa2',t:performance.now()}}else{score+=50;cnt.g++;judge={txt:'GOOD',c:'#45bdf5',t:performance.now()}}
+    combo++;maxCombo=Math.max(maxCombo,combo);sing[l]=performance.now();sad[l]=0;burst(l,LC[l]);if(combo>0&&combo%10===0)quack(1.25,0,.8,'quack3')}
+  else{quack(.55+Math.random()*.15,0,.6,'quack2')}}
+function burst(l,c){const x=(l+.5)*BW/4,y=BH*.86;for(let i=0;i<14;i++){const a=Math.random()*Math.PI*2,v=1.5+Math.random()*3.5;fx.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-2,life:1,c,r:2+Math.random()*3})}fx.push({x,y,ring:1,life:1,c})}
+function finish(){playing=false;ended=true;const tot=notes.length,acc=(cnt.p+cnt.g*.5)/tot;const rk=acc>=.95?'S':acc>=.85?'A':acc>=.7?'B':acc>=.5?'C':'꽥?';
+  $('rank').textContent=rk;$('rstat').innerHTML=`<b>${song.name}</b><br>점수 ${score} · 최대 콤보 ${maxCombo}<br>PERFECT ${cnt.p} · GOOD ${cnt.g} · MISS ${cnt.m}<br>${acc>=.85?'오리 합창단 대성공! 🦆🎉':acc>=.5?'조금만 더 맞추면 오리들이 행복해해요':'오리들이 박자를 잃었어요…'}`;
+  setTimeout(()=>{$('res').classList.remove('off');if(buf.toyduck&&!muted){const s=AC.createBufferSource();s.buffer=buf.toyduck;const g=AC.createGain();g.gain.value=acc>=.7?.8:.0;s.connect(g);g.connect(master);s.start(0,0,1.6)}},400)}
+
+/* ---------- 렌더 ---------- */
+function drawTop(){const W=TW,H=TH;tg.fillStyle='#1b1430';tg.fillRect(0,0,W,H);if(!stage.complete)return;
+  const sc=Math.max(W/1280,H/720),ox=(W-1280*sc)/2,oy=(H-720*sc)/2;tg.drawImage(stage,ox,oy,1280*sc,720*sc);
+  const tn=performance.now();
+  // 노래하는 오리: 확대 + 통통
+  for(let i=0;i<4;i++){const d=DUCK[i];const e=(tn-sing[i])/1000;const sd=sad[i]?(tn-sad[i])/1000:9;
+    if(e<.4&&DIMG[i].complete){const k=1-e/.4;const hop=Math.sin(Math.min(1,e/.4)*Math.PI);const sx=1+.10*hop,sy=1+.16*hop;const cx=ox+(d.x+d.w/2)*sc,by=oy+(d.y+d.h-30)*sc;
+      tg.save();tg.translate(cx,by-hop*H*.04);tg.scale(sx,sy);tg.translate(-cx,-by);tg.drawImage(DIMG[i],ox+d.x*sc,oy+d.y*sc,d.w*sc,d.h*sc);tg.restore();
+      const bx=cx+d.w*sc*.28,byy=oy+(d.y+40)*sc-hop*H*.06;tg.font=`${Math.round(H*.1)}px "Black Han Sans",sans-serif`;tg.textAlign='center';tg.lineWidth=5;tg.strokeStyle='#fff';tg.strokeText('꽥!',bx,byy);tg.fillStyle=LC[i];tg.fillText('꽥!',bx,byy)}
+    if(sd<.6){const cx=ox+(d.x+d.w*.75)*sc,cy=oy+(d.y+30)*sc;tg.font=`bold ${Math.round(H*.08)}px sans-serif`;tg.textAlign='center';tg.fillStyle='#fff';tg.globalAlpha=1-sd/.6;tg.fillText('?',cx,cy-sd*20);tg.globalAlpha=1}}
+  // 점수
+  tg.font=`${Math.round(H*.1)}px "Black Han Sans",sans-serif`;tg.textAlign='center';tg.lineWidth=5;tg.strokeStyle='#3a1f4a';tg.strokeText(score,W/2,H*.13);tg.fillStyle='#fff';tg.fillText(score,W/2,H*.13);
+  if(combo>=3){tg.font=`${Math.round(H*.06)}px "Black Han Sans",sans-serif`;tg.textAlign='right';tg.strokeText(combo+' COMBO',W-8,H*.11);tg.fillStyle='#ffe066';tg.fillText(combo+' COMBO',W-8,H*.11)}
+  // 가사 (꽥 자막)
+  if(song){const tn2=now();let i0=notes.findIndex(n=>n.t>tn2-spb*.5);if(i0<0)i0=notes.length;const st=Math.max(0,Math.floor(i0/6)*6);const line=notes.slice(st,st+6);
+    tg.fillStyle='rgba(0,0,0,.55)';tg.fillRect(0,H*.86,W,H*.14);tg.font=`${Math.round(H*.075)}px "Jua",sans-serif`;tg.textAlign='left';
+    const words=line.map(()=>'꽥');const ws=words.map(w=>tg.measureText(w+' ').width);let x=(W-ws.reduce((a,b)=>a+b,0))/2;
+    line.forEach((n,k)=>{tg.fillStyle=n.hit?LC[n.lane]:(n.t<tn2-GOOD?'#777':'#fff');tg.fillText(words[k],x,H*.955);x+=ws[k]})}}
+function drawBot(){const W=BW,H=BH;const lw=W/4,hitY=H*.86;
+  // 피아노 건반 배경
+  bg.fillStyle='#f6f3f8';bg.fillRect(0,0,W,H);for(let i=0;i<4;i++){bg.fillStyle=i%2?'#e9e4ef':'#fbf9fd';bg.fillRect(i*lw,0,lw,H);const pr=(performance.now()-press[i])/1000;if(pr<.18){bg.fillStyle=LC[i]+'44';bg.fillRect(i*lw,0,lw,H)}bg.strokeStyle='#cfc6db';bg.lineWidth=1;bg.beginPath();bg.moveTo(i*lw,0);bg.lineTo(i*lw,H);bg.stroke()}
+  for(let i=1;i<4;i++){bg.fillStyle='#2b2233';bg.fillRect(i*lw-lw*.14,H*.12,lw*.28,H*.5);}
+  // 상단 커튼 바
+  bg.fillStyle='#9c4a2e';bg.fillRect(0,0,W,H*.12);for(let x=0;x<W;x+=6){bg.fillStyle=x%12?'#8a3f26':'#b0583a';bg.fillRect(x,0,3,H*.12)}
+  // 판정선 원
+  for(let i=0;i<4;i++){const cx=(i+.5)*lw;bg.beginPath();bg.arc(cx,hitY,lw*.3,0,7);bg.fillStyle='#2b2233';bg.fill();bg.lineWidth=3;bg.strokeStyle=LC[i];bg.stroke()}
+  // 노트
+  const tn=now();const R=lw*.26;
+  for(const n of notes){if(n.hit)continue;const dt=n.t-tn;if(dt>FALL)break;const y=hitY-dt/FALL*(hitY-H*.12);if(dt<-GOOD){if(!n.miss){n.miss=1;cnt.m++;combo=0;sad[n.lane]=performance.now();judge={txt:'MISS',c:'#999',t:performance.now()}}continue}
+    if(y<H*.08)continue;const cx=(n.lane+.5)*lw;
+    // 음표 꼬리(긴 음)
+    bg.beginPath();bg.arc(cx,y,R,0,7);bg.fillStyle=LC[n.lane];bg.fill();bg.lineWidth=2.5;bg.strokeStyle='#fff';bg.stroke();
+    bg.fillStyle='#fff';bg.font=`bold ${Math.round(R*1.1)}px sans-serif`;bg.textAlign='center';bg.textBaseline='middle';bg.fillText('♪',cx,y+1);bg.textBaseline='alphabetic';
+    if(n.auto&&dt<=0.004&&!n.hit){hitLane(n.lane)}}
+  // 이펙트
+  for(const p of fx){p.life-=.035;if(p.ring){bg.beginPath();bg.arc(p.x,p.y,lw*.3+(1-p.life)*lw*.35,0,7);bg.strokeStyle=p.c;bg.globalAlpha=Math.max(0,p.life);bg.lineWidth=4;bg.stroke();bg.globalAlpha=1;continue}p.x+=p.vx;p.y+=p.vy;p.vy+=.15;bg.globalAlpha=Math.max(0,p.life);bg.fillStyle=p.c;bg.beginPath();bg.arc(p.x,p.y,p.r,0,7);bg.fill();bg.globalAlpha=1}
+  fx=fx.filter(p=>p.life>0);
+  if(judge){const e=(performance.now()-judge.t)/1000;if(e<.6){const s=1+.25*Math.max(0,1-e/.1);bg.save();bg.translate(W/2,H*.5);bg.scale(s,s);bg.font=`${Math.round(W*.11)}px "Black Han Sans",sans-serif`;bg.textAlign='center';bg.lineWidth=5;bg.strokeStyle='#fff';bg.globalAlpha=1-Math.max(0,(e-.35)/.25);bg.strokeText(judge.txt,0,0);bg.fillStyle=judge.c;bg.fillText(judge.txt,0,0);bg.restore();bg.globalAlpha=1}}
+  // 카운트인
+  if(playing&&tn<0){const k=Math.ceil(-tn/spb);if(k<=4){bg.font=`${Math.round(W*.25)}px "Black Han Sans",sans-serif`;bg.textAlign='center';bg.fillStyle=LC[(4-k)%4];bg.lineWidth=6;bg.strokeStyle='#fff';bg.strokeText(k,W/2,H*.5);bg.fillText(k,W/2,H*.5)}}
+  if(playing&&tn>song.len*spb)finish()}
+function loop(){drawTop();drawBot();requestAnimationFrame(loop)}
+
+/* ---------- 입력 ---------- */
+bc.addEventListener('pointerdown',e=>{e.preventDefault();if(auto)return;const r=bc.getBoundingClientRect();const l=Math.max(0,Math.min(3,Math.floor((e.clientX-r.left)/r.width*4)));hitLane(l)});
+addEventListener('keydown',e=>{if(e.repeat||auto)return;const l=KEYS.indexOf(e.code);const l2='1234'.indexOf(e.key);if(l>=0)hitLane(l);else if(l2>=0)hitLane(l2)});
+for(const s of SONGS){const b=document.createElement('button');b.className='song';b.innerHTML=`<span></span><small></small>`;b.querySelector('span').textContent='🎵 '+s.name;b.querySelector('small').textContent=s.lv;b.onclick=async()=>{await audioInit();if(AC.state==='suspended')await AC.resume();start(s)};$('songs').appendChild(b)}
+$('fast').onclick=()=>{fast=!fast;$('fast').setAttribute('aria-pressed',fast)};
+$('auto').onclick=()=>{auto=!auto;$('auto').setAttribute('aria-pressed',auto)};
+$('retry').onclick=()=>start(song);
+$('back').onclick=()=>{$('res').classList.add('off');$('menu').classList.remove('off');song=null;notes=[]};
+$('mute').onclick=()=>{muted=!muted;$('mute').textContent=muted?'🔇':'🔊'};
+resize();loop();
+window.__app={SONGS,start,get state(){return{score,combo,cnt,playing,ended}},audioInit};
+</script>
+</body>
+</html>
