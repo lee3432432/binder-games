@@ -99,10 +99,15 @@ function pluck(midi,when,dur,v=.05){if(muted)return;const o=AC.createOscillator(
 
 /* ---------- 캔버스 ---------- */
 const tc=$('tc'),bc=$('bc'),tg=tc.getContext('2d'),bg=bc.getContext('2d');let TW,TH,BW,BH,DPR=1;
-const stage=new Image();stage.src='stage.jpg';
+const stage=new Image();stage.src='plate.jpg';const micImg=new Image();micImg.src='mic.png';
 // 오리 영역 (stage.jpg 1280x720 기준)
 const DUCK=[{x:70,y:150,w:330,h:500},{x:355,y:150,w:310,h:490},{x:630,y:170,w:305,h:470},{x:890,y:170,w:330,h:470}];
 const DIMG=DUCK.map((d,i)=>{const im=new Image();im.src='duck'+i+'.png';return im});
+// 오리마다 스프링 상태: s=늘어남, y=점프, r=기울기
+const SP=DUCK.map(()=>({s:0,vs:0,y:0,vy:0,r:0,vr:0,side:1,droop:0}));let notesFx=[],lastT=performance.now();
+function kick(i){const p=SP[i];p.s=Math.min(p.s,-.07);p.vs+=4.2;p.vy+=1.9;p.side*=-1;p.vr+=1.1*p.side;p.droop=0;
+  notesFx.push({i,x:0,y:0,vx:(Math.random()-.5)*.6,life:1,ch:Math.random()<.5?'♪':'♫'})}
+function droop(i){const p=SP[i];p.droop=performance.now();p.vr+=(i<2?-1:1)*.9;p.vs-=1.2}
 function resize(){DPR=Math.min(2,devicePixelRatio||1);let r=tc.getBoundingClientRect();TW=r.width;TH=r.height;tc.width=TW*DPR;tc.height=TH*DPR;tg.setTransform(DPR,0,0,DPR,0,0);r=bc.getBoundingClientRect();BW=r.width;BH=r.height;bc.width=BW*DPR;bc.height=BH*DPR;bg.setTransform(DPR,0,0,DPR,0,0)}
 addEventListener('resize',resize);
 
@@ -120,7 +125,7 @@ function start(s){song=s;spb=60/(s.bpm*(fast?1.3:1));notes=s.notes.map(n=>({...n
   if(auto)for(const n of notes){n.auto=true}}
 function hitLane(l){if(!playing)return;press[l]=performance.now();const tn=now();let best=null,bd=9;for(const n of notes){if(n.hit||n.lane!==l)continue;const d=Math.abs(n.t-tn);if(d<bd){bd=d;best=n}if(n.t-tn>GOOD)break}
   if(best&&bd<=GOOD){best.hit=bd<=PERF?2:1;quack(best.m,0,1);if(best.hit===2){score+=100;cnt.p++;judge={txt:'PERFECT',c:'#ff5fa2',t:performance.now()}}else{score+=50;cnt.g++;judge={txt:'GOOD',c:'#45bdf5',t:performance.now()}}
-    combo++;maxCombo=Math.max(maxCombo,combo);sing[l]=performance.now();sad[l]=0;burst(l,LC[l]);if(combo>0&&combo%10===0)quack(1.25,0,.8,'quack3')}
+    combo++;maxCombo=Math.max(maxCombo,combo);sing[l]=performance.now();sad[l]=0;kick(l);burst(l,LC[l]);if(combo>0&&combo%10===0)quack(1.25,0,.8,'quack3')}
   else{quack(.55+Math.random()*.15,0,.6,'quack2')}}
 function burst(l,c){const x=(l+.5)*BW/4,y=BH*.86;for(let i=0;i<14;i++){const a=Math.random()*Math.PI*2,v=1.5+Math.random()*3.5;fx.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-2,life:1,c,r:2+Math.random()*3})}fx.push({x,y,ring:1,life:1,c})}
 function finish(){playing=false;ended=true;const tot=notes.length,acc=(cnt.p+cnt.g*.5)/tot;const rk=acc>=.95?'S':acc>=.85?'A':acc>=.7?'B':acc>=.5?'C':'꽥?';
@@ -130,13 +135,32 @@ function finish(){playing=false;ended=true;const tot=notes.length,acc=(cnt.p+cnt
 /* ---------- 렌더 ---------- */
 function drawTop(){const W=TW,H=TH;tg.fillStyle='#1b1430';tg.fillRect(0,0,W,H);if(!stage.complete)return;
   const sc=Math.max(W/1280,H/720),ox=(W-1280*sc)/2,oy=(H-720*sc)/2;tg.drawImage(stage,ox,oy,1280*sc,720*sc);
-  const tn=performance.now();
-  // 노래하는 오리: 확대 + 통통
+  const tn=performance.now();const dt=Math.min(.04,(tn-lastT)/1000);lastT=tn;
+  const beat=playing&&AC?Math.max(0,now())/spb:tn/1000*1.1;const hype=combo>=10?1.8:1;
+  for(let i=0;i<4;i++){const p=SP[i],d=DUCK[i];
+    const drooping=p.droop&&tn-p.droop<700;
+    // 박자에 맞춘 숨쉬기·좌우 흔들기 (오리마다 위상 다름)
+    const sT=(drooping?-.06:.022*hype*Math.sin(beat*Math.PI*2+i*.9));
+    const rT=(drooping?(i<2?-.09:.09):.03*hype*Math.sin(beat*Math.PI+i*1.7));
+    // 감쇠 스프링
+    p.vs+=(-230*(p.s-sT)-13*p.vs)*dt;p.s+=p.vs*dt;
+    p.vy+=(-170*p.y-11*p.vy)*dt;p.y+=p.vy*dt;if(p.y<0){p.y=0;p.vy*=-.3}
+    p.vr+=(-110*(p.r-rT)-7*p.vr)*dt;p.r+=p.vr*dt;
+    if(!DIMG[i].complete)continue;
+    const cx=ox+(d.x+d.w/2)*sc,fy=oy+(d.y+d.h-45)*sc;const sy=1+p.s,sx=1-p.s*.55;
+    tg.save();tg.translate(cx,fy-p.y*H*.07);tg.rotate(p.r);tg.scale(sx,sy);tg.translate(-cx,-fy);
+    tg.drawImage(DIMG[i],ox+d.x*sc,oy+d.y*sc,d.w*sc,d.h*sc);tg.restore();
+    // 그림자
+  }
+  if(micImg.complete)tg.drawImage(micImg,ox+585*sc,oy+330*sc,micImg.width*sc,micImg.height*sc);
+  // 부리에서 나오는 음표
+  for(const f of notesFx){const d=DUCK[f.i];f.life-=dt*1.4;f.y-=dt*90;f.x+=f.vx*dt*60+Math.sin(f.life*9)*.6;
+    const bx=ox+(d.x+d.w*.55)*sc+f.x,by=oy+(d.y+d.h*.3)*sc+f.y;tg.globalAlpha=Math.max(0,f.life);tg.font=`bold ${Math.round(H*.075)}px sans-serif`;tg.textAlign='center';tg.lineWidth=4;tg.strokeStyle='#fff';tg.strokeText(f.ch,bx,by);tg.fillStyle=LC[f.i];tg.fillText(f.ch,bx,by);tg.globalAlpha=1}
+  notesFx=notesFx.filter(f=>f.life>0);
   for(let i=0;i<4;i++){const d=DUCK[i];const e=(tn-sing[i])/1000;const sd=sad[i]?(tn-sad[i])/1000:9;
-    if(e<.4&&DIMG[i].complete){const k=1-e/.4;const hop=Math.sin(Math.min(1,e/.4)*Math.PI);const sx=1+.10*hop,sy=1+.16*hop;const cx=ox+(d.x+d.w/2)*sc,by=oy+(d.y+d.h-30)*sc;
-      tg.save();tg.translate(cx,by-hop*H*.04);tg.scale(sx,sy);tg.translate(-cx,-by);tg.drawImage(DIMG[i],ox+d.x*sc,oy+d.y*sc,d.w*sc,d.h*sc);tg.restore();
-      const bx=cx+d.w*sc*.28,byy=oy+(d.y+40)*sc-hop*H*.06;tg.font=`${Math.round(H*.1)}px "Black Han Sans",sans-serif`;tg.textAlign='center';tg.lineWidth=5;tg.strokeStyle='#fff';tg.strokeText('꽥!',bx,byy);tg.fillStyle=LC[i];tg.fillText('꽥!',bx,byy)}
-    if(sd<.6){const cx=ox+(d.x+d.w*.75)*sc,cy=oy+(d.y+30)*sc;tg.font=`bold ${Math.round(H*.08)}px sans-serif`;tg.textAlign='center';tg.fillStyle='#fff';tg.globalAlpha=1-sd/.6;tg.fillText('?',cx,cy-sd*20);tg.globalAlpha=1}}
+    if(e<.35){const k=1-e/.35;const cx=ox+(d.x+d.w/2)*sc;const bx=cx+d.w*sc*.3,byy=oy+(d.y+30)*sc-(1-k)*H*.05;const fs=Math.round(H*.1*(1+.35*Math.max(0,1-e/.08)));
+      tg.globalAlpha=Math.min(1,k*2);tg.font=`${fs}px "Black Han Sans",sans-serif`;tg.textAlign='center';tg.lineWidth=5;tg.strokeStyle='#fff';tg.strokeText('꽥!',bx,byy);tg.fillStyle=LC[i];tg.fillText('꽥!',bx,byy);tg.globalAlpha=1}
+    if(sd<.7){const cx=ox+(d.x+d.w*.72)*sc,cy=oy+(d.y+30)*sc;tg.font=`${Math.round(H*.09)}px "Black Han Sans",sans-serif`;tg.textAlign='center';tg.globalAlpha=1-sd/.7;tg.lineWidth=4;tg.strokeStyle='#3a1f4a';tg.strokeText('?',cx,cy-sd*25);tg.fillStyle='#fff';tg.fillText('?',cx,cy-sd*25);tg.globalAlpha=1}}
   // 점수
   tg.font=`${Math.round(H*.1)}px "Black Han Sans",sans-serif`;tg.textAlign='center';tg.lineWidth=5;tg.strokeStyle='#3a1f4a';tg.strokeText(score,W/2,H*.13);tg.fillStyle='#fff';tg.fillText(score,W/2,H*.13);
   if(combo>=3){tg.font=`${Math.round(H*.06)}px "Black Han Sans",sans-serif`;tg.textAlign='right';tg.strokeText(combo+' COMBO',W-8,H*.11);tg.fillStyle='#ffe066';tg.fillText(combo+' COMBO',W-8,H*.11)}
@@ -155,7 +179,7 @@ function drawBot(){const W=BW,H=BH;const lw=W/4,hitY=H*.86;
   for(let i=0;i<4;i++){const cx=(i+.5)*lw;bg.beginPath();bg.arc(cx,hitY,lw*.3,0,7);bg.fillStyle='#2b2233';bg.fill();bg.lineWidth=3;bg.strokeStyle=LC[i];bg.stroke()}
   // 노트
   const tn=now();const R=lw*.26;
-  for(const n of notes){if(n.hit)continue;const dt=n.t-tn;if(dt>FALL)break;const y=hitY-dt/FALL*(hitY-H*.12);if(dt<-GOOD){if(!n.miss){n.miss=1;cnt.m++;combo=0;sad[n.lane]=performance.now();judge={txt:'MISS',c:'#999',t:performance.now()}}continue}
+  for(const n of notes){if(n.hit)continue;const dt=n.t-tn;if(dt>FALL)break;const y=hitY-dt/FALL*(hitY-H*.12);if(dt<-GOOD){if(!n.miss){n.miss=1;cnt.m++;combo=0;sad[n.lane]=performance.now();droop(n.lane);judge={txt:'MISS',c:'#999',t:performance.now()}}continue}
     if(y<H*.08)continue;const cx=(n.lane+.5)*lw;
     // 음표 꼬리(긴 음)
     bg.beginPath();bg.arc(cx,y,R,0,7);bg.fillStyle=LC[n.lane];bg.fill();bg.lineWidth=2.5;bg.strokeStyle='#fff';bg.stroke();
