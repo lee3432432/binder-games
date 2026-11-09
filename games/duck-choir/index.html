@@ -107,6 +107,7 @@ const stage=new Image();stage.src='plate.jpg';const micImg=new Image();micImg.sr
 // 오리 영역 (stage.jpg 1280x720 기준)
 const DUCK=[{x:70,y:150,w:330,h:500},{x:355,y:150,w:310,h:490},{x:630,y:170,w:305,h:470},{x:890,y:170,w:330,h:470}];
 const DIMG=DUCK.map((d,i)=>{const im=new Image();im.src='duck'+i+'.png';return im});
+const CIMG=DUCK.map((d,i)=>{const im=new Image();im.src='duckc'+i+'.png';return im});// 입 다문 버전 (춤출 때)
 // 오리마다 스프링 상태: s=늘어남, y=점프, r=기울기
 const SP=DUCK.map(()=>({s:0,vs:0,y:0,vy:0,r:0,vr:0,side:1,droop:0}));let notesFx=[],lastT=performance.now();
 function kick(i){const p=SP[i];p.s=Math.min(p.s,-.07);p.vs+=4.2;p.vy+=1.9;p.side*=-1;p.vr+=1.1*p.side;p.droop=0;
@@ -140,20 +141,28 @@ function finish(){playing=false;ended=true;const tot=notes.length,acc=(cnt.p+cnt
 function drawTop(){const W=TW,H=TH;tg.fillStyle='#1b1430';tg.fillRect(0,0,W,H);if(!stage.complete)return;
   const sc=Math.max(W/1280,H/720),ox=(W-1280*sc)/2,oy=(H-720*sc)/2;tg.drawImage(stage,ox,oy,1280*sc,720*sc);
   const tn=performance.now();const dt=Math.min(.04,(tn-lastT)/1000);lastT=tn;
-  const beat=playing&&AC?Math.max(0,now())/spb:tn/1000*1.1;const hype=combo>=10?1.8:1;
+  const beat=playing&&AC?now()/spb:tn/1000*1.6;const hype=combo>=10?1.8:1;
   for(let i=0;i<4;i++){const p=SP[i],d=DUCK[i];
     const drooping=p.droop&&tn-p.droop<700;
-    // 박자에 맞춘 숨쉬기·좌우 흔들기 (오리마다 위상 다름)
-    const sT=(drooping?-.06:.022*hype*Math.sin(beat*Math.PI*2+i*.9));
-    const rT=(drooping?(i<2?-.09:.09):.03*hype*Math.sin(beat*Math.PI+i*1.7));
-    // 감쇠 스프링
+    const se=(tn-sing[i])/1000;const singing=se<.42;
+    // 노래 중이면 춤 멈춤(부드럽게 섞기)
+    p.w=(p.w||0)+((singing||drooping?0:1)-(p.w||0))*Math.min(1,dt*14);const w=p.w*hype;
+    // ── 안무 (8박 루프, 오리마다 살짝 늦게 따라오는 파도 효과) ──
+    const B=beat-i*.08,b8=((B%8)+8)%8;
+    const hop=Math.abs(Math.sin(Math.PI*B));                 // 매 박 콩콩
+    const step=Math.sin(Math.PI*B/2);                          // 2박마다 좌우 스텝
+    const fl=k=>Math.cos(Math.PI*Math.min(1,Math.max(0,k)));let turn=b8<7?fl((b8-6.75)/.25):-fl((b8-7.75)/.25); // 7박: 휙 뒤돌기, 8박: 휙 돌아오기
+    if(Math.abs(turn)<.35)turn=Math.sign(turn||1)*.35;
+    const wiggle=b8>4&&b8<6?Math.sin(Math.PI*4*B)*.06:0;        // 5~6박: 엉덩이 흔들
+    const dX=w*step*d.w*.07*sc, dY=w*hop*H*.035, dS=w*(.05*Math.cos(2*Math.PI*B)-.01), dR=w*(.10*step+wiggle);
+    const sT=drooping?-.06:0, rT=drooping?(i<2?-.09:.09):0;
     p.vs+=(-230*(p.s-sT)-13*p.vs)*dt;p.s+=p.vs*dt;
     p.vy+=(-170*p.y-11*p.vy)*dt;p.y+=p.vy*dt;if(p.y<0){p.y=0;p.vy*=-.3}
     p.vr+=(-110*(p.r-rT)-7*p.vr)*dt;p.r+=p.vr*dt;
-    if(!DIMG[i].complete)continue;
-    const cx=ox+(d.x+d.w/2)*sc,fy=oy+(d.y+d.h-45)*sc;const sy=1+p.s,sx=1-p.s*.55;
-    tg.save();tg.translate(cx,fy-p.y*H*.07);tg.rotate(p.r);tg.scale(sx,sy);tg.translate(-cx,-fy);
-    tg.drawImage(DIMG[i],ox+d.x*sc,oy+d.y*sc,d.w*sc,d.h*sc);tg.restore();
+    const img=(singing||!CIMG[i].complete||!CIMG[i].naturalWidth)?DIMG[i]:CIMG[i];if(!img.complete)continue;
+    const cx=ox+(d.x+d.w/2)*sc+dX,fy=oy+(d.y+d.h-45)*sc;const S=p.s+dS;const sy=1+S,sx=(1-S*.55)*(p.w>.5?turn:1);
+    tg.save();tg.translate(cx,fy-p.y*H*.07-dY);tg.rotate(p.r+dR);tg.scale(sx,sy);tg.translate(-cx,-fy);
+    tg.drawImage(img,ox+d.x*sc+dX,oy+d.y*sc,d.w*sc,d.h*sc);tg.restore();
     // 그림자
   }
   if(micImg.complete)tg.drawImage(micImg,ox+585*sc,oy+330*sc,micImg.width*sc,micImg.height*sc);
