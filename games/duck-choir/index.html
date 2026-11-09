@@ -89,11 +89,15 @@ for(const s of SONGS){const ps=[...new Set(s.notes.map(n=>n.m))].sort((a,b)=>a-b
   const last=s.notes[s.notes.length-1];s.len=last.b+2}
 
 /* ---------- 오디오 ---------- */
-let AC=null,master=null,buf={},muted=false;
+let AC=null,master=null,echoIn=null,buf={},muted=false;
 async function audioInit(){if(AC)return;AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=1.4;const comp=AC.createDynamicsCompressor();comp.threshold.value=-14;master.connect(comp);comp.connect(AC.destination);
+  // 꽥 소리 전용 에코: 딜레이(0.21초) + 피드백 + 고음 깎기 + 짧은 잔향
+  echoIn=AC.createGain();const dl=AC.createDelay(1);dl.delayTime.value=.21;const fb=AC.createGain();fb.gain.value=.38;const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2600;const wet=AC.createGain();wet.gain.value=.42;
+  echoIn.connect(dl);dl.connect(lp);lp.connect(fb);fb.connect(dl);lp.connect(wet);wet.connect(master);
+  const rv=AC.createConvolver();const L=AC.sampleRate*1.1,ir=AC.createBuffer(2,L,AC.sampleRate);for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<L;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/L,3)}rv.buffer=ir;const rg=AC.createGain();rg.gain.value=.22;echoIn.connect(rv);rv.connect(rg);rg.connect(master);
   for(const n of['quack1','quack2','quack3','toyduck']){try{const r=await fetch('sfx/'+n+'.mp3');buf[n]=await AC.decodeAudioData(await r.arrayBuffer())}catch(e){}}}
 const BASE=70.1,OFF=.06;
-function quack(midi,when,vol=1,name='quack1'){if(muted||!buf[name])return;const s=AC.createBufferSource();s.buffer=buf[name];const g=AC.createGain();g.gain.value=vol;s.playbackRate.value=name==='quack1'?Math.pow(2,(midi+12-BASE)/12):midi;s.connect(g);g.connect(master);s.start(when||0,name==='quack1'?OFF:0)}
+function quack(midi,when,vol=1,name='quack1'){if(muted||!buf[name])return;const s=AC.createBufferSource();s.buffer=buf[name];const g=AC.createGain();g.gain.value=vol;s.playbackRate.value=name==='quack1'?Math.pow(2,(midi+12-BASE)/12):midi;s.connect(g);g.connect(master);if(echoIn)g.connect(echoIn);s.start(when||0,name==='quack1'?OFF:0)}
 function hat(when,v=.05){if(muted)return;const n=AC.sampleRate*.04,b=AC.createBuffer(1,n,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);const s=AC.createBufferSource();s.buffer=b;const f=AC.createBiquadFilter();f.type='highpass';f.frequency.value=7000;const g=AC.createGain();g.gain.value=v;s.connect(f);f.connect(g);g.connect(master);s.start(when)}
 function pluck(midi,when,dur,v=.05){if(muted)return;const o=AC.createOscillator(),g=AC.createGain();o.type='triangle';o.frequency.value=440*Math.pow(2,(midi-69)/12);g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.01);g.gain.exponentialRampToValueAtTime(.001,when+dur);o.connect(g);g.connect(master);o.start(when);o.stop(when+dur+.05)}
 
