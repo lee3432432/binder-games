@@ -60,7 +60,7 @@ html,body{height:100%;overflow:hidden;background:#fbe9ef;font-family:"Jua",syste
       <div class="ov" id="menu">
         <h2>노래를 골라주세요</h2>
         <div id="songs" style="display:flex;flex-direction:column;gap:8px;width:100%;align-items:center"></div>
-        <div class="row"><button class="tog" id="fast" aria-pressed="false">⚡ 빠르게</button><button class="tog" id="auto" aria-pressed="false">🤖 자동연주</button></div>
+        <div class="row"><button class="tog" id="fast" aria-pressed="false">⚡ 빠르게</button><button class="tog" id="auto" aria-pressed="false">🤖 자동연주</button><button class="tog" id="bgm" aria-pressed="true">🎸 반주</button></div>
         <div class="hint">떨어지는 음표가 동그라미에 닿을 때 탭!<br>키보드: D F J K</div>
       </div>
       <div class="ov off" id="res">
@@ -79,25 +79,61 @@ const KEYS=['KeyD','KeyF','KeyJ','KeyK'];
 /* ---------- 노래 (퍼블릭 도메인 멜로디) [박자, 길이, midi] ---------- */
 function seq(list){let t=0;return list.map(([m,d])=>{const n={b:t,m};t+=d;return n})}
 const SONGS=[
- {id:'star',name:'반짝반짝 작은 별',lv:'★',bpm:104,notes:seq([[60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],[65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2],[67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],[67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],[60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],[65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2]])},
- {id:'bday',name:'생일 축하합니다',lv:'★★',bpm:112,notes:seq([[67,.75],[67,.25],[69,1],[67,1],[72,1],[71,2],[67,.75],[67,.25],[69,1],[67,1],[74,1],[72,2],[67,.75],[67,.25],[79,1],[76,1],[72,1],[71,1],[69,2],[77,.75],[77,.25],[76,1],[72,1],[74,1],[72,3]])},
- {id:'joy',name:'환희의 송가',lv:'★★',bpm:132,notes:seq([[64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[64,1.5],[62,.5],[62,2],[64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[62,1.5],[60,.5],[60,2],[62,1],[62,1],[64,1],[60,1],[62,1],[64,.5],[65,.5],[64,1],[60,1],[62,1],[64,.5],[65,.5],[64,1],[62,1],[60,1],[62,1],[55,2],[64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[62,1.5],[60,.5],[60,2]])},
- {id:'cancan',name:'캉캉',lv:'★★★',bpm:150,notes:seq([[60,2],[62,.5],[65,.5],[64,.5],[62,.5],[67,1],[67,1],[67,.5],[69,.5],[64,.5],[65,.5],[62,1],[62,1],[62,.5],[65,.5],[64,.5],[62,.5],[60,.5],[72,.5],[71,.5],[69,.5],[67,.5],[65,.5],[64,.5],[62,.5],[60,2],[62,.5],[65,.5],[64,.5],[62,.5],[67,1],[67,1],[67,.5],[69,.5],[64,.5],[65,.5],[62,1],[62,1],[62,.5],[65,.5],[64,.5],[62,.5],[60,.5],[67,.5],[62,.5],[64,.5],[60,2]])},
+ {id:'star',name:'반짝반짝 작은 별',lv:'★',bpm:104,meter:4,pick:0,notes:seq([[60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],[65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2],[67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],[67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],[60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],[65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2]])},
+ {id:'bday',name:'생일 축하합니다',lv:'★★',bpm:112,meter:3,pick:1,notes:seq([[67,.75],[67,.25],[69,1],[67,1],[72,1],[71,2],[67,.75],[67,.25],[69,1],[67,1],[74,1],[72,2],[67,.75],[67,.25],[79,1],[76,1],[72,1],[71,1],[69,2],[77,.75],[77,.25],[76,1],[72,1],[74,1],[72,3]])},
+ {id:'joy',name:'환희의 송가',lv:'★★',bpm:132,meter:4,pick:0,notes:seq([[64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[64,1.5],[62,.5],[62,2],[64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[62,1.5],[60,.5],[60,2],[62,1],[62,1],[64,1],[60,1],[62,1],[64,.5],[65,.5],[64,1],[60,1],[62,1],[64,.5],[65,.5],[64,1],[62,1],[60,1],[62,1],[55,2],[64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],[60,1],[60,1],[62,1],[64,1],[62,1.5],[60,.5],[60,2]])},
+ {id:'cancan',name:'캉캉',lv:'★★★',bpm:150,meter:4,pick:0,notes:seq([[60,2],[62,.5],[65,.5],[64,.5],[62,.5],[67,1],[67,1],[67,.5],[69,.5],[64,.5],[65,.5],[62,1],[62,1],[62,.5],[65,.5],[64,.5],[62,.5],[60,.5],[72,.5],[71,.5],[69,.5],[67,.5],[65,.5],[64,.5],[62,.5],[60,2],[62,.5],[65,.5],[64,.5],[62,.5],[67,1],[67,1],[67,.5],[69,.5],[64,.5],[65,.5],[62,1],[62,1],[62,.5],[65,.5],[64,.5],[62,.5],[60,.5],[67,.5],[62,.5],[64,.5],[60,2]])},
 ];
 for(const s of SONGS){const ps=[...new Set(s.notes.map(n=>n.m))].sort((a,b)=>a-b);s.notes.forEach(n=>{n.lane=Math.min(3,Math.floor(ps.indexOf(n.m)*4/ps.length))});
   // 같은 레인이 3번 이상 연속이면 다음 음은 옆 레인과 섞지 않음 (멜로디 유지)
   const last=s.notes[s.notes.length-1];s.len=last.b+2}
 
 /* ---------- 오디오 ---------- */
-let AC=null,master=null,echoIn=null,buf={},muted=false;
+let AC=null,master=null,echoIn=null,bgmBus=null,bgmOn=true,bgmNodes=[],buf={},muted=false;
 async function audioInit(){if(AC)return;AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=1.4;const comp=AC.createDynamicsCompressor();comp.threshold.value=-14;master.connect(comp);comp.connect(AC.destination);
+  bgmBus=AC.createGain();bgmBus.gain.value=.9;bgmBus.connect(master);
   // 꽥 소리 전용 에코: 딜레이(0.21초) + 피드백 + 고음 깎기 + 짧은 잔향
   echoIn=AC.createGain();const dl=AC.createDelay(1);dl.delayTime.value=.21;const fb=AC.createGain();fb.gain.value=.38;const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2600;const wet=AC.createGain();wet.gain.value=.42;
   echoIn.connect(dl);dl.connect(lp);lp.connect(fb);fb.connect(dl);lp.connect(wet);wet.connect(master);
   const rv=AC.createConvolver();const L=AC.sampleRate*1.1,ir=AC.createBuffer(2,L,AC.sampleRate);for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<L;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/L,3)}rv.buffer=ir;const rg=AC.createGain();rg.gain.value=.22;echoIn.connect(rv);rv.connect(rg);rg.connect(master);
-  for(const n of['quack1','quack2','quack3','toyduck']){try{const r=await fetch('sfx/'+n+'.mp3');buf[n]=await AC.decodeAudioData(await r.arrayBuffer())}catch(e){}}}
+  for(const n of['quack1','quack2','quack3','toyduck','uke','pizz','clap','shaker']){try{const r=await fetch('sfx/'+n+'.mp3');buf[n]=await AC.decodeAudioData(await r.arrayBuffer())}catch(e){}}}
 const BASE=70.1,OFF=.06;
 function quack(midi,when,vol=1,name='quack1'){if(muted||!buf[name])return;const s=AC.createBufferSource();s.buffer=buf[name];const g=AC.createGain();g.gain.value=vol;s.playbackRate.value=name==='quack1'?Math.pow(2,(midi+12-BASE)/12):midi;s.connect(g);g.connect(master);if(echoIn)g.connect(echoIn);s.start(when||0,name==='quack1'?OFF:0)}
+
+/* ---------- 반주 (CC0 우쿨렐레·피치카토·박수·셰이커) ---------- */
+const SAMP={uke:{base:59.8,off:.005},pizz:{base:57.1,off:.004},clap:{base:0,off:.27},shaker:{base:0,off:.07}};
+function samp(name,when,{midi=null,vol=.3,dur=null,pan=0}={}){if(muted||!bgmOn||!buf[name])return;const s=AC.createBufferSource();s.buffer=buf[name];
+  if(midi!=null)s.playbackRate.value=Math.pow(2,(midi-SAMP[name].base)/12);const g=AC.createGain();g.gain.setValueAtTime(vol,when);
+  if(dur){g.gain.setValueAtTime(vol,when+dur*.85);g.gain.linearRampToValueAtTime(0,when+dur)}
+  let out=g;if(pan&&AC.createStereoPanner){const p=AC.createStereoPanner();p.pan.value=pan;g.connect(p);out=p}
+  s.connect(g);out.connect(bgmBus);s.start(when,SAMP[name].off);if(dur)s.stop(when+dur+.05);bgmNodes.push(s)}
+function stopBgm(){for(const n of bgmNodes){try{n.stop()}catch(e){}}bgmNodes=[]}
+const CHORDS=[{n:'C',r:0,pc:[0,4,7]},{n:'F',r:5,pc:[5,9,0]},{n:'G',r:7,pc:[7,11,2]},{n:'Am',r:9,pc:[9,0,4]},{n:'Dm',r:2,pc:[2,5,9]},{n:'Em',r:4,pc:[4,7,11]}];
+function pickChord(ns,from,to,isLast){let best=CHORDS[0],bs=-1e9;for(const c of CHORDS){let sc=0;for(const n of ns){const st=Math.max(from,n.b),en=Math.min(to,n.b+(n.d||1));if(en<=st)continue;const w=en-st;sc+=(c.pc.includes(((n.m%12)+12)%12)?2:-1.2)*w*(n.b===from?1.5:1)}
+    sc+=({C:.3,F:.2,G:.2,Am:.05,Dm:0,Em:-.1})[c.n];if(isLast&&c.n==='C')sc+=5;if(sc>bs){bs=sc;best=c}}return best}
+function arrange(s){// 마디(4/4는 반마디) 단위로 코드 선택
+  const ns=s.notes.map((n,i)=>({...n,d:(s.notes[i+1]?s.notes[i+1].b:n.b+2)-n.b}));const seg=s.meter===4?2:3;const out=[];
+  for(let t=s.pick;t<s.len;t+=seg){out.push({b:t,len:Math.min(seg,s.len-t),c:pickChord(ns,t,t+seg,t+seg>=s.len-.01)})}
+  if(s.pick)out.unshift({b:0,len:s.pick,c:CHORDS[0],pickup:1});return out}
+function voicing(c){return c.pc.map(pc=>60+((pc-0+12)%12)).sort((a,b)=>a-b).map(m=>m<62?m+12:m)}
+function scheduleBgm(s,T0){stopBgm();const ch=arrange(s);const last=ch[ch.length-1];
+  for(const seg of ch){if(seg.pickup)continue;const v=voicing(seg.c);const root=48+seg.c.r-(seg.c.r>7?12:0);
+    for(let k=0;k<seg.len;k++){const b=seg.b+k,t=T0+b*spb;const inBar=((b-s.pick)%s.meter+s.meter)%s.meter;
+      if(s.meter===4){
+        if(inBar===0||inBar===2)samp('pizz',t,{midi:inBar===0?root:root+7,vol:.55,dur:spb*1.6});
+        const strum=(tt,up,vol)=>{(up?[...v].reverse():v).forEach((m,j)=>samp('uke',tt+j*.012,{midi:m,vol,dur:spb*.95,pan:-.15}))};
+        strum(t,0,inBar===0?.2:.15);if(inBar===1||inBar===2)strum(t+spb*.5,1,.1);
+        if(inBar===1||inBar===3)samp('clap',t,{vol:.28,pan:.2});
+      }else{ // 3/4: 쿵-짝-짝
+        if(inBar===0)samp('pizz',t,{midi:root,vol:.55,dur:spb*2});
+        else{v.forEach((m,j)=>samp('uke',t+j*.012,{midi:m,vol:.15,dur:spb*.8,pan:-.15}))}
+        if(inBar===2)samp('clap',t,{vol:.22,pan:.2});
+      }
+      samp('shaker',t,{vol:.10,pan:.35});samp('shaker',t+spb*.5,{vol:.06,pan:.35});
+    }}
+  // 마지막 코드 길게 울리기
+  const te=T0+(last.b+last.len)*spb;voicing(CHORDS[0]).forEach((m,j)=>samp('uke',te+j*.03,{midi:m,vol:.2,dur:2.2}));samp('pizz',te,{midi:48,vol:.5,dur:2.2});
+}
 function hat(when,v=.05){if(muted)return;const n=AC.sampleRate*.04,b=AC.createBuffer(1,n,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);const s=AC.createBufferSource();s.buffer=b;const f=AC.createBiquadFilter();f.type='highpass';f.frequency.value=7000;const g=AC.createGain();g.gain.value=v;s.connect(f);f.connect(g);g.connect(master);s.start(when)}
 function pluck(midi,when,dur,v=.05){if(muted)return;const o=AC.createOscillator(),g=AC.createGain();o.type='triangle';o.frequency.value=440*Math.pow(2,(midi-69)/12);g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.01);g.gain.exponentialRampToValueAtTime(.001,when+dur);o.connect(g);g.connect(master);o.start(when);o.stop(when+dur+.05)}
 
@@ -124,9 +160,9 @@ function start(s){song=s;spb=60/(s.bpm*(fast?1.3:1));notes=s.notes.map(n=>({...n
   $('menu').classList.add('off');$('res').classList.add('off');
   const lead=4*spb+.3;t0=AC.currentTime+lead;playing=true;
   for(let i=0;i<4;i++)quack(i===3?2.2:1.6,AC.currentTime+.3+i*spb,.7,'quack2');// 카운트인 꽥꽥꽥꽥
-  // 반주: 하이햇 + 낮은 베이스음
-  const beats=Math.ceil(s.len);for(let b=0;b<beats;b++){hat(t0+b*spb,b%2?.035:.06);hat(t0+(b+.5)*spb,.02)}
-  for(const n of notes){if(n.b%2===0)pluck(n.m-24,t0+n.t,spb*1.6,.045)}
+  // 반주: 카운트인 동안 셰이커, 본곡은 우쿨렐레·피치카토·박수
+  for(let i=0;i<4;i++)samp('shaker',AC.currentTime+.3+i*spb,{vol:.1});
+  scheduleBgm(s,t0);
   if(auto)for(const n of notes){n.auto=true}}
 function hitLane(l){if(!playing)return;press[l]=performance.now();const tn=now();let best=null,bd=9;for(const n of notes){if(n.hit||n.lane!==l)continue;const d=Math.abs(n.t-tn);if(d<bd){bd=d;best=n}if(n.t-tn>GOOD)break}
   if(best&&bd<=GOOD){best.hit=bd<=PERF?2:1;quack(best.m,0,1);if(best.hit===2){score+=100;cnt.p++;judge={txt:'PERFECT',c:'#ff5fa2',t:performance.now()}}else{score+=50;cnt.g++;judge={txt:'GOOD',c:'#45bdf5',t:performance.now()}}
@@ -211,10 +247,11 @@ function loop(){drawTop();drawBot();requestAnimationFrame(loop)}
 bc.addEventListener('pointerdown',e=>{e.preventDefault();if(auto)return;const r=bc.getBoundingClientRect();const l=Math.max(0,Math.min(3,Math.floor((e.clientX-r.left)/r.width*4)));hitLane(l)});
 addEventListener('keydown',e=>{if(e.repeat||auto)return;const l=KEYS.indexOf(e.code);const l2='1234'.indexOf(e.key);if(l>=0)hitLane(l);else if(l2>=0)hitLane(l2)});
 for(const s of SONGS){const b=document.createElement('button');b.className='song';b.innerHTML=`<span></span><small></small>`;b.querySelector('span').textContent='🎵 '+s.name;b.querySelector('small').textContent=s.lv;b.onclick=async()=>{await audioInit();if(AC.state==='suspended')await AC.resume();start(s)};$('songs').appendChild(b)}
+$('bgm').onclick=()=>{bgmOn=!bgmOn;$('bgm').setAttribute('aria-pressed',bgmOn)};
 $('fast').onclick=()=>{fast=!fast;$('fast').setAttribute('aria-pressed',fast)};
 $('auto').onclick=()=>{auto=!auto;$('auto').setAttribute('aria-pressed',auto)};
-$('retry').onclick=()=>start(song);
-$('back').onclick=()=>{$('res').classList.add('off');$('menu').classList.remove('off');song=null;notes=[]};
+$('retry').onclick=()=>{stopBgm();start(song)};
+$('back').onclick=()=>{stopBgm();$('res').classList.add('off');$('menu').classList.remove('off');song=null;notes=[]};
 $('mute').onclick=()=>{muted=!muted;$('mute').textContent=muted?'🔇':'🔊'};
 resize();loop();
 window.__app={SONGS,start,get state(){return{score,combo,cnt,playing,ended}},audioInit};
