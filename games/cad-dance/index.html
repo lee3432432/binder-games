@@ -67,9 +67,10 @@ let target=null;// 자동 춤 목표 포즈
 let sel=new Set(),hover=null,drag=null,box=null,mouse={x:-99,y:-99,in:false,touch:false};
 let count=8,figs=[],U=40;
 let undoStack=[];
-function layout(){const cols=count===8?(W>H*1.15?8:4):(W>H*1.15?8:4);const rows=Math.ceil(count/cols);
-  U=Math.min(W/(cols*1.35),(H-30)/(rows*3.4));figs=[];const gx=W/cols;const gy=(H-10)/rows;
-  for(let i=0;i<count;i++){const c=i%cols,r=Math.floor(i/cols);figs.push({x:gx*(c+.5),y:10+gy*r+(gy-U*3.2)/2+U*2.05})}}
+function layout(){const wide=W>H*1.15;const cols=wide?Math.min(8,count):4;const rows=Math.ceil(count/cols);
+  const side=W*(wide?.16:.1);const UW=W-side*2;// 좌우 여백: 마우스 움직일 공간
+  U=Math.min(UW/(cols*1.35),(H-30)/(rows*3.4));figs=[];const gx=UW/cols;const gy=(H-10)/rows;
+  for(let i=0;i<count;i++){const c=i%cols,r=Math.floor(i/cols);figs.push({x:side+gx*(c+.5),y:10+gy*r+(gy-U*3.2)/2+U*2.05})}}
 function resize(){DPR=Math.min(2,devicePixelRatio||1);const r=$('wrap').getBoundingClientRect();W=r.width;H=r.height;cv.width=W*DPR;cv.height=H*DPR;g.setTransform(DPR,0,0,DPR,0,0);layout()}
 addEventListener('resize',resize);if(window.ResizeObserver)new ResizeObserver(()=>resize()).observe(document.getElementById('wrap'));
 function P(f,k){const b=BASE[k],o=off[k];return[f.x+(b[0]+o[0])*U,f.y+(b[1]+o[1])*U]}
