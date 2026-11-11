@@ -4,189 +4,164 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>CAD 댄스 · 커맨드 플레이</title>
-<meta name="description" content="도면 위 막대인간 8명의 관절을 드래그해서 늘리고 꺾으면 8명이 똑같이 춤춰요. 녹화해서 음악에 맞춰 반복 재생까지.">
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<meta name="description" content="AutoCAD STRETCH 명령으로 막대인간 8명을 춤추게 하세요. 걸치기 박스로 선택하고 기준점을 찍은 뒤 마우스를 흔들면 8명이 똑같이 늘어나며 춤춰요.">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden;background:#212830;color:#d8e2ee;font-family:"Noto Sans KR",system-ui,sans-serif;-webkit-user-select:none;user-select:none;touch-action:none}
-#app{position:fixed;inset:0;display:flex;flex-direction:column}
-.bar{display:flex;align-items:center;gap:6px;padding:6px 8px;background:#2b333d;border-bottom:1px solid #3b4652;flex-wrap:wrap}
-.bar .t{font-weight:900;font-size:15px;margin-right:4px;white-space:nowrap}
-.bar .t small{font-family:"Share Tech Mono",monospace;color:#7d8fa3;font-weight:400;font-size:11px;margin-left:4px}
-.b{border:1px solid #47566a;background:#36414e;color:#e3ecf6;font:inherit;font-weight:700;font-size:12px;border-radius:5px;padding:5px 9px;cursor:pointer;text-decoration:none;white-space:nowrap}
-.b:hover{background:#405062}
-.b.on{background:#1e6fff;border-color:#4d8dff}
-.b.rec.on{background:#d9324a;border-color:#ff6a7f;animation:blink 1s steps(2) infinite}
-@keyframes blink{50%{opacity:.6}}
-#wrap{position:relative;flex:1;min-height:0}
-#c{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:none}
-#cmd{flex:none;background:#1a2027;border-top:1px solid #3b4652;font-family:"Share Tech Mono","Noto Sans KR",monospace;font-size:12px;line-height:1.5;padding:4px 8px 6px;color:#9fb0c2;min-height:62px}
-#cmd .h{color:#6e7f92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#cmd .cur{color:#e9f1fa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#cmd .cur:after{content:"▌";animation:blink 1s steps(2) infinite;margin-left:2px;color:#9fd0ff}
-#tip{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:rgba(20,26,33,.85);border:1px solid #47566a;color:#e3ecf6;font-size:13px;font-weight:700;padding:7px 12px;border-radius:8px;pointer-events:none;transition:opacity .5s;white-space:nowrap}
-#start{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(22,28,35,.82);z-index:5;text-align:center;padding:20px}
+html,body{height:100%;overflow:hidden;background:#1d2738;color:#d8e2ee;font-family:"Noto Sans KR",system-ui,sans-serif;-webkit-user-select:none;user-select:none;touch-action:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:none}
+#cmd{position:fixed;left:24%;right:6%;bottom:10px;pointer-events:none;font-size:12px;line-height:1}
+#cmd .h{display:table;background:rgba(150,160,175,.55);color:#f2f4f7;padding:3px 6px;margin-top:2px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+#cmd .in{margin-top:3px;background:rgba(245,247,250,.92);color:#222;padding:4px 6px;display:flex;gap:6px;align-items:center;white-space:nowrap;overflow:hidden}
+#cmd .in b{color:#555;font-weight:400}
+#cmd .in span:after{content:"";display:inline-block;width:1px;height:12px;background:#222;margin-left:2px;vertical-align:middle;animation:bl 1s steps(2) infinite}
+@keyframes bl{50%{opacity:0}}
+#ui{position:fixed;top:8px;right:8px;display:flex;gap:5px;z-index:4}
+#ui a,#ui button{border:1px solid rgba(255,255,255,.18);background:rgba(20,28,40,.55);color:#dfe7f1;font:inherit;font-size:12px;border-radius:5px;padding:4px 8px;cursor:pointer;text-decoration:none}
+#ui .on{background:rgba(30,111,255,.75)}
+#help{position:fixed;left:12px;top:10px;font-size:12px;color:rgba(230,238,248,.75);line-height:1.6;pointer-events:none;transition:opacity .6s}
+#start{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(20,28,40,.78);z-index:9;text-align:center;padding:20px}
 #start.off{display:none}
-#start h1{font-family:"Share Tech Mono",monospace;font-size:clamp(34px,8vw,64px);color:#fff;letter-spacing:.04em}
-#start h1 span{color:#4d8dff}
-#start p{color:#b8c6d6;font-weight:700;line-height:1.7;font-size:14px}
-#start p b{color:#7fe08f}
-#go{font:inherit;font-weight:900;font-size:20px;padding:10px 34px;border-radius:8px;border:2px solid #4d8dff;background:#1e6fff;color:#fff;cursor:pointer}
+#start h1{font-size:clamp(30px,7vw,54px);font-weight:900;color:#fff}
+#start p{color:#c4d0de;line-height:1.8;font-size:14px}
+#start p b{color:#7cf08f}
+#go{font:inherit;font-weight:900;font-size:19px;padding:10px 34px;border-radius:6px;border:0;background:#1e6fff;color:#fff;cursor:pointer}
 </style>
 </head>
 <body>
-<div id="app">
-  <div class="bar">
-    <a class="b" href="/">🏠</a>
-    <span class="t">CAD 댄스<small>STRETCH.dwg</small></span>
-    <button class="b" id="music">♪ 음악</button>
-    <button class="b rec" id="rec">● 녹화</button>
-    <button class="b" id="play">▶ 재생</button>
-    <button class="b" id="rand">🎲 자동 춤</button>
-    <button class="b" id="undo">↶ 취소</button>
-    <button class="b" id="reset">⟲ 원래대로</button>
-    <button class="b" id="cnt">8명</button>
-  </div>
-  <div id="wrap"><canvas id="c"></canvas><div id="tip">관절을 드래그하거나, 빈 곳을 끌어서 박스로 선택하세요</div>
-    <div id="start"><h1>CAD <span>DANCE</span></h1>
-      <p>도면 위 막대인간 8명은 전부 <b>같은 도면</b>이에요.<br>관절 하나를 잡아 끌면 8명이 똑같이 늘어나고 꺾여요.<br>빈 곳을 드래그하면 박스 선택 → 파란 점을 잡고 끌기!</p>
-      <button id="go">도면 열기</button></div>
-  </div>
-  <div id="cmd"><div class="h" id="h1"></div><div class="h" id="h2"></div><div class="cur" id="cur">명령:</div></div>
-</div>
+<canvas id="c"></canvas>
+<div id="help">① 빈 곳을 <b>오른쪽→왼쪽</b>으로 끌어 걸치기 선택<br>② 기준점 클릭 → 마우스를 움직이면 춤<br>③ 클릭하면 확정 · Esc/우클릭 취소</div>
+<div id="ui"><a href="/">🏠</a><button id="music">♪</button><button id="undo">↶</button><button id="reset">⟲</button></div>
+<div id="cmd"><div class="h" id="h1"></div><div class="h" id="h2"></div><div class="h" id="h3"></div><div class="in"><b>⌨</b><span id="cur">명령 입력</span></div></div>
+<div id="start"><h1>STRETCH.dwg</h1><p>AutoCAD <b>STRETCH</b> 명령으로 막대인간 8명을 춤추게 하세요.<br>초록 박스로 다리·팔을 걸치기 선택 → 기준점 클릭 → 마우스를 흔들기!</p><button id="go">도면 열기</button></div>
 <script>
 const $=id=>document.getElementById(id);
 const cv=$('c'),g=cv.getContext('2d');let W=0,H=0,DPR=1;
-/* ---------- 막대인간 뼈대 (골반 기준 단위좌표, y 아래로 +) ---------- */
-const J=['head','neck','hip','lElb','lHand','rElb','rHand','lKnee','lFoot','rKnee','rFoot'];
-const BASE={head:[0,-1.58],neck:[0,-1.18],hip:[0,0],lElb:[-.32,-.78],lHand:[-.5,-.38],rElb:[.32,-.78],rHand:[.5,-.38],lKnee:[-.2,.55],lFoot:[-.3,1.1],rKnee:[.2,.55],rFoot:[.3,1.1]};
-const BONES=[['neck','hip'],['neck','lElb'],['lElb','lHand'],['neck','rElb'],['rElb','rHand'],['hip','lKnee'],['lKnee','lFoot'],['hip','rKnee'],['rKnee','rFoot']];
-const HEAD_R=.3;
-let off={};J.forEach(k=>off[k]=[0,0]);
-let target=null;// 자동 춤 목표 포즈
-let sel=new Set(),hover=null,drag=null,box=null,mouse={x:-99,y:-99,in:false,touch:false};
-let count=8,figs=[],U=40;
-let undoStack=[];
-function layout(){const wide=W>H*1.15;const cols=wide?Math.min(8,count):4;const rows=Math.ceil(count/cols);
-  const side=W*(wide?.16:.1);const UW=W-side*2;// 좌우 여백: 마우스 움직일 공간
-  U=Math.min(UW/(cols*1.35),(H-30)/(rows*3.4));figs=[];const gx=UW/cols;const gy=(H-10)/rows;
-  for(let i=0;i<count;i++){const c=i%cols,r=Math.floor(i/cols);figs.push({x:side+gx*(c+.5),y:10+gy*r+(gy-U*3.2)/2+U*2.05})}}
-function resize(){DPR=Math.min(2,devicePixelRatio||1);const r=$('wrap').getBoundingClientRect();W=r.width;H=r.height;cv.width=W*DPR;cv.height=H*DPR;g.setTransform(DPR,0,0,DPR,0,0);layout()}
-addEventListener('resize',resize);if(window.ResizeObserver)new ResizeObserver(()=>resize()).observe(document.getElementById('wrap'));
-function P(f,k){const b=BASE[k],o=off[k];return[f.x+(b[0]+o[0])*U,f.y+(b[1]+o[1])*U]}
+/* ---------- 도면 (머리 반지름 r=1 단위) ---------- */
+// 꼭짓점: C 머리중심, S 어깨, H 골반, EL/ER 손, FL/FR 발
+const V=['C','S','H','EL','ER','FL','FR'];
+const BASE={C:[0,0],S:[0,1.97],H:[0,4.6],EL:[-1.08,3.0],ER:[1.08,3.0],FL:[-.95,5.05],FR:[.95,5.05]};
+const LINES=[['N','S'],['S','H'],['S','EL'],['S','ER'],['H','FL'],['H','FR']];
+const N_FIG=8;
+let figs=[];      // 각 인물: {ox,oy, p:{C:[x,y],...}} (도면 좌표 = 픽셀/스케일 전)
+let R=30;         // 머리 반지름(px)
+function initFigs(){figs=[];for(let i=0;i<N_FIG;i++){const p={};for(const k of V)p[k]=[...BASE[k]];figs.push({i,p})}}
+initFigs();
+let rows=1,perRow=8,orgX=0,orgY=0,gapX=3.3;
+function layout(){const portrait=W<H*0.9;rows=portrait?2:1;perRow=N_FIG/rows;
+  if(portrait){R=Math.min(W*.72/((perRow-1)*gapX+2.2),H*.045);orgX=W*.14+R;orgY=H*.2}
+  else{R=Math.min(W*.62/((perRow-1)*gapX),H*.055);orgX=W*.15;orgY=H*.29}}
+function base(i){const r=Math.floor(i/perRow),c=i%perRow;return[orgX+c*gapX*R,orgY+r*R*7.4]}
+function toPx(i,pt){const[bx,by]=base(i);return[bx+pt[0]*R,by+pt[1]*R]}
+function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;g.setTransform(DPR,0,0,DPR,0,0);layout()}
+addEventListener('resize',resize);
 
 /* ---------- 오디오 ---------- */
-let AC=null,buf={},musicSrc=null,musicT0=0,muted=false;const BPM=120,SPB=60/BPM;
-async function audioInit(){if(AC)return;AC=new (window.AudioContext||window.webkitAudioContext)();for(const n of['funk','boing','click','stretch']){try{const r=await fetch('sfx/'+n+'.mp3');buf[n]=await AC.decodeAudioData(await r.arrayBuffer())}catch(e){}}}
-function sfx(n,{vol=.6,rate=1,dur=null}={}){if(!AC||!buf[n])return;const s=AC.createBufferSource();s.buffer=buf[n];s.playbackRate.value=rate;const gn=AC.createGain();gn.gain.value=vol;s.connect(gn);gn.connect(AC.destination);s.start(0,0,dur||undefined)}
-function musicOn(){if(!AC||!buf.funk||musicSrc)return;const s=AC.createBufferSource();s.buffer=buf.funk;s.loop=true;const d=buf.funk.duration;s.loopStart=Math.max(0,d-32);s.loopEnd=d;const gn=AC.createGain();gn.gain.value=.55;s.connect(gn);gn.connect(AC.destination);s.start(0,Math.max(0,d-32));musicSrc=s;musicT0=AC.currentTime;$('music').classList.add('on')}
+let AC=null,buf={},musicSrc=null;
+async function audioInit(){if(AC)return;AC=new (window.AudioContext||window.webkitAudioContext)();for(const n of['funk','click','boing']){try{const r=await fetch('sfx/'+n+'.mp3');buf[n]=await AC.decodeAudioData(await r.arrayBuffer())}catch(e){}}}
+function sfx(n,vol=.5,rate=1){if(!AC||!buf[n])return;const s=AC.createBufferSource();s.buffer=buf[n];s.playbackRate.value=rate;const gn=AC.createGain();gn.gain.value=vol;s.connect(gn);gn.connect(AC.destination);s.start()}
+function musicOn(){if(!AC||!buf.funk||musicSrc)return;const s=AC.createBufferSource();s.buffer=buf.funk;s.loop=true;const d=buf.funk.duration;s.loopStart=Math.max(0,d-32);s.loopEnd=d;const gn=AC.createGain();gn.gain.value=.5;s.connect(gn);gn.connect(AC.destination);s.start(0,Math.max(0,d-32));musicSrc=s;$('music').classList.add('on')}
 function musicOff(){if(musicSrc){try{musicSrc.stop()}catch(e){}musicSrc=null}$('music').classList.remove('on')}
-function beatNow(){return musicSrc?(AC.currentTime-musicT0)/SPB:performance.now()/1000/SPB}
 
 /* ---------- 명령줄 ---------- */
-const hist=['',''];function cmd(line,cur){if(line){hist.shift();hist.push(line);$('h1').textContent=hist[0];$('h2').textContent=hist[1]}if(cur!=null)$('cur').textContent=cur}
-let tipT=0;function tip(t){$('tip').textContent=t;$('tip').style.opacity=1;clearTimeout(tipT);tipT=setTimeout(()=>$('tip').style.opacity=0,2600)}
+const hist=['','',''];function log(t){hist.shift();hist.push(t);['h1','h2','h3'].forEach((id,k)=>{$(id).textContent=hist[k];$(id).style.visibility=hist[k]?'visible':'hidden'})}
+function prompt(t){$('cur').textContent=t}
+
+/* ---------- STRETCH 상태 ---------- */
+// state: 'idle' | 'box' | 'base' | 'second'
+let state='idle',box=null,selV=[],selL=[],basePt=null,mouse={x:-999,y:-999,in:false},touch=false,snapshot=null,undoStack=[],downAt=null;
+function pickVerts(x0,y0,x1,y1){const sv=[];for(const f of figs)for(const k of V){const[px,py]=toPx(f.i,f.p[k]);if(px>=x0&&px<=x1&&py>=y0&&py<=y1)sv.push([f.i,k])}return sv}
+function endpoints(f,a){if(a==='N'){const c=f.p.C;return[c[0],c[1]+1]}return f.p[a]}
+function lineSel(f,l,crossBox){// 걸치기: 선이 박스를 지나거나 끝점이 안에 있으면 선택
+  const a=toPx(f.i,endpoints(f,l[0])),b=toPx(f.i,endpoints(f,l[1]));return segRect(a,b,crossBox)}
+function segRect(a,b,[x0,y0,x1,y1]){const inside=p=>p[0]>=x0&&p[0]<=x1&&p[1]>=y0&&p[1]<=y1;if(inside(a)||inside(b))return true;
+  const edges=[[[x0,y0],[x1,y0]],[[x1,y0],[x1,y1]],[[x1,y1],[x0,y1]],[[x0,y1],[x0,y0]]];return edges.some(([c,d])=>segX(a,b,c,d))}
+function segX(a,b,c,d){const o=(p,q,r)=>Math.sign((q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]));return o(a,b,c)!==o(a,b,d)&&o(c,d,a)!==o(c,d,b)}
+function headSel(f,[x0,y0,x1,y1],crossing){const[cx,cy]=toPx(f.i,f.p.C);const r=R;if(!crossing)return cx-r>=x0&&cx+r<=x1&&cy-r>=y0&&cy+r<=y1;
+  const nx=Math.max(x0,Math.min(cx,x1)),ny=Math.max(y0,Math.min(cy,y1));const d=Math.hypot(nx-cx,ny-cy);const inside=cx>x0&&cx<x1&&cy>y0&&cy<y1;return d<=r&&!(inside&&cx-r>x0&&cx+r<x1&&cy-r>y0&&cy+r<y1&&false)}
+function finishBox(){const x0=Math.min(box.x0,box.x1),x1=Math.max(box.x0,box.x1),y0=Math.min(box.y0,box.y1),y1=Math.max(box.y0,box.y1);const crossing=box.x1<box.x0;const rect=[x0,y0,x1,y1];
+  selL=[];let objs=0;for(const f of figs){LINES.forEach((l,li)=>{const inWin=[l[0],l[1]].every(k=>{const p=toPx(f.i,endpoints(f,k));return p[0]>=x0&&p[0]<=x1&&p[1]>=y0&&p[1]<=y1});if(crossing?lineSel(f,l,rect):inWin){selL.push([f.i,li]);objs++}});
+    if(headSel(f,rect,crossing)){selL.push([f.i,'head']);objs++}}
+  // STRETCH는 걸치기 박스 안의 꼭짓점만 이동 (윈도우 선택이면 객체 전체 이동)
+  if(crossing)selV=pickVerts(x0,y0,x1,y1);else{const s=new Set();for(const[fi,li]of selL){if(li==='head'){s.add(fi+':C');continue}for(const k of LINES[li])s.add(fi+':'+(k==='N'?'C':k))}selV=[...s].map(t=>{const[a,b]=t.split(':');return[+a,b]})}
+  log(`객체 선택: 반대 구석 지정: ${objs}개를 찾음`);box=null;
+  if(objs){state='base';prompt('기준점 지정 또는 [변위(D)] <변위>:');sfx('click',.45)}else{state='idle';prompt('명령 입력');log('*취소*')}}
+function startStretch(x,y){basePt=[x,y];snapshot=JSON.stringify(figs.map(f=>f.p));state='second';prompt('두 번째 점 지정 또는 <첫 번째 점을 변위로 사용>:');sfx('click',.35,1.2)}
+function applyDisp(x,y){const orig=JSON.parse(snapshot);const dx=(x-basePt[0])/R,dy=(y-basePt[1])/R;
+  for(const f of figs){f.p=JSON.parse(JSON.stringify(orig[f.i]))}for(const[fi,k]of selV){const p=figs[fi].p[k];p[0]+=dx;p[1]+=dy}}
+function commit(){undoStack.push(snapshot);if(undoStack.length>60)undoStack.shift();const d=Math.hypot(mouse.x-basePt[0],mouse.y-basePt[1])/R;if(d>2)sfx('boing',.4,1+Math.random()*.3);
+  log(`두 번째 점 지정: @${((mouse.x-basePt[0])/R*10).toFixed(1)},${(-(mouse.y-basePt[1])/R*10).toFixed(1)}`);state='base';basePt=null;snapshot=null;prompt('기준점 지정 또는 [변위(D)] <변위>:  (Esc: 선택 해제)')}
+function cancel(){if(state==='second'){figs.forEach((f,i)=>f.p=JSON.parse(snapshot)[i]);state='base';basePt=null;snapshot=null;log('*취소*');prompt('기준점 지정 또는 [변위(D)] <변위>:')}
+  else{state='idle';selV=[];selL=[];box=null;log('*취소*');prompt('명령 입력')}}
 
 /* ---------- 입력 ---------- */
-function hitJoint(x,y,r){let best=null,bd=r*r;for(const f of figs)for(const k of J){const[px,py]=P(f,k);const d=(px-x)**2+(py-y)**2;if(d<bd){bd=d;best=k}}return best}
-function pos(e){const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]}
-let auto=false,playing=false,recording=false,recData=[],recT0=0,lastSnd=0;
-cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);const[x,y]=pos(e);mouse={x,y,in:true,touch:e.pointerType!=='mouse'};
-  if(auto)toggleAuto(false);if(playing)togglePlay(false);
-  const rad=mouse.touch?24:12;const k=hitJoint(x,y,rad);
-  if(k){if(!sel.has(k)){if(!e.shiftKey)sel.clear();sel.add(k);sfx('click',{vol:.5})}
-    undoStack.push(JSON.stringify(off));if(undoStack.length>50)undoStack.shift();
-    drag={x0:x,y0:y,start:JSON.parse(JSON.stringify(off)),moved:0,hot:k};cmd('명령: STRETCH',`신축 점 지정: (그립 ${sel.size}개)`);sfx('stretch',{vol:.35,dur:.35,rate:1.1});
-    if(recording&&!recData.length)recT0=performance.now()}
-  else{box={x0:x,y0:y,x1:x,y1:y};if(!e.shiftKey)sel.clear();cmd(null,'반대 구석 지정:')}});
+function pos(e){return[e.clientX,e.clientY]}
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);const[x,y]=pos(e);touch=e.pointerType!=='mouse';mouse={x,y,in:true};$('help').style.opacity=0;
+  if(e.button===2){cancel();return}
+  downAt=[x,y,performance.now()];
+  if(state==='idle'){state='box';box={x0:x,y0:y,x1:x,y1:y};prompt('반대 구석 지정:');if(!hist[2].startsWith('명령: STRETCH')){log('명령: STRETCH');log('걸치기 윈도우 또는 걸치기 폴리곤으로 신축할 객체 선택...')}}
+  else if(state==='base'){startStretch(x,y);if(touch)applyDisp(x,y)}
+  else if(state==='second'){applyDisp(x,y);commit()}});
 cv.addEventListener('pointermove',e=>{const[x,y]=pos(e);mouse.x=x;mouse.y=y;mouse.in=true;
-  if(drag){const dx=(x-drag.x0)/U,dy=(y-drag.y0)/U;for(const k of sel){off[k]=[drag.start[k][0]+dx,drag.start[k][1]+dy]}drag.moved=Math.hypot(dx,dy);
-    $('cur').textContent=`신축 점 지정:  @${(dx*100).toFixed(0)},${(-dy*100).toFixed(0)}`;
-    if(AC&&drag.moved>.4&&performance.now()-lastSnd>260){lastSnd=performance.now();sfx('stretch',{vol:.18,dur:.18,rate:.9+Math.min(1.2,drag.moved*.25)})}}
-  else if(box){box.x1=x;box.y1=y}
-  else hover=hitJoint(x,y,mouse.touch?24:12)});
-function endPtr(e){if(drag){if(drag.moved>1.1)sfx('boing',{vol:.55,rate:1+Math.random()*.3});cmd(`신축 점 지정: @${(drag.moved*100).toFixed(0)}`,'명령:');drag=null}
-  else if(box){const x0=Math.min(box.x0,box.x1),x1=Math.max(box.x0,box.x1),y0=Math.min(box.y0,box.y1),y1=Math.max(box.y0,box.y1);
-    if(x1-x0>4||y1-y0>4){const crossing=box.x1<box.x0;for(const f of figs)for(const k of J){const[px,py]=P(f,k);if(px>=x0&&px<=x1&&py>=y0&&py<=y1)sel.add(k)}
-      cmd(`${crossing?'걸치기':'윈도우'} 선택: 관절 ${sel.size}종류 × ${count}명`,sel.size?'명령: 파란 그립을 잡아 끌면 신축(STRETCH)':'명령:');if(sel.size){sfx('click',{vol:.5});tip('파란 점을 잡아서 끌어보세요!')}}
-    else cmd(null,'명령:');box=null}
-  if(e&&e.pointerType!=='mouse')mouse.in=false}
-cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);cv.addEventListener('pointerleave',()=>{if(!drag&&!box)mouse.in=false});
-addEventListener('keydown',e=>{if(e.key==='Escape'){sel.clear();cmd('*취소*','명령:')}if((e.ctrlKey||e.metaKey)&&e.key==='z'){undo();e.preventDefault()}if(e.code==='Space'&&$('start').classList.contains('off')){e.preventDefault();$('music').click()}});
-function undo(){const s=undoStack.pop();if(s){off=JSON.parse(s);cmd('명령: U  실행 취소','명령:')}}
-
-/* ---------- 녹화 / 재생 ---------- */
-function snapshot(){const o={};for(const k of J)o[k]=[off[k][0],off[k][1]];return o}
-function toggleRec(on){recording=on??!recording;$('rec').classList.toggle('on',recording);
-  if(recording){togglePlay(false);toggleAuto(false);recData=[];recT0=performance.now();recData.push({t:0,o:snapshot()});cmd('명령: RECORD 시작','관절을 움직여 춤을 만드세요… 다시 누르면 끝');musicOn()}
-  else{if(recData.length>2){const L=recData[recData.length-1].t;// 박자 단위로 길이 맞추기
-      const beats=Math.max(2,Math.round(L/1000/SPB));recData.len=beats*SPB*1000;cmd(`녹화 완료: ${beats}박`,'명령: ▶ 재생을 누르면 음악에 맞춰 반복');tip('▶ 재생으로 춤을 반복해보세요');}
-    else cmd('녹화된 움직임이 없어요','명령:')}}
-function togglePlay(on){playing=on??!playing;if(playing&&!(recData.length>2&&recData.len)){playing=false;tip('먼저 ● 녹화로 춤을 만들어주세요');}
-  $('play').classList.toggle('on',playing);if(playing){toggleAuto(false);musicOn();cmd('명령: PLAY','반복 재생 중…')}}
-function toggleAuto(on){auto=on??!auto;$('rand').classList.toggle('on',auto);if(auto){playing=false;$('play').classList.remove('on');musicOn();sel.clear();cmd('명령: AUTODANCE','박자에 맞춰 자동으로 춤춰요')}else target=null}
-
-/* ---------- 자동 춤 포즈 (BASE 대비 오프셋) ---------- */
-const POSES=[
- {lHand:[-.3,-1.5],rHand:[.3,-1.5],lElb:[-.1,-.6],rElb:[.1,-.6]},                         // 만세
- {lFoot:[-1.2,-.6],rFoot:[1.2,-.6],lKnee:[-.6,-.4],rKnee:[.6,-.4],hip:[0,.5],neck:[0,.5],head:[0,.5],lElb:[0,.5],rElb:[0,.5],lHand:[-.4,.2],rHand:[.4,.2]}, // 다리 찢기
- {rFoot:[1.4,-1.3],rKnee:[.7,-.6],lHand:[-.6,-.9],rHand:[.9,-1.2],rElb:[.3,-.3]},           // 발차기
- {head:[.7,.2],neck:[.5,.1],lElb:[.4,-.2],rElb:[.6,.1],lHand:[.2,-1.1],rHand:[1.2,-.5]},    // 기울기
- {head:[-.7,.2],neck:[-.5,.1],lElb:[-.6,.1],rElb:[-.4,-.2],lHand:[-1.2,-.5],rHand:[-.2,-1.1]},
- {lHand:[1.1,-.5],rHand:[1.6,-.2],lElb:[.6,-.3],rElb:[.9,-.1],lFoot:[-.4,0],rFoot:[.4,0]},  // 가리키기
- {head:[0,-1.2],neck:[0,-.8],lHand:[-1.4,-1.2],rHand:[1.4,-1.2],lElb:[-.6,-.6],rElb:[.6,-.6]}, // 목 늘이기 (CAD 신축)
- {lKnee:[-.5,-.2],rKnee:[.5,-.2],hip:[0,.35],lHand:[-.1,.4],rHand:[.1,.4],lElb:[-.3,.2],rElb:[.3,.2]}, // 쪼그려
- {lFoot:[2.2,-.1],rFoot:[2.8,-.1],lKnee:[1.1,0],rKnee:[1.4,0],lHand:[-1.6,.2],rHand:[-1.2,.5]},  // 쭉 늘어나기
-];
-let lastBeat=-1,poseIdx=0;
-function autoStep(){const b=Math.floor(beatNow());if(b!==lastBeat){lastBeat=b;let n;do{n=Math.floor(Math.random()*POSES.length)}while(n===poseIdx);poseIdx=b%2?n:0===0&&b%4===0?6:n;
-  const p=POSES[poseIdx];target={};for(const k of J)target[k]=p[k]?[...p[k]]:[0,0];if(b%4===0&&Math.random()<.35){for(const k of J)target[k]=[target[k][0]*1.4,target[k][1]*1.4]}}
-  if(target){const a=.28;for(const k of J){off[k][0]+=(target[k][0]-off[k][0])*a;off[k][1]+=(target[k][1]-off[k][1])*a}}}
+  if(state==='box'){box.x1=x;box.y1=y}else if(state==='second')applyDisp(x,y)});
+cv.addEventListener('pointerup',e=>{const[x,y]=pos(e);
+  if(state==='box'){if(Math.hypot(x-box.x0,y-box.y0)<6){state='idle';box=null;prompt('명령 입력')}else finishBox()}
+  else if(state==='second'&&downAt&&Math.hypot(x-downAt[0],y-downAt[1])>8){applyDisp(x,y);commit()} // 드래그 방식(터치)
+  downAt=null;if(touch)mouse.in=false});
+cv.addEventListener('pointerleave',()=>{if(state!=='second')mouse.in=false});
+addEventListener('keydown',e=>{if(e.key==='Escape')cancel();if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo()}});
+function undo(){if(state==='second')cancel();const s=undoStack.pop();if(s){JSON.parse(s).forEach((p,i)=>figs[i].p=p);log('명령: U  STRETCH')}}
 
 /* ---------- 그리기 ---------- */
-function grid(){g.fillStyle='#212830';g.fillRect(0,0,W,H);const s=Math.max(12,U*.25);const ox=(W/2)%s,oy=(H/2)%s;
-  g.lineWidth=1;g.strokeStyle='rgba(120,150,190,.10)';g.beginPath();for(let x=ox;x<W;x+=s){g.moveTo(x+.5,0);g.lineTo(x+.5,H)}for(let y=oy;y<H;y+=s){g.moveTo(0,y+.5);g.lineTo(W,y+.5)}g.stroke();
-  g.strokeStyle='rgba(120,150,190,.22)';g.beginPath();for(let x=ox;x<W;x+=s*5){g.moveTo(x+.5,0);g.lineTo(x+.5,H)}for(let y=oy;y<H;y+=s*5){g.moveTo(0,y+.5);g.lineTo(W,y+.5)}g.stroke();
-  // UCS 아이콘
-  const ux=16,uy=H-16;g.strokeStyle='#c9d6e4';g.lineWidth=1.5;g.beginPath();g.moveTo(ux,uy);g.lineTo(ux+34,uy);g.moveTo(ux,uy);g.lineTo(ux,uy-34);g.stroke();
-  g.fillStyle='#c9d6e4';g.font='10px "Share Tech Mono"';g.fillText('X',ux+37,uy+3);g.fillText('Y',ux-3,uy-38);g.strokeRect(ux-3,uy-3,6,6)}
-function drawFig(f){const selBone=b=>sel.has(b[0])||sel.has(b[1]);
-  for(const pass of[0,1]){for(const b of BONES){const s=selBone(b);if((pass===0)===s)continue;const[a1,a2]=P(f,b[0]),[c1,c2]=P(f,b[1]);g.setLineDash(s?[6,4]:[]);g.strokeStyle=s?'#9fd0ff':'#eef3f9';g.lineWidth=Math.max(1.4,U*.045);g.beginPath();g.moveTo(a1,a2);g.lineTo(c1,c2);g.stroke()}}
-  g.setLineDash([]);
-  // 머리: 목과 머리 사이 연결선 + 원 + 얼굴
-  const[hx,hy]=P(f,'head'),[nx,ny]=P(f,'neck');const r=HEAD_R*U;const d=Math.hypot(hx-nx,hy-ny);const hs=sel.has('head');
-  if(d>r){g.strokeStyle=sel.has('neck')||hs?'#9fd0ff':'#eef3f9';g.setLineDash(sel.has('neck')||hs?[6,4]:[]);g.beginPath();g.moveTo(nx,ny);g.lineTo(hx-(hx-nx)/d*r,hy-(hy-ny)/d*r);g.stroke();g.setLineDash([])}
-  g.strokeStyle=hs?'#9fd0ff':'#eef3f9';g.setLineDash(hs?[6,4]:[]);g.beginPath();g.arc(hx,hy,r,0,7);g.stroke();g.setLineDash([]);
-  g.fillStyle='#eef3f9';g.beginPath();g.arc(hx-r*.35,hy-r*.18,Math.max(1.2,r*.09),0,7);g.arc(hx+r*.35,hy-r*.18,Math.max(1.2,r*.09),0,7);g.fill();
-  g.lineWidth=Math.max(1.2,U*.035);g.beginPath();g.arc(hx,hy+r*.05,r*.5,.2*Math.PI,.8*Math.PI);g.stroke();
-  // 그립
-  for(const k of J){const[px,py]=P(f,k);const s=Math.max(5,U*.13);
-    if(sel.has(k)){g.fillStyle=(drag&&drag.hot===k)||(!drag&&hover===k)?'#ff3b4e':'#1e6fff';g.fillRect(px-s/2,py-s/2,s,s);g.strokeStyle='#cfe1ff';g.lineWidth=1;g.strokeRect(px-s/2,py-s/2,s,s)}
-    else if(hover===k&&!drag&&!auto&&!playing){g.strokeStyle='#ffd23f';g.lineWidth=1.5;g.strokeRect(px-s/2,py-s/2,s,s)}}}
-function crosshair(){if(!mouse.in||(mouse.touch&&!drag&&!box))return;const{x,y}=mouse;g.strokeStyle='rgba(255,255,255,.85)';g.lineWidth=1;g.beginPath();g.moveTo(0,y+.5);g.lineTo(W,y+.5);g.moveTo(x+.5,0);g.lineTo(x+.5,H);g.stroke();
-  g.clearRect(x-5,y-5,10,10);g.fillStyle='#212830';g.fillRect(x-5,y-5,10,10);g.strokeRect(x-4.5,y-4.5,9,9)}
-function drawBox(){if(!box)return;const crossing=box.x1<box.x0;const x=Math.min(box.x0,box.x1),y=Math.min(box.y0,box.y1),w=Math.abs(box.x1-box.x0),h=Math.abs(box.y1-box.y0);
-  g.fillStyle=crossing?'rgba(60,200,90,.28)':'rgba(40,110,255,.28)';g.fillRect(x,y,w,h);g.strokeStyle=crossing?'#7cf08f':'#7fb0ff';g.setLineDash(crossing?[7,5]:[]);g.lineWidth=1.2;g.strokeRect(x+.5,y+.5,w,h);g.setLineDash([])}
-function loop(){const now=performance.now();
-  if(auto)autoStep();
-  if(recording&&recData.length&&(drag||now-recT0-recData[recData.length-1].t>66))recData.push({t:now-recT0,o:snapshot()});
-  if(playing&&recData.len){const t=((beatNow()*SPB*1000)%recData.len);let i=recData.findIndex(r=>r.t>t);if(i<0)i=recData.length-1;const a=recData[Math.max(0,i-1)],b=recData[i];const u=b.t>a.t?(t-a.t)/(b.t-a.t):0;
-    for(const k of J){off[k]=[a.o[k][0]+(b.o[k][0]-a.o[k][0])*u,a.o[k][1]+(b.o[k][1]-a.o[k][1])*u]}}
-  grid();for(const f of figs)drawFig(f);drawBox();crosshair();
-  if(recording){g.fillStyle='#ff3b4e';g.beginPath();g.arc(W-22,20,7,0,7);g.fill();g.font='bold 12px "Share Tech Mono"';g.textAlign='right';g.fillText('REC '+((now-recT0)/1000).toFixed(1)+'s',W-34,24);g.textAlign='left'}
-  requestAnimationFrame(loop)}
+function drawBg(){const gr=g.createRadialGradient(W*.72,H*.42,0,W*.55,H*.45,Math.max(W,H)*.8);gr.addColorStop(0,'#566b86');gr.addColorStop(.3,'#344a66');gr.addColorStop(1,'#1d2a3d');g.fillStyle=gr;g.fillRect(0,0,W,H);
+  const s=Math.max(14,R*.86);const ox=orgX-gapX*R*.5,oy=orgY;const sx=((ox%s)+s)%s,sy=((oy%s)+s)%s;
+  g.lineWidth=1;g.strokeStyle='rgba(175,195,225,.20)';g.beginPath();for(let x=sx;x<W;x+=s){g.moveTo(Math.round(x)+.5,0);g.lineTo(Math.round(x)+.5,H)}for(let y=sy;y<H;y+=s){g.moveTo(0,Math.round(y)+.5);g.lineTo(W,Math.round(y)+.5)}g.stroke();
+  g.strokeStyle='rgba(200,215,240,.36)';g.beginPath();for(let x=sx,i=0;x<W;x+=s,i++){if(i%5)continue;g.moveTo(Math.round(x)+.5,0);g.lineTo(Math.round(x)+.5,H)}for(let y=sy,i=0;y<H;y+=s,i++){if(i%5)continue;g.moveTo(0,Math.round(y)+.5);g.lineTo(W,Math.round(y)+.5)}g.stroke();
+  // 도면 경계선(빨강)·UCS
+  g.strokeStyle='rgba(230,80,90,.55)';g.beginPath();g.moveTo(0,H-62.5);g.lineTo(W,H-62.5);g.stroke();
+  const ux=18,uy=H-72;g.strokeStyle='#e8eef6';g.lineWidth=1.3;g.beginPath();g.moveTo(ux,uy);g.lineTo(ux+40,uy);g.moveTo(ux,uy);g.lineTo(ux,uy-44);g.stroke();g.strokeRect(ux-3,uy-3,6,6);
+  g.fillStyle='#e8eef6';g.font='12px sans-serif';g.fillText('X',ux+44,uy+4);g.fillText('Y',ux-4,uy-48)}
+function figPath(f,ctx,pts){// 선·머리·손·발 그리기 (pts: 꼭짓점 픽셀 좌표 함수)
+  const P=k=>pts(k);const C=P('C'),S=P('S'),Hh=P('H'),EL=P('EL'),ER=P('ER'),FL=P('FL'),FR=P('FR');const Nn=[C[0],C[1]+R];
+  ctx.beginPath();
+  ctx.moveTo(...Nn);ctx.lineTo(...S);ctx.lineTo(...Hh);
+  ctx.moveTo(...S);ctx.lineTo(...EL);ctx.moveTo(...S);ctx.lineTo(...ER);
+  ctx.moveTo(...Hh);ctx.lineTo(...FL);ctx.moveTo(...Hh);ctx.lineTo(...FR);
+  // 손(지그재그)·발(꺾임)
+  const hand=(E,s)=>{ctx.moveTo(...E);ctx.lineTo(E[0]-s*.2*R,E[1]+.16*R);ctx.lineTo(E[0]-s*.02*R,E[1]+.3*R);ctx.moveTo(...E);ctx.lineTo(E[0]+s*.12*R,E[1]+.2*R)};
+  hand(EL,1);hand(ER,-1);
+  ctx.moveTo(...FL);ctx.lineTo(FL[0]-.22*R,FL[1]+.16*R);ctx.moveTo(...FR);ctx.lineTo(FR[0]+.22*R,FR[1]+.16*R);
+  ctx.stroke();
+  // 머리
+  ctx.beginPath();ctx.arc(C[0],C[1],R,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.arc(C[0]-.4*R,C[1]-.25*R,.09*R,0,7);ctx.moveTo(C[0]+.49*R,C[1]-.25*R);ctx.arc(C[0]+.4*R,C[1]-.25*R,.09*R,0,7);ctx.stroke();
+  ctx.beginPath();ctx.arc(C[0],C[1]+.05*R,.42*R,.22*Math.PI,.78*Math.PI);ctx.stroke()}
+function drawFigs(){const lw=Math.max(1.4,R*.065);
+  // 신축 중이면 원래 모습 잔상
+  if(state==='second'&&snapshot){const orig=JSON.parse(snapshot);g.strokeStyle='rgba(225,232,242,.28)';g.lineWidth=lw;for(const f of figs)figPath(f,g,k=>toPx(f.i,orig[f.i][k]))}
+  g.lineCap='round';g.lineJoin='round';g.shadowColor='rgba(255,255,255,.45)';g.shadowBlur=3;g.strokeStyle='#f3f6fb';g.lineWidth=lw;
+  for(const f of figs)figPath(f,g,k=>toPx(f.i,f.p[k]));g.shadowBlur=0;
+  // 선택된 객체: 파랗게 + 그립
+  if((state==='base')&&selL.length){g.strokeStyle='#2f86ff';g.lineWidth=lw*1.6;const gs=Math.max(5,R*.22);
+    for(const[fi,li]of selL){if(li==='head')continue;const f=figs[fi];const a=toPx(fi,endpoints(f,LINES[li][0])),b=toPx(fi,endpoints(f,LINES[li][1]));g.beginPath();g.moveTo(...a);g.lineTo(...b);g.stroke();
+      g.fillStyle='#1e78ff';for(const p of[a,b]){g.fillRect(p[0]-gs/2,p[1]-gs/2,gs,gs)}const m=[(a[0]+b[0])/2,(a[1]+b[1])/2];g.fillRect(m[0]-gs*.32,m[1]-gs*.42,gs*.64,gs*.84)}
+    for(const[fi,li]of selL){if(li!=='head')continue;const c=toPx(fi,figs[fi].p.C);g.strokeStyle='#2f86ff';g.beginPath();g.arc(c[0],c[1],R,0,7);g.stroke()}}}
+function drawBox(){if(state!=='box'||!box)return;const crossing=box.x1<box.x0;const x=Math.min(box.x0,box.x1),y=Math.min(box.y0,box.y1),w=Math.abs(box.x1-box.x0),h=Math.abs(box.y1-box.y0);
+  g.fillStyle=crossing?'rgba(46,204,64,.78)':'rgba(30,110,255,.45)';g.fillRect(x,y,w,h);g.strokeStyle=crossing?'#9dff9d':'#9cc4ff';g.setLineDash(crossing?[6,4]:[]);g.lineWidth=1;g.strokeRect(x+.5,y+.5,w,h);g.setLineDash([])}
+function drawCursor(){if(!mouse.in)return;const{x,y}=mouse;const L=Math.max(48,R*2.3);
+  if(state==='second'&&basePt){g.strokeStyle='rgba(255,236,170,.85)';g.setLineDash([7,6]);g.lineWidth=1.3;g.beginPath();g.moveTo(...basePt);g.lineTo(x,y);g.stroke();g.setLineDash([])}
+  g.strokeStyle='rgba(255,255,255,.95)';g.lineWidth=1.6;g.beginPath();g.moveTo(x-L,y+.5);g.lineTo(x+L,y+.5);g.moveTo(x+.5,y-L);g.lineTo(x+.5,y+L);g.stroke();
+  if(state==='idle'||state==='box'||state==='base'){g.lineWidth=1.2;g.strokeRect(x-5,y-5,10,10)}}
+function loop(){drawBg();drawFigs();drawBox();drawCursor();requestAnimationFrame(loop)}
 
 /* ---------- 버튼 ---------- */
-$('go').onclick=async()=>{await audioInit();if(AC.state==='suspended')await AC.resume();$('start').classList.add('off');musicOn();cmd('AutoCAD 스타일 도면을 열었습니다: STRETCH.dwg','명령:');tip('관절을 드래그하거나, 빈 곳을 끌어서 박스로 선택하세요')};
+$('go').onclick=async()=>{await audioInit();if(AC.state==='suspended')await AC.resume();$('start').classList.add('off');musicOn();log('');log('');log('명령: STRETCH.dwg 열기');prompt('명령 입력')};
 $('music').onclick=async()=>{await audioInit();musicSrc?musicOff():musicOn()};
-$('rec').onclick=async()=>{await audioInit();toggleRec()};
-$('play').onclick=async()=>{await audioInit();if(recording)toggleRec(false);togglePlay()};
-$('rand').onclick=async()=>{await audioInit();if(recording)toggleRec(false);toggleAuto()};
 $('undo').onclick=undo;
-$('reset').onclick=()=>{undoStack.push(JSON.stringify(off));toggleAuto(false);togglePlay(false);J.forEach(k=>off[k]=[0,0]);sel.clear();cmd('명령: RESET  원래 자세로','명령:');sfx('boing',{vol:.4,rate:.8})};
-$('cnt').onclick=()=>{count=count===8?16:count===16?4:8;$('cnt').textContent=count+'명';layout();cmd(`명령: ARRAY  ${count}개`,'명령:')};
-resize();loop();cmd('','명령:');
-window.__app={off,sel,J,P:(i,k)=>P(figs[i],k),get figs(){return figs},toggleAuto,toggleRec,togglePlay,get recData(){return recData}};
+$('reset').onclick=()=>{undoStack.push(JSON.stringify(figs.map(f=>f.p)));initFigs();state='idle';selV=[];selL=[];log('명령: 원래대로');prompt('명령 입력')};
+resize();loop();log('');log('');log('');
+window.__app={get figs(){return figs},toPx,get state(){return state},get selV(){return selV},base};
 </script>
 </body>
 </html>

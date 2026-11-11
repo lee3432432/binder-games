@@ -2,7 +2,7 @@
   {
     "id": "cad-dance",
     "title": "CAD 댄스",
-    "desc": "도면 위 막대인간 8명의 관절을 드래그해서 늘리고 꺾으면 8명이 똑같이 춤춰요. 녹화하면 펑키 음악에 맞춰 반복 재생!",
+    "desc": "AutoCAD STRETCH 명령으로 막대인간 8명을 춤추게! 초록 걸치기 박스로 선택 → 기준점 클릭 → 마우스를 흔들면 8명이 똑같이 늘어나요.",
     "thumb": "assets/thumbs/cad-dance.jpg",
     "tags": [
       "CAD",
