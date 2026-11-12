@@ -3,52 +3,46 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>시바 타자왕 · 커맨드 플레이</title>
-<meta name="description" content="키보드를 치면 바탕화면의 시바견이 같이 타자를 치고, 마우스를 움직이면 마우스를 잡아요. 윈도우 앱으로 받아서 바탕화면에 띄워두세요.">
-<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<title>타자치는 토끼 · 커맨드 플레이</title>
+<meta name="description" content="바탕화면 위 책상 뒤에서 캐릭터가 내 키보드·마우스를 그대로 따라 해요. 키를 치면 같은 키를 누르고, 마우스를 움직이면 마우스를 같이 움직여요.">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;font-family:"Noto Sans KR",system-ui,sans-serif;color:#fff}
-body{background:radial-gradient(ellipse at 70% 30%,#f7b2c4 0%,#e0708f 18%,#9b3f6e 40%,#4b2050 65%,#1d1030 100%)}
-body:before{content:"";position:fixed;inset:0;background:radial-gradient(1px 1px at 20% 30%,#fff8,transparent),radial-gradient(1px 1px at 60% 70%,#fff6,transparent),radial-gradient(1.5px 1.5px at 80% 20%,#fff9,transparent),radial-gradient(1px 1px at 35% 80%,#fff7,transparent),radial-gradient(1px 1px at 90% 60%,#fff8,transparent),radial-gradient(1px 1px at 10% 60%,#fff6,transparent);pointer-events:none}
-.top{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(20,10,30,.35);backdrop-filter:blur(8px)}
-.top h1{font-family:"Black Han Sans",sans-serif;font-size:20px;font-weight:400;flex:1}
-.top a{color:#fff;text-decoration:none;font-size:13px;font-weight:700;border:1px solid #fff6;border-radius:8px;padding:5px 10px}
-.card{position:fixed;left:50%;top:84px;transform:translateX(-50%);width:min(560px,calc(100% - 28px));background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:18px;padding:16px;backdrop-filter:blur(10px)}
-.card p{font-size:14px;line-height:1.7;color:#ffe9f1}
-.card p b{color:#fff}
-textarea{width:100%;height:92px;margin-top:10px;border:0;border-radius:12px;padding:12px;font:inherit;font-size:15px;color:#2a1730;background:rgba(255,255,255,.92);resize:none;outline:3px solid transparent}
-textarea:focus{outline-color:#ffb347}
-.dl{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center}
-.dl a{display:inline-flex;align-items:center;gap:6px;background:#ff8a1e;color:#fff;text-decoration:none;font-weight:900;font-size:15px;border-radius:12px;padding:10px 16px;box-shadow:0 3px 0 #b85a00}
-.dl small{font-size:12px;color:#ffd9e6;line-height:1.5}
-#w{position:fixed;right:max(16px,4vw);bottom:0;width:min(340px,70vw);height:min(340px,70vw);cursor:grab}
-.kb{position:fixed;left:16px;bottom:14px;font-size:12px;color:#ffd9e6}
-@media (max-height:640px){.card{top:64px}textarea{height:60px}}
+html,body{height:100%;overflow:hidden;font-family:"Noto Sans KR",system-ui,sans-serif;color:#fff;cursor:default}
+body{background:
+ radial-gradient(ellipse 60% 35% at 72% 18%,rgba(255,236,236,.95),rgba(255,190,200,.55) 35%,transparent 70%),
+ radial-gradient(ellipse 120% 60% at 60% 40%,rgba(214,92,112,.85),transparent 60%),
+ linear-gradient(160deg,#c45b7c 0%,#a13f63 35%,#6e2a55 65%,#3b1c3e 100%)}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.55;background:
+ radial-gradient(1px 1px at 12% 22%,#fff,transparent),radial-gradient(1px 1px at 33% 61%,#fff,transparent),radial-gradient(1.4px 1.4px at 58% 12%,#fff,transparent),
+ radial-gradient(1px 1px at 77% 48%,#fff,transparent),radial-gradient(1px 1px at 88% 81%,#fff,transparent),radial-gradient(1.2px 1.2px at 22% 85%,#fff,transparent),
+ radial-gradient(1px 1px at 46% 35%,#fff,transparent),radial-gradient(1px 1px at 67% 72%,#fff,transparent)}
+#w{position:fixed;left:8%;top:12%;width:min(560px,84vw);aspect-ratio:3/2}
+#t{position:fixed;opacity:0;pointer-events:none;left:0;top:0;width:1px;height:1px}
+.bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:10px;align-items:center;background:rgba(20,10,30,.45);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:8px 10px 8px 14px;width:max-content;max-width:calc(100% - 20px)}
+.bar span{font-size:13px;line-height:1.4;color:#ffe3ec}
+.bar a{color:#fff;text-decoration:none;font-weight:900;font-size:13px;border-radius:10px;padding:8px 12px;white-space:nowrap}
+.bar .dl{background:#ff8a1e;box-shadow:0 2px 0 #b85a00}
+.bar .home{border:1px solid #fff6}
+#hint{position:fixed;left:50%;top:10px;transform:translateX(-50%);font-size:13px;color:#ffe3ec;background:rgba(20,10,30,.35);padding:6px 12px;border-radius:99px;transition:opacity .8s;pointer-events:none;white-space:nowrap}
+@media (max-width:640px){.bar span{display:none}#w{left:4%;top:16%}}
 </style>
 </head>
 <body>
-<div class="top"><h1>🐕 시바 타자왕</h1><a href="/">🏠 다른 앱</a></div>
-<div class="card">
-  <p>키보드를 치면 오른쪽 아래 <b>시바견이 같이 타자</b>를 치고, 마우스를 움직이면 <b>마우스를 잡아요</b>.<br>윈도우 앱을 받으면 바탕화면에 항상 떠 있어서 <b>어떤 프로그램에서 타이핑해도</b> 따라 쳐요.</p>
-  <textarea id="t" placeholder="여기에 아무거나 타이핑해보세요 ⌨️"></textarea>
-  <div class="dl"><a id="dlbtn" href="ShibaTyper-win.zip" download>⬇ 윈도우 앱 받기 <span style="font-weight:500;font-size:12px;opacity:.85">(1.4MB)</span></a>
-    <small>압축 풀고 <b>ShibaTyper.exe</b> 실행 · 처음 실행 때 "Windows의 PC 보호" 창이 뜨면 <b>추가 정보 → 실행</b><br>시바견 오른쪽 클릭 또는 작업표시줄 아이콘에서 크기 조절·종료</small></div>
-</div>
 <canvas id="w"></canvas>
-<div class="kb" id="kb"></div>
-<script src="core.js"></script>
+<textarea id="t" aria-hidden="true"></textarea>
+<div id="hint">키보드를 쳐보고 마우스를 움직여보세요</div>
+<div class="bar"><a class="home" href="/">🏠</a><span>윈도우 앱을 받으면 바탕화면에 항상 떠서<br>어떤 프로그램에서 치든 따라 해요</span><a class="dl" href="DeskTyper-win.zip" download>⬇ 윈도우 앱 받기 <span style="font-weight:500;opacity:.85">(2MB)</span></a></div>
+<script src="desk.js"></script>
 <script>
 const cv=document.getElementById('w'),g=cv.getContext('2d');
 function fit(){const d=devicePixelRatio||1;const r=cv.getBoundingClientRect();cv.width=r.width*d;cv.height=r.height*d;g.setTransform(d,0,0,d,0,0)}addEventListener('resize',fit);fit();
-const LEFT=new Set(['Escape','Backquote','Digit1','Digit2','Digit3','Digit4','Digit5','Tab','KeyQ','KeyW','KeyE','KeyR','KeyT','CapsLock','KeyA','KeyS','KeyD','KeyF','KeyG','ShiftLeft','KeyZ','KeyX','KeyC','KeyV','KeyB','ControlLeft','MetaLeft','AltLeft','F1','F2','F3','F4','F5']);
-let lastKD=0;addEventListener('keydown',e=>{if(e.repeat)return;lastKD=performance.now();if(!e.code||e.code==='Unidentified'||e.key==='Process'){ShibaCore.key('auto');return}ShibaCore.key(e.code==='Space'?'both':LEFT.has(e.code)?'L':'R')});
-// 모바일 가상 키보드·한글 조합 입력 대비
-document.getElementById('t').addEventListener('input',()=>{if(performance.now()-lastKD>40)ShibaCore.key('auto')});
-let lm=0;addEventListener('pointermove',e=>{const t=performance.now();if(t-lm>40){lm=t;ShibaCore.mouse('move')}});
-addEventListener('pointerdown',e=>ShibaCore.mouse('click'));addEventListener('wheel',()=>ShibaCore.mouse('move'),{passive:true});
-(function loop(){const r=cv.getBoundingClientRect();ShibaCore.draw(g,r.width,r.height);requestAnimationFrame(loop)})();
-document.getElementById('t').focus();
+let lastKD=0;const hide=()=>document.getElementById('hint').style.opacity=0;
+addEventListener('keydown',e=>{if(e.repeat)return;lastKD=performance.now();hide();DeskWidget.key(e.code)});
+const t=document.getElementById('t');t.addEventListener('input',()=>{if(performance.now()-lastKD>40)DeskWidget.key('')});
+addEventListener('pointermove',e=>{DeskWidget.cursor(e.clientX/innerWidth,e.clientY/innerHeight)});
+addEventListener('pointerdown',e=>{DeskWidget.click();if(e.pointerType!=='mouse')t.focus()});
+(function loop(){const r=cv.getBoundingClientRect();DeskWidget.draw(g,r.width,r.height);requestAnimationFrame(loop)})();
 </script>
 </body>
 </html>
