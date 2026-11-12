@@ -17,7 +17,7 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.55;ba
  radial-gradient(1px 1px at 12% 22%,#fff,transparent),radial-gradient(1px 1px at 33% 61%,#fff,transparent),radial-gradient(1.4px 1.4px at 58% 12%,#fff,transparent),
  radial-gradient(1px 1px at 77% 48%,#fff,transparent),radial-gradient(1px 1px at 88% 81%,#fff,transparent),radial-gradient(1.2px 1.2px at 22% 85%,#fff,transparent),
  radial-gradient(1px 1px at 46% 35%,#fff,transparent),radial-gradient(1px 1px at 67% 72%,#fff,transparent)}
-#w{position:fixed;left:8%;top:12%;width:min(560px,84vw);aspect-ratio:3/2}
+#w{position:fixed;left:8%;top:12%;width:calc(560px * var(--s,1));max-width:96vw;aspect-ratio:1536/1144}
 #t{position:fixed;opacity:0;pointer-events:none;left:0;top:0;width:1px;height:1px}
 .bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:10px;align-items:center;background:rgba(20,10,30,.45);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:8px 10px 8px 14px;width:max-content;max-width:calc(100% - 20px)}
 .bar span{font-size:13px;line-height:1.4;color:#ffe3ec}
@@ -25,14 +25,15 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.55;ba
 .bar .dl{background:#ff8a1e;box-shadow:0 2px 0 #b85a00}
 .bar .home{border:1px solid #fff6}
 #hint{position:fixed;left:50%;top:10px;transform:translateX(-50%);font-size:13px;color:#ffe3ec;background:rgba(20,10,30,.35);padding:6px 12px;border-radius:99px;transition:opacity .8s;pointer-events:none;white-space:nowrap}
+.sz{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#ffe3ec;white-space:nowrap}.sz input{width:90px;accent-color:#ff8a1e}.sz b{width:38px}
 @media (max-width:640px){.bar span{display:none}#w{left:4%;top:16%}}
 </style>
 </head>
 <body>
 <canvas id="w"></canvas>
 <textarea id="t" aria-hidden="true"></textarea>
-<div id="hint">키보드를 쳐보고 마우스를 움직여보세요</div>
-<div class="bar"><a class="home" href="/">🏠</a><span>윈도우 앱을 받으면 바탕화면에 항상 떠서<br>어떤 프로그램에서 치든 따라 해요</span><a class="dl" href="DeskTyper-win.zip" download>⬇ 윈도우 앱 받기 <span style="font-weight:500;opacity:.85">(2MB)</span></a></div>
+<div id="hint">키보드를 쳐보고 마우스를 움직여보세요 · 캐릭터 위에서 휠 = 크기</div>
+<div class="bar"><a class="home" href="/">🏠</a><span>윈도우 앱을 받으면 바탕화면에 항상 떠서<br>어떤 프로그램에서 치든 따라 해요</span><label class="sz">크기 <input id="size" type="range" min="50" max="200" step="5" value="100"><b id="szv">100%</b></label><a class="dl" href="DeskTyper-win.zip" download>⬇ 윈도우 앱 받기 <span style="font-weight:500;opacity:.85">(2MB)</span></a></div>
 <script src="desk.js"></script>
 <script>
 const cv=document.getElementById('w'),g=cv.getContext('2d');
@@ -42,6 +43,12 @@ addEventListener('keydown',e=>{if(e.repeat)return;lastKD=performance.now();hide(
 const t=document.getElementById('t');t.addEventListener('input',()=>{if(performance.now()-lastKD>40)DeskWidget.key('')});
 addEventListener('pointermove',e=>{DeskWidget.cursor(e.clientX/innerWidth,e.clientY/innerHeight)});
 addEventListener('pointerdown',e=>{DeskWidget.click();if(e.pointerType!=='mouse')t.focus()});
+// 크기 조절: 슬라이더 또는 캐릭터 위에서 마우스 휠
+const sz=document.getElementById('size'),szv=document.getElementById('szv');
+function setSize(v){v=Math.max(50,Math.min(200,Math.round(v/5)*5));sz.value=v;szv.textContent=v+'%';document.documentElement.style.setProperty('--s',v/100);fit();try{localStorage.setItem('desk-size',v)}catch(e){}}
+sz.addEventListener('input',()=>setSize(+sz.value));
+cv.addEventListener('wheel',e=>{e.preventDefault();setSize(+sz.value+(e.deltaY<0?10:-10))},{passive:false});
+try{const v=+localStorage.getItem('desk-size');if(v)setSize(v)}catch(e){}
 (function loop(){const r=cv.getBoundingClientRect();DeskWidget.draw(g,r.width,r.height);requestAnimationFrame(loop)})();
 </script>
 </body>

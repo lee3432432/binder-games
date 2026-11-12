@@ -50,10 +50,10 @@ namespace ShibaTyper
     // 웹 버전 desk.js 와 같은 좌표·규칙
     class Desk
     {
-        public const float SW = 1536, SH = 1024;
+        public const float SW = 1536, SH = 1024, BAND = 120, TH = SH + BAND; // 아래 120 = 누적 횟수 줄
         static readonly PointF[] PAD = { new PointF(254, 641), new PointF(665, 542), new PointF(801, 713), new PointF(370, 822) };
         static readonly PointF[] KB = { new PointF(772, 566), new PointF(1355, 417), new PointF(1496, 550), new PointF(892, 709) };
-        static readonly PointF SH_MOUSE = new PointF(575, 525), SH_KEY = new PointF(905, 488), UP_SLEEVE = new PointF(1015, 430);
+        static readonly PointF SH_MOUSE = new PointF(575, 525), SH_KEY = new PointF(905, 488), UP_SLEEVE = new PointF(1050, 315);
         const float MOUSE_S = .36f, GRIP_S = .40f, POINT_S = .36f, UP_S = .34f;
         static readonly PointF GRIP_PALM = new PointF(.36f, .62f), GRIP_SLEEVE = new PointF(.80f, .30f), POINT_TIP = new PointF(.14f, .94f), POINT_SLEEVE = new PointF(.74f, .17f), UP_SLEEVE_A = new PointF(.42f, .95f);
         const float KW = (.715f - .035f) / 15f;
@@ -158,24 +158,30 @@ namespace ShibaTyper
         };
         readonly Image scene, mouse, grip, point, up;
         Bitmap cScene; Bitmap cMouse, cGrip, cPoint, cPointF, cUp; float cs = -1;
+        public long Keys, Clicks; long lastSave;
+        static readonly string CountPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DeskTyper", "counts.txt");
+        public void LoadCounts() { try { var p = File.ReadAllText(CountPath).Split(','); Keys = long.Parse(p[0]); Clicks = long.Parse(p[1]); } catch { } }
+        public void SaveCounts() { try { Directory.CreateDirectory(Path.GetDirectoryName(CountPath)); File.WriteAllText(CountPath, Keys + "," + Clicks); } catch { } }
+        public void ResetCounts() { Keys = 0; Clicks = 0; SaveCounts(); }
         readonly Stopwatch sw = Stopwatch.StartNew();
         public long Now { get { return sw.ElapsedMilliseconds; } }
         class Hit { public KeyPos k; public long t; }
         readonly List<Hit> hits = new List<Hit>();
         KeyPos press; bool hasPress; long pressUntil, click;
-        float mx = .5f, my = .5f, tx = .5f, ty = .5f;
+        float mx = .5f, my = .5f, tx = .5f, ty = .5f, speed; long last; PointF hs, hv; bool hsInit;
 
         static Image Res(string n) { using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream(n)) return new Bitmap(Image.FromStream(s)); }
         public Desk() { scene = Res("scene.png"); mouse = Res("mouse.png"); grip = Res("hand_grip.png"); point = Res("hand_point.png"); up = Res("hand_up.png"); }
 
         public void Key(uint vk)
         {
-            KeyPos k; if (!KEYS.TryGetValue(vk, out k)) k = KEYS[0x46];
+            Keys++; KeyPos k; if (!KEYS.TryGetValue(vk, out k)) k = KEYS[0x46];
             hits.Add(new Hit { k = k, t = Now }); if (hits.Count > 12) hits.RemoveAt(0);
-            press = k; hasPress = true; pressUntil = Now + 120;
+            press = k; hasPress = true; pressUntil = Now + 140;
         }
         public void Cursor(float x, float y) { tx = Math.Max(0, Math.Min(1, x)); ty = Math.Max(0, Math.Min(1, y)); }
-        public void Click() { click = Now; }
+        public void Click() { click = Now; Clicks++; }
+        public void ResetSpring() { hsInit = false; }
 
         static PointF Lerp(PointF a, PointF b, float t) { return new PointF(a.X + (b.X - a.X) * t, a.Y + (b.Y - a.Y) * t); }
         static PointF Quad(PointF[] q, float u, float v) { return Lerp(Lerp(q[0], q[1], u), Lerp(q[3], q[2], u), v); }
@@ -221,8 +227,8 @@ namespace ShibaTyper
         public void Draw(Graphics g, int W, int H)
         {
             g.Clear(Color.Transparent);
-            float s = Math.Min(W / SW, H / SH); Cache(s);
-            float ox = (W - SW * s) / 2, oy = (H - SH * s) / 2;
+            float s = Math.Min(W / SW, H / TH); Cache(s);
+            float ox = (W - SW * s) / 2, oy = (H - TH * s) / 2;
             Func<PointF, PointF> P = p => new PointF(ox + p.X * s, oy + p.Y * s);
             g.SmoothingMode = SmoothingMode.AntiAlias; g.CompositingQuality = CompositingQuality.HighSpeed; g.InterpolationMode = InterpolationMode.NearestNeighbor; g.PixelOffsetMode = PixelOffsetMode.Half;
             g.DrawImageUnscaled(cScene, (int)Math.Round(ox), (int)Math.Round(oy));
@@ -236,25 +242,51 @@ namespace ShibaTyper
                 var pts = new[] { P(Quad(KB, u0, v0)), P(Quad(KB, u1, v0)), P(Quad(KB, u1, v1)), P(Quad(KB, u0, v1)) };
                 using (var br = new SolidBrush(Color.FromArgb((int)(230 * a), 64, 224, 255))) g.FillPolygon(br, pts);
             }
-            // 마우스
-            mx += (tx - mx) * .35f; my += (ty - my) * .35f;
-            var mc = P(Quad(PAD, .2f + .6f * mx, .22f + .56f * my)); float press_ = (t - click) < 120 ? 6 * s : 0;
+            // 마우스: 패드 끝까지 넓게, 빠르게 움직이면 팔이 더 휨
+            float dt = last == 0 ? .016f : Math.Min(.05f, (t - last) / 1000f); if (dt <= 0) dt = .016f; last = t;
+            float kf = 1 - (float)Math.Exp(-dt * 22); float pmx = mx, pmy = my;
+            mx += (tx - mx) * kf; my += (ty - my) * kf;
+            float sp = Math.Min(1f, (float)Math.Sqrt((mx - pmx) * (mx - pmx) + (my - pmy) * (my - pmy)) / dt / 1.5f); speed += (sp - speed) * .25f;
+            var mc = P(Quad(PAD, .04f + .92f * mx, .06f + .88f * my)); float press_ = (t - click) < 120 ? 6 * s : 0;
             PointF tl;
             Place(cMouse, new PointF(.5f, .5f), false, mc, new PointF(.5f, .5f), out tl); g.DrawImageUnscaled(cMouse, (int)tl.X, (int)tl.Y);
             var palm = new PointF(mc.X, mc.Y - 14 * s + press_);
             var gs = Place(cGrip, GRIP_PALM, false, palm, GRIP_SLEEVE, out tl);
-            Arm(g, P(SH_MOUSE), gs, 30, s); g.DrawImageUnscaled(cGrip, (int)tl.X, (int)tl.Y);
-            // 키보드 손
-            if (hasPress && t < pressUntil)
+            Arm(g, P(SH_MOUSE), gs, 30 + speed * 70 * (mx > .5f ? 1 : -1), s); g.DrawImageUnscaled(cGrip, (int)tl.X, (int)tl.Y);
+            // 키보드 손: 소매 위치가 스프링으로 휙 이동 (든 손 <-> 누를 키)
+            bool pressing = hasPress && t < pressUntil; bool flip = false; PointF target; float wob = (float)Math.Sin(t / 230.0) * 10;
+            Bitmap pb = cPoint;
+            if (pressing)
             {
-                var kp = P(Quad(KB, press.u, press.v)); bool flip = kp.X > P(SH_KEY).X + 40 * s; var bmp = flip ? cPointF : cPoint;
-                var sl = Place(bmp, POINT_TIP, flip, kp, POINT_SLEEVE, out tl); Arm(g, P(SH_KEY), sl, 20, s); g.DrawImageUnscaled(bmp, (int)tl.X, (int)tl.Y);
+                var kp = P(Quad(KB, press.u, press.v)); flip = kp.X > P(SH_KEY).X + 40 * s; pb = flip ? cPointF : cPoint;
+                PointF dummy; target = Place(pb, POINT_TIP, flip, kp, POINT_SLEEVE, out dummy);
             }
-            else
+            else target = P(new PointF(UP_SLEEVE.X, UP_SLEEVE.Y + wob));
+            if (!hsInit) { hs = target; hv = PointF.Empty; hsInit = true; }
+            // 스프링은 장면 좌표 기준 세기로 (크기와 무관하게 같은 느낌)
+            float K2 = pressing ? 900 : 260, D = pressing ? 38 : 16;
+            hv = new PointF(hv.X + (K2 * (target.X - hs.X) - D * hv.X) * dt, hv.Y + (K2 * (target.Y - hs.Y) - D * hv.Y) * dt);
+            hs = new PointF(hs.X + hv.X * dt, hs.Y + hv.Y * dt);
+            bool near = Math.Sqrt((target.X - hs.X) * (target.X - hs.X) + (target.Y - hs.Y) * (target.Y - hs.Y)) < 120 * s;
+            if (pressing && near) { Place(pb, POINT_SLEEVE, flip, hs, POINT_SLEEVE, out tl); Arm(g, P(SH_KEY), hs, 20, s); g.DrawImageUnscaled(pb, (int)tl.X, (int)tl.Y); }
+            else { Place(cUp, UP_SLEEVE_A, false, hs, UP_SLEEVE_A, out tl); Arm(g, P(SH_KEY), hs, -10, s); g.DrawImageUnscaled(cUp, (int)tl.X, (int)tl.Y); }
+            // 누적 횟수 (그림 아래)
+            string txt = "⌨ 타자 " + Keys.ToString("N0") + "회      🖱 마우스 " + Clicks.ToString("N0") + "회";
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+            using (var font = new Font("Malgun Gothic", 50 * s, FontStyle.Bold, GraphicsUnit.Pixel))
             {
-                float wob = (float)Math.Sin(t / 260.0) * 4; var at = P(new PointF(UP_SLEEVE.X, UP_SLEEVE.Y + wob));
-                Place(cUp, UP_SLEEVE_A, false, at, UP_SLEEVE_A, out tl); Arm(g, P(SH_KEY), at, -10, s); g.DrawImageUnscaled(cUp, (int)tl.X, (int)tl.Y);
+                var ts = g.MeasureString(txt, font); float bw = ts.Width + 70 * s, bh = 92 * s, cx = ox + SW / 2 * s, by = oy + (SH + BAND / 2) * s - bh / 2 + 6 * s;
+                using (var path = new GraphicsPath())
+                {
+                    path.AddArc(cx - bw / 2, by, bh, bh, 90, 180); path.AddArc(cx + bw / 2 - bh, by, bh, bh, 270, 180); path.CloseFigure();
+                    using (var fill = new SolidBrush(Color.FromArgb(242, 255, 255, 255))) g.FillPath(fill, path);
+                    using (var pen = new Pen(Color.FromArgb(17, 17, 17), Math.Max(1.5f, 7 * s))) g.DrawPath(pen, path);
+                }
+                using (var br = new SolidBrush(Color.FromArgb(34, 34, 34)))
+                using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+                    g.DrawString(txt, font, br, new RectangleF(cx - bw / 2, by + 2 * s, bw, bh), sf);
             }
+            if (t - lastSave > 5000) { lastSave = t; SaveCounts(); }
         }
     }
 
@@ -266,15 +298,19 @@ namespace ShibaTyper
         readonly ContextMenuStrip menu = new ContextMenuStrip();
         Native.HookProc kbProc; IntPtr kbHook = IntPtr.Zero;
         readonly HashSet<uint> down = new HashSet<uint>();
-        float scale = 1f, dpi = 1f; bool lDown;
+        float scale = 1f, dpi = 1f; bool lDown; ToolStripMenuItem sizeMenu;
+        static readonly string SettingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DeskTyper", "settings.txt");
         const int BASE_W = 420;
 
         public DeskForm()
         {
+            desk.LoadCounts();
             FormBorderStyle = FormBorderStyle.None; ShowInTaskbar = false; TopMost = true; StartPosition = FormStartPosition.Manual; Text = "타자치는 토끼";
             using (var g = CreateGraphics()) dpi = g.DpiX / 96f;
-            var wa = Screen.PrimaryScreen.WorkingArea; var sz = Px();
-            Bounds = new Rectangle(wa.Left + (int)(wa.Width * .12), wa.Top + (int)(wa.Height * .18), sz.Width, sz.Height);
+            var wa = Screen.PrimaryScreen.WorkingArea; Point? saved = LoadSettings(); var sz = Px();
+            var pos = saved ?? new Point(wa.Left + (int)(wa.Width * .12), wa.Top + (int)(wa.Height * .18));
+            if (!SystemInformation.VirtualScreen.IntersectsWith(new Rectangle(pos, sz))) pos = new Point(wa.Left + (int)(wa.Width * .12), wa.Top + (int)(wa.Height * .18));
+            Bounds = new Rectangle(pos, sz);
             using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("icon.ico")) tray.Icon = new Icon(s);
             tray.Text = "타자치는 토끼"; tray.Visible = true; tray.ContextMenuStrip = menu;
             BuildMenu();
@@ -282,7 +318,7 @@ namespace ShibaTyper
             Load += (o, e) => { Render(); InstallHook(); };
             MouseDown += (o, e) => { if (e.Button == MouseButtons.Left) { Native.ReleaseCapture(); Native.SendMessage(Handle, 0xA1, (IntPtr)2, IntPtr.Zero); } else if (e.Button == MouseButtons.Right) menu.Show(Cursor.Position); };
         }
-        Size Px() { int w = (int)Math.Round(BASE_W * scale * dpi); return new Size(w, (int)Math.Round(w * Desk.SH / Desk.SW)); }
+        Size Px() { int w = (int)Math.Round(BASE_W * scale * dpi); return new Size(w, (int)Math.Round(w * Desk.TH / Desk.SW)); }
         protected override CreateParams CreateParams { get { var cp = base.CreateParams; cp.ExStyle |= 0x80000 | 0x80 | 0x08 | 0x08000000; return cp; } }
         protected override bool ShowWithoutActivation { get { return true; } }
 
@@ -290,19 +326,53 @@ namespace ShibaTyper
         {
             menu.Items.Add(new ToolStripMenuItem("타자치는 토끼") { Enabled = false });
             menu.Items.Add(new ToolStripSeparator());
-            var size = new ToolStripMenuItem("크기");
-            foreach (var p in new[] { Tuple.Create("작게", .7f), Tuple.Create("보통", 1f), Tuple.Create("크게", 1.4f) })
+            sizeMenu = new ToolStripMenuItem("크기  (캐릭터 위에서 마우스 휠)");
+            foreach (var v in new[] { .5f, .75f, 1f, 1.25f, 1.5f, 2f })
             {
-                var it = new ToolStripMenuItem(p.Item1) { Checked = p.Item2 == 1f }; float v = p.Item2;
-                it.Click += (o, e) => { foreach (ToolStripMenuItem x in size.DropDownItems) x.Checked = false; it.Checked = true; scale = v; var sz = Px(); Bounds = new Rectangle(Left, Top, sz.Width, sz.Height); Render(); };
-                size.DropDownItems.Add(it);
+                float vv = v; var it = new ToolStripMenuItem((int)(v * 100) + "%") { Tag = v };
+                it.Click += (o, e) => SetScale(vv); sizeMenu.DropDownItems.Add(it);
             }
+            var bigger = new ToolStripMenuItem("크게 +") { ShortcutKeyDisplayString = "휠 ↑" }; bigger.Click += (o, e) => SetScale(scale * 1.1f);
+            var smaller = new ToolStripMenuItem("작게 −") { ShortcutKeyDisplayString = "휠 ↓" }; smaller.Click += (o, e) => SetScale(scale / 1.1f);
+            menu.Items.Add(bigger); menu.Items.Add(smaller);
+            var size = sizeMenu; UpdateSizeChecks();
             menu.Items.Add(size);
             var top = new ToolStripMenuItem("항상 위에") { Checked = true, CheckOnClick = true }; top.Click += (o, e) => TopMost = top.Checked; menu.Items.Add(top);
-            var home = new ToolStripMenuItem("처음 위치로"); home.Click += (o, e) => { var wa = Screen.PrimaryScreen.WorkingArea; Location = new Point(wa.Left + (int)(wa.Width * .12), wa.Top + (int)(wa.Height * .18)); }; menu.Items.Add(home);
+            var home = new ToolStripMenuItem("처음 위치·크기로"); home.Click += (o, e) => { SetScale(1f); var wa = Screen.PrimaryScreen.WorkingArea; Location = new Point(wa.Left + (int)(wa.Width * .12), wa.Top + (int)(wa.Height * .18)); }; menu.Items.Add(home);
+            var rc = new ToolStripMenuItem("타자·마우스 횟수 초기화"); rc.Click += (o, e) => desk.ResetCounts(); menu.Items.Add(rc);
             menu.Items.Add(new ToolStripSeparator());
             var quit = new ToolStripMenuItem("종료"); quit.Click += (o, e) => Close(); menu.Items.Add(quit);
         }
+        void SetScale(float v)
+        {
+            v = Math.Max(.4f, Math.Min(2.5f, v)); if (Math.Abs(v - scale) < .001f) return;
+            var c = new Point(Left + Width / 2, Top + Height / 2); scale = v; var sz = Px();
+            Bounds = new Rectangle(c.X - sz.Width / 2, c.Y - sz.Height / 2, sz.Width, sz.Height);
+            desk.ResetSpring(); UpdateSizeChecks(); Render(); SaveSettings();
+        }
+        void UpdateSizeChecks()
+        {
+            if (sizeMenu == null) return;
+            foreach (ToolStripMenuItem it in sizeMenu.DropDownItems) it.Checked = Math.Abs((float)it.Tag - scale) < .02f;
+            sizeMenu.Text = "크기 " + (int)Math.Round(scale * 100) + "%  (캐릭터 위에서 마우스 휠)";
+        }
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == 0x20A) { int delta = (short)((m.WParam.ToInt64() >> 16) & 0xFFFF); SetScale(delta > 0 ? scale * 1.1f : scale / 1.1f); return; }
+            base.WndProc(ref m);
+        }
+        protected override void OnMouseEnter(EventArgs e) { base.OnMouseEnter(e); }
+        Point? LoadSettings()
+        {
+            try { var p = File.ReadAllText(SettingsPath).Split(','); scale = Math.Max(.4f, Math.Min(2.5f, float.Parse(p[0], System.Globalization.CultureInfo.InvariantCulture))); return new Point(int.Parse(p[1]), int.Parse(p[2])); }
+            catch { return null; }
+        }
+        void SaveSettings()
+        {
+            try { Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)); File.WriteAllText(SettingsPath, scale.ToString(System.Globalization.CultureInfo.InvariantCulture) + "," + Left + "," + Top); } catch { }
+        }
+        protected override void OnMove(EventArgs e) { base.OnMove(e); if (IsHandleCreated) SaveSettings(); }
+
         void InstallHook()
         {
             try { kbProc = KbHook; kbHook = Native.SetWindowsHookEx(Native.WH_KEYBOARD_LL, kbProc, Native.GetModuleHandle(Process.GetCurrentProcess().MainModule.ModuleName), 0); } catch { }
@@ -349,16 +419,16 @@ namespace ShibaTyper
         }
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            tray.Visible = false; if (kbHook != IntPtr.Zero) Native.UnhookWindowsHookEx(kbHook); base.OnFormClosing(e);
+            SaveSettings(); desk.SaveCounts(); tray.Visible = false; if (kbHook != IntPtr.Zero) Native.UnhookWindowsHookEx(kbHook); base.OnFormClosing(e);
         }
 
         public static void TestRender(string outDir)
         {
             var d = new Desk(); int n = 0;
-            Action<string> snap = name => { using (var b = new Bitmap(630, 420, PixelFormat.Format32bppPArgb)) { using (var g = Graphics.FromImage(b)) d.Draw(g, 630, 420); b.Save(Path.Combine(outDir, (n++) + "_" + name + ".png")); } };
-            d.Cursor(.1f, .1f); for (int i = 0; i < 30; i++) { using (var b = new Bitmap(630, 420)) using (var g = Graphics.FromImage(b)) d.Draw(g, 630, 420); }
-            snap("idle_mouseTL"); d.Key(0x41); snap("key_A"); d.Cursor(.9f, .9f); for (int i = 0; i < 30; i++) { using (var b = new Bitmap(630, 420)) using (var g = Graphics.FromImage(b)) d.Draw(g, 630, 420); }
-            d.Key(0x50); snap("key_P_mouseBR"); d.Key(0x20); snap("space");
+            Action<string> snap = name => { using (var b = new Bitmap(630, 467, PixelFormat.Format32bppPArgb)) { using (var g = Graphics.FromImage(b)) d.Draw(g, 630, 467); b.Save(Path.Combine(outDir, (n++) + "_" + name + ".png")); } };
+            d.Cursor(.1f, .1f); for (int i = 0; i < 30; i++) { using (var b = new Bitmap(630, 467)) using (var g = Graphics.FromImage(b)) d.Draw(g, 630, 467); }
+            d.Click(); d.Click(); snap("idle_mouseTL"); d.Key(0x41); for (int i = 0; i < 4; i++) { Thread.Sleep(16); using (var b = new Bitmap(630, 467)) using (var g = Graphics.FromImage(b)) d.Draw(g, 630, 467); } snap("key_A"); d.Cursor(.9f, .9f); for (int i = 0; i < 30; i++) { using (var b = new Bitmap(630, 467)) using (var g = Graphics.FromImage(b)) d.Draw(g, 630, 467); }
+            d.Key(0x50); for (int i = 0; i < 4; i++) { Thread.Sleep(16); using (var b = new Bitmap(630, 467)) using (var g = Graphics.FromImage(b)) d.Draw(g, 630, 467); } snap("key_P_mouseBR"); Thread.Sleep(300); for (int i = 0; i < 6; i++) { Thread.Sleep(30); using (var b = new Bitmap(630, 467)) using (var g = Graphics.FromImage(b)) d.Draw(g, 630, 467); } snap("raised_after");
         }
 
         [STAThread]
