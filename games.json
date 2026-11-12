@@ -1,5 +1,17 @@
 [
   {
+    "id": "shiba-typer",
+    "title": "시바 타자왕",
+    "desc": "키보드를 치면 바탕화면의 시바견이 같이 타자 치고, 마우스를 움직이면 마우스를 잡아요. 윈도우 앱으로 받아서 항상 띄워두세요.",
+    "thumb": "assets/thumbs/shiba-typer.jpg",
+    "tags": [
+      "데스크톱",
+      "시바견",
+      "윈도우 앱"
+    ],
+    "new": true
+  },
+  {
     "id": "cad-dance",
     "title": "CAD 댄스",
     "desc": "AutoCAD STRETCH 명령으로 막대인간 8명을 춤추게! 초록 걸치기 박스로 선택 → 기준점 클릭 → 마우스를 흔들면 8명이 똑같이 늘어나요.",
@@ -9,7 +21,7 @@
       "춤",
       "드래그"
     ],
-    "new": true
+    "new": false
   },
   {
     "id": "duck-choir",
