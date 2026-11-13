@@ -178,7 +178,7 @@ namespace ShibaTyper
         public void Key(uint vk)
         {
             Keys++; KeyPos k; if (!KEYS.TryGetValue(vk, out k)) k = KEYS[0x46];
-            hits.Add(new Hit { k = k, t = Now }); fx.Add(new Fx { mouse = false, k = k, t = Now, seed = (float)(rnd.NextDouble() * 6.28) }); if (hits.Count > 12) hits.RemoveAt(0);
+            hits.Add(new Hit { k = k, t = Now }); if (hits.Count > 12) hits.RemoveAt(0);
             press = k; hasPress = true; pressUntil = Now + 140;
         }
         public void Cursor(float x, float y) { tx = Math.Max(0, Math.Min(1, x)); ty = Math.Max(0, Math.Min(1, y)); }

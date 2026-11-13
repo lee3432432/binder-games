@@ -34,7 +34,7 @@
   const FX=[];// 빛 효과
   const st={hits:[],press:null,pressUntil:0,mx:.5,my:.5,tx:.5,ty:.5,click:0,hs:null,hv:[0,0],last:0,speed:0};
   function key(code){const t=performance.now();let k=K[code];if(!k){const c=Object.keys(K);k=K[c[(code||'').length*7%c.length]]||K.KeyF}
-    CNT.k++;st.hits.push({k,t});FX.push({kind:'key',k,t,rgb:C.HIT,seed:Math.random()*6.28});if(st.hits.length>12)st.hits.shift();st.press=k;st.pressUntil=t+140}
+    CNT.k++;st.hits.push({k,t});if(st.hits.length>12)st.hits.shift();st.press=k;st.pressUntil=t+140}
   function cursor(x,y){st.tx=Math.max(0,Math.min(1,x));st.ty=Math.max(0,Math.min(1,y))}
   function click(){st.click=performance.now();CNT.m++;FX.push({kind:'mouse',t:st.click,rgb:C.MGLOW||'255,236,120',seed:Math.random()*6.28})}
 

@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>타자치는 강아지 · 커맨드 플레이</title>
-<meta name="description" content="바탕화면 위 책상 뒤에서 강아지가 내 키보드·마우스를 그대로 따라 해요. 키를 치면 같은 키를 누르고, 마우스를 움직이면 마우스를 같이 움직여요.">
+<meta name="description" content="바탕화면 위 책상 뒤에서 캐릭터가 내 키보드·마우스를 그대로 따라 해요. 키를 치면 같은 키를 누르고, 마우스를 움직이면 마우스를 같이 움직여요.">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden;font-family:"Noto Sans KR",system-ui,sans-serif;color:#fff;cursor:default}
 body{background:
- radial-gradient(ellipse 60% 35% at 72% 18%,rgba(255,250,225,.95),rgba(255,226,160,.5) 35%,transparent 70%),
- radial-gradient(ellipse 120% 60% at 60% 40%,rgba(120,180,240,.75),transparent 60%),
- linear-gradient(160deg,#7cc3f0 0%,#4f97d8 35%,#3a6fb8 65%,#2a4580 100%)}
+ radial-gradient(ellipse 60% 35% at 72% 18%,rgba(255,236,236,.95),rgba(255,190,200,.55) 35%,transparent 70%),
+ radial-gradient(ellipse 120% 60% at 60% 40%,rgba(214,92,112,.85),transparent 60%),
+ linear-gradient(160deg,#c45b7c 0%,#a13f63 35%,#6e2a55 65%,#3b1c3e 100%)}
 body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.55;background:
  radial-gradient(1px 1px at 12% 22%,#fff,transparent),radial-gradient(1px 1px at 33% 61%,#fff,transparent),radial-gradient(1.4px 1.4px at 58% 12%,#fff,transparent),
  radial-gradient(1px 1px at 77% 48%,#fff,transparent),radial-gradient(1px 1px at 88% 81%,#fff,transparent),radial-gradient(1.2px 1.2px at 22% 85%,#fff,transparent),
@@ -34,13 +34,7 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.55;ba
 <textarea id="t" aria-hidden="true"></textarea>
 <div id="hint">키보드를 쳐보고 마우스를 움직여보세요 · 캐릭터 위에서 휠 = 크기</div>
 <div class="bar"><a class="home" href="/">🏠</a><span>윈도우 앱을 받으면 바탕화면에 항상 떠서<br>어떤 프로그램에서 치든 따라 해요</span><label class="sz">크기 <input id="size" type="range" min="50" max="200" step="5" value="100"><b id="szv">100%</b></label><a class="dl" href="DogTyper-win.zip" download>⬇ 윈도우 앱 받기 <span style="font-weight:500;opacity:.85">(2MB)</span></a></div>
-<script>
-window.DESK_CFG={PAD:[[295,603],[626,508],[760,667],[413,778]],KB:[[727,514],[1304,399],[1458,559],[846,703]],
-  SH_MOUSE:[650,470],SH_KEY:[885,455],UP_SLEEVE:[1120,345],
-  P:{mouse:{s:.30,c:[.5,.5]},grip:{s:.38,palm:[.32,.72],sleeve:[.80,.12]},point:{s:.34,tip:[.32,.98],sleeve:[.785,.116]},up:{s:.34,sleeve:[.33,.976]}},
-  ARM:{line:'#111',fill:'#fdf3e3',shade:'rgba(225,195,155,.55)',w:34},HIT:'255,170,60',STORE:'dog-desk-counts',
-  KL:{U0:.04,U1:.97,V:[.17,.17,.35,.52,.69,.86],RX0:.80,RXW:.18,KH:.08}};
-</script>
+<script>window.DESK_CFG={STORE:'dog-desk-counts'};</script>
 <script src="../shiba-typer/desk.js"></script>
 <script>
 const cv=document.getElementById('w'),g=cv.getContext('2d');
