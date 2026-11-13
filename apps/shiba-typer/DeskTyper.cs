@@ -54,9 +54,9 @@ namespace ShibaTyper
         static readonly PointF[] PAD = { new PointF(254, 641), new PointF(665, 542), new PointF(801, 713), new PointF(370, 822) };
         static readonly PointF[] KB = { new PointF(772, 566), new PointF(1355, 417), new PointF(1496, 550), new PointF(892, 709) };
         static readonly PointF SH_MOUSE = new PointF(575, 525), SH_KEY = new PointF(905, 488), UP_SLEEVE = new PointF(1050, 315);
-        const float MOUSE_S = .36f, GRIP_S = .40f, POINT_S = .36f, UP_S = .34f;
-        static readonly PointF GRIP_PALM = new PointF(.36f, .62f), GRIP_SLEEVE = new PointF(.80f, .30f), POINT_TIP = new PointF(.14f, .94f), POINT_SLEEVE = new PointF(.74f, .17f), UP_SLEEVE_A = new PointF(.42f, .95f);
-        const float KW = (.715f - .035f) / 15f;
+        const float MOUSE_S = 0.36f, GRIP_S = 0.4f, POINT_S = 0.36f, UP_S = 0.34f;
+        static readonly PointF GRIP_PALM = new PointF(0.36f, 0.62f), GRIP_SLEEVE = new PointF(0.8f, 0.3f), POINT_TIP = new PointF(0.14f, 0.94f), POINT_SLEEVE = new PointF(0.74f, 0.17f), UP_SLEEVE_A = new PointF(0.42f, 0.95f);
+        const float KW = 0.04533f;
         static readonly Dictionary<uint, KeyPos> KEYS = new Dictionary<uint, KeyPos> {
             {0x1b,new KeyPos(0.0577f,0.1300f,1f)},
             {0x70,new KeyPos(0.1551f,0.1300f,1f)},
@@ -152,9 +152,9 @@ namespace ShibaTyper
             {0x62,new KeyPos(0.9125f,0.7200f,1f)},
             {0x63,new KeyPos(0.9470f,0.7200f,1f)},
             {0x60,new KeyPos(0.8964f,0.8700f,1.6f)},
-            {0x10,new KeyPos(0.0849f,0.72f,2.2f)},
-            {0x11,new KeyPos(0.0622f,0.87f,1.2f)},
-            {0x12,new KeyPos(0.1801f,0.87f,1.2f)}
+            {0x10,new KeyPos(0.0849f,0.7200f,2.2f)},
+            {0x11,new KeyPos(0.0622f,0.8700f,1.2f)},
+            {0x12,new KeyPos(0.1801f,0.8700f,1.2f)}
         };
         readonly Image scene, mouse, grip, point, up;
         Bitmap cScene; Bitmap cMouse, cGrip, cPoint, cPointF, cUp; float cs = -1;
@@ -166,6 +166,8 @@ namespace ShibaTyper
         readonly Stopwatch sw = Stopwatch.StartNew();
         public long Now { get { return sw.ElapsedMilliseconds; } }
         class Hit { public KeyPos k; public long t; }
+        class Fx { public bool mouse; public KeyPos k; public long t; public float seed; }
+        readonly List<Fx> fx = new List<Fx>(); readonly Random rnd = new Random();
         readonly List<Hit> hits = new List<Hit>();
         KeyPos press; bool hasPress; long pressUntil, click;
         float mx = .5f, my = .5f, tx = .5f, ty = .5f, speed; long last; PointF hs, hv; bool hsInit;
@@ -176,11 +178,11 @@ namespace ShibaTyper
         public void Key(uint vk)
         {
             Keys++; KeyPos k; if (!KEYS.TryGetValue(vk, out k)) k = KEYS[0x46];
-            hits.Add(new Hit { k = k, t = Now }); if (hits.Count > 12) hits.RemoveAt(0);
+            hits.Add(new Hit { k = k, t = Now }); fx.Add(new Fx { mouse = false, k = k, t = Now, seed = (float)(rnd.NextDouble() * 6.28) }); if (hits.Count > 12) hits.RemoveAt(0);
             press = k; hasPress = true; pressUntil = Now + 140;
         }
         public void Cursor(float x, float y) { tx = Math.Max(0, Math.Min(1, x)); ty = Math.Max(0, Math.Min(1, y)); }
-        public void Click() { click = Now; Clicks++; }
+        public void Click() { click = Now; Clicks++; fx.Add(new Fx { mouse = true, t = Now, seed = (float)(rnd.NextDouble() * 6.28) }); }
         public void ResetSpring() { hsInit = false; }
 
         static PointF Lerp(PointF a, PointF b, float t) { return new PointF(a.X + (b.X - a.X) * t, a.Y + (b.Y - a.Y) * t); }
@@ -212,6 +214,36 @@ namespace ShibaTyper
             topLeft = new PointF(at.X - ax, at.Y - ay);
             return new PointF(topLeft.X + (flip ? 1 - other.X : other.X) * b.Width, topLeft.Y + other.Y * b.Height);
         }
+        static readonly Color HITC = Color.FromArgb(64, 224, 255), MGLOWC = Color.FromArgb(255, 236, 120);
+        static void Glow(Graphics g, PointF c, Color col, float e, float seed, bool big, float s)
+        {
+            float k = e / .5f; if (k >= 1 || k < 0) return; float R = (big ? 220 : 175) * (.5f + .8f * k) * s; float a = (float)Math.Pow(1 - k, .8);
+            using (var path = new GraphicsPath())
+            {
+                path.AddEllipse(c.X - R, c.Y - R, 2 * R, 2 * R);
+                using (var br = new PathGradientBrush(path))
+                {
+                    br.CenterPoint = c;
+                    var cb = new ColorBlend(3);
+                    cb.Colors = new[] { Color.FromArgb(0, col), Color.FromArgb((int)(215 * a), col), Color.FromArgb((int)(245 * a), 255, 255, 255) };
+                    cb.Positions = new[] { 0f, .75f, 1f }; br.InterpolationColors = cb;
+                    g.FillPath(br, path);
+                }
+            }
+            for (int i = 0; i < 8; i++)
+            {
+                double an = seed + i * Math.PI / 4; float r0 = R * .35f, r1 = R * (.75f + .25f * (float)Math.Sin(seed * 3 + i));
+                using (var pen = new Pen(Color.FromArgb((int)(230 * a), col), ((i % 2 == 1 ? 10 : 16) * a + 3) * s) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+                    g.DrawLine(pen, c.X + (float)Math.Cos(an) * r0, c.Y + (float)Math.Sin(an) * r0, c.X + (float)Math.Cos(an) * r1, c.Y + (float)Math.Sin(an) * r1);
+            }
+            using (var wb = new SolidBrush(Color.FromArgb((int)(255 * a), 255, 255, 255)))
+                for (int i = 0; i < 6; i++)
+                {
+                    double an = seed * 2 + i * 1.05; float r = R * (.5f + .6f * k) * (.8f + .4f * (float)Math.Sin(i * 7 + seed));
+                    float sx = c.X + (float)Math.Cos(an) * r, sy = c.Y + (float)Math.Sin(an) * r - 20 * k * s, ss = (14 + 8 * (float)Math.Sin(i + seed)) * a * s;
+                    g.FillPolygon(wb, new[] { new PointF(sx, sy - ss), new PointF(sx + ss * .3f, sy - ss * .3f), new PointF(sx + ss, sy), new PointF(sx + ss * .3f, sy + ss * .3f), new PointF(sx, sy + ss), new PointF(sx - ss * .3f, sy + ss * .3f), new PointF(sx - ss, sy), new PointF(sx - ss * .3f, sy - ss * .3f) });
+                }
+        }
         static void Arm(Graphics g, PointF a, PointF b, float bend, float s)
         {
             var c = new PointF((a.X + b.X) / 2, (a.Y + b.Y) / 2 - bend * s);
@@ -238,7 +270,7 @@ namespace ShibaTyper
             foreach (var h in hits)
             {
                 float a = 1 - (t - h.t) / 220f; var k = h.k;
-                float u0 = k.u - KW * k.w / 2, u1 = k.u + KW * k.w / 2, v0 = k.v - .065f, v1 = k.v + .065f;
+                float u0 = k.u - KW * k.w / 2, u1 = k.u + KW * k.w / 2, v0 = k.v - 0.065f, v1 = k.v + 0.065f;
                 var pts = new[] { P(Quad(KB, u0, v0)), P(Quad(KB, u1, v0)), P(Quad(KB, u1, v1)), P(Quad(KB, u0, v1)) };
                 using (var br = new SolidBrush(Color.FromArgb((int)(230 * a), 64, 224, 255))) g.FillPolygon(br, pts);
             }
@@ -270,6 +302,14 @@ namespace ShibaTyper
             bool near = Math.Sqrt((target.X - hs.X) * (target.X - hs.X) + (target.Y - hs.Y) * (target.Y - hs.Y)) < 120 * s;
             if (pressing && near) { Place(pb, POINT_SLEEVE, flip, hs, POINT_SLEEVE, out tl); Arm(g, P(SH_KEY), hs, 20, s); g.DrawImageUnscaled(pb, (int)tl.X, (int)tl.Y); }
             else { Place(cUp, UP_SLEEVE_A, false, hs, UP_SLEEVE_A, out tl); Arm(g, P(SH_KEY), hs, -10, s); g.DrawImageUnscaled(cUp, (int)tl.X, (int)tl.Y); }
+            // 빛 효과 (손 위에)
+            fx.RemoveAll(f => t - f.t > 520); if (fx.Count > 24) fx.RemoveRange(0, fx.Count - 24);
+            foreach (var f in fx)
+            {
+                float e = (t - f.t) / 1000f;
+                if (f.mouse) Glow(g, new PointF(mc.X, mc.Y - 10 * s), MGLOWC, e, f.seed, true, s);
+                else Glow(g, P(Quad(KB, f.k.u, f.k.v)), HITC, e, f.seed, f.k.w > 3, s);
+            }
             // 누적 횟수 (그림 아래)
             string txt = "⌨ 타자 " + Keys.ToString("N0") + "회      🖱 마우스 " + Clicks.ToString("N0") + "회";
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;

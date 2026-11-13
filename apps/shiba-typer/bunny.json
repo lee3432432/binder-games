@@ -1,0 +1,5 @@
+{"id":"DeskTyper","title":"타자치는 토끼","product":"Desk Typer","assets":"/home/claude/binder-games/games/shiba-typer","icon":"/home/claude/shiba-typer/native/bunny_icon.ico",
+ "PAD":[[254,641],[665,542],[801,713],[370,822]],"KB":[[772,566],[1355,417],[1496,550],[892,709]],
+ "SH_MOUSE":[575,525],"SH_KEY":[905,488],"UP_SLEEVE":[1050,315],
+ "P":{"mouse":{"s":0.36},"grip":{"s":0.40,"palm":[0.36,0.62],"sleeve":[0.80,0.30]},"point":{"s":0.36,"tip":[0.14,0.94],"sleeve":[0.74,0.17]},"up":{"s":0.34,"sleeve":[0.42,0.95]}},
+ "ARM":{"line":"17, 17, 17","fill":"251, 251, 255","shade":"140, 180, 170, 210","w":30},"HIT":"64, 224, 255","web":{}}

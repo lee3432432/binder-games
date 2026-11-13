@@ -31,16 +31,27 @@
 
   const CNT=(()=>{try{return JSON.parse(localStorage.getItem(C.STORE))||{k:0,m:0}}catch(e){return{k:0,m:0}}})();
   const saveCnt=()=>{try{localStorage.setItem(C.STORE,JSON.stringify(CNT))}catch(e){}};addEventListener('beforeunload',saveCnt);setInterval(saveCnt,5000);
+  const FX=[];// 빛 효과
   const st={hits:[],press:null,pressUntil:0,mx:.5,my:.5,tx:.5,ty:.5,click:0,hs:null,hv:[0,0],last:0,speed:0};
   function key(code){const t=performance.now();let k=K[code];if(!k){const c=Object.keys(K);k=K[c[(code||'').length*7%c.length]]||K.KeyF}
-    CNT.k++;st.hits.push({k,t});if(st.hits.length>12)st.hits.shift();st.press=k;st.pressUntil=t+140}
+    CNT.k++;st.hits.push({k,t});FX.push({kind:'key',k,t,rgb:C.HIT,seed:Math.random()*6.28});if(st.hits.length>12)st.hits.shift();st.press=k;st.pressUntil=t+140}
   function cursor(x,y){st.tx=Math.max(0,Math.min(1,x));st.ty=Math.max(0,Math.min(1,y))}
-  function click(){st.click=performance.now();CNT.m++}
+  function click(){st.click=performance.now();CNT.m++;FX.push({kind:'mouse',t:st.click,rgb:C.MGLOW||'255,236,120',seed:Math.random()*6.28})}
 
   function drawSprite(g,img,s,anchor,at,flip){const w=img.naturalWidth*s,h=img.naturalHeight*s;const ax=(flip?1-anchor[0]:anchor[0])*w,ay=anchor[1]*h;
     g.save();g.translate(at[0]-ax,at[1]-ay);if(flip){g.translate(w,0);g.scale(-1,1)}g.drawImage(img,0,0,w,h);g.restore();return{w,h}}
   function sprAnchor(img,s,anchor,at,flip,other){// 같은 스프라이트의 다른 기준점 위치
     const w=img.naturalWidth*s,h=img.naturalHeight*s;const ax=(flip?1-anchor[0]:anchor[0])*w,ay=anchor[1]*h;const ox=(flip?1-other[0]:other[0])*w,oy=other[1]*h;return[at[0]-ax+ox,at[1]-ay+oy]}
+  // 빛: 부드러운 원형 번짐 + 퍼지는 빛줄기 + 반짝이
+  function glow(g,x,y,rgb,e,seed,big){const D=.5,k=e/D;if(k>=1)return;const R=(big?220:175)*(.5+.8*k),a=Math.pow(1-k,.8);
+    g.save();g.globalCompositeOperation='lighter';
+    const gr=g.createRadialGradient(x,y,0,x,y,R);gr.addColorStop(0,`rgba(255,255,255,${.95*a})`);gr.addColorStop(.25,`rgba(${rgb},${.85*a})`);gr.addColorStop(1,`rgba(${rgb},0)`);
+    g.fillStyle=gr;g.beginPath();g.arc(x,y,R,0,7);g.fill();
+    g.lineCap='round';for(let i=0;i<8;i++){const an=seed+i*Math.PI/4,r0=R*.35,r1=R*(.75+.25*Math.sin(seed*3+i));g.strokeStyle=`rgba(${rgb},${.9*a})`;g.lineWidth=(i%2?10:16)*a+3;
+      g.beginPath();g.moveTo(x+Math.cos(an)*r0,y+Math.sin(an)*r0);g.lineTo(x+Math.cos(an)*r1,y+Math.sin(an)*r1);g.stroke()}
+    for(let i=0;i<6;i++){const an=seed*2+i*1.05,r=R*(.5+.6*k)*(.8+.4*Math.sin(i*7+seed)),sx=x+Math.cos(an)*r,sy=y+Math.sin(an)*r-20*k,ss=(14+8*Math.sin(i+seed))*a;
+      g.fillStyle=`rgba(255,255,255,${a})`;g.beginPath();g.moveTo(sx,sy-ss);g.lineTo(sx+ss*.3,sy-ss*.3);g.lineTo(sx+ss,sy);g.lineTo(sx+ss*.3,sy+ss*.3);g.lineTo(sx,sy+ss);g.lineTo(sx-ss*.3,sy+ss*.3);g.lineTo(sx-ss,sy);g.lineTo(sx-ss*.3,sy-ss*.3);g.closePath();g.fill()}
+    g.restore()}
   function arm(g,a,b,bend){const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2-bend;g.lineCap='round';
     g.strokeStyle=C.ARM.line;g.lineWidth=C.ARM.w+10;g.beginPath();g.moveTo(...a);g.quadraticCurveTo(mx,my,...b);g.stroke();
     g.strokeStyle=C.ARM.fill;g.lineWidth=C.ARM.w;g.beginPath();g.moveTo(...a);g.quadraticCurveTo(mx,my,...b);g.stroke();
@@ -72,6 +83,9 @@
     const near=Math.hypot(target[0]-st.hs[0],target[1]-st.hs[1])<120;
     if(pressing&&near){arm(g,SH_KEY,st.hs,20);drawSprite(g,IMG.hand_point,P.point.s,P.point.sleeve,st.hs,flip)}
     else{arm(g,SH_KEY,st.hs,-10);drawSprite(g,IMG.hand_up,P.up.s,P.up.sleeve,st.hs,false)}
+    // 빛 효과 (손 위에 덮어서 잘 보이게)
+    for(const f of FX){const e=(t-f.t)/1000;if(f.kind==='mouse')glow(g,mc[0],mc[1]-10,f.rgb,e,f.seed,true);else glow(g,...quad(KB,f.k.u,f.k.v),f.rgb,e,f.seed,f.k.w>3)}
+    for(let i=FX.length-1;i>=0;i--)if(t-FX[i].t>520)FX.splice(i,1);if(FX.length>24)FX.splice(0,FX.length-24);
     // 누적 횟수 (그림 아래)
     const txt='⌨ 타자 '+CNT.k.toLocaleString()+'회     🖱 마우스 '+CNT.m.toLocaleString()+'회';
     g.font='900 56px "Noto Sans KR","Malgun Gothic",sans-serif';const tw=g.measureText(txt).width;const bw=tw+90,bh=92,bx=SW/2-bw/2,by=SH+BAND/2-bh/2+6;

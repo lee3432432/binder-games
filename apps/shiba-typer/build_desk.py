@@ -16,6 +16,7 @@ s=s.replace('new Pen(Color.FromArgb(17, 17, 17), 40 * s)',f'new Pen(Color.FromAr
 s=s.replace('new Pen(Color.FromArgb(251, 251, 255), 30 * s)',f'new Pen(Color.FromArgb({A["fill"]}), {A["w"]} * s)')
 s=s.replace('new Pen(Color.FromArgb(140, 180, 170, 210), 8 * s)',f'new Pen(Color.FromArgb({A["shade"]}), 8 * s)')
 s=s.replace('Color.FromArgb((int)(230 * a), 64, 224, 255)',f'Color.FromArgb((int)(230 * a), {cfg["HIT"]})')
+s=s.replace('HITC = Color.FromArgb(64, 224, 255)',f'HITC = Color.FromArgb({cfg["HIT"]})')
 s=s.replace('"DeskTyper", "counts.txt"',f'"{cfg["id"]}", "counts.txt"').replace('"DeskTyper", "settings.txt"',f'"{cfg["id"]}", "settings.txt"')
 s=s.replace('"DeskTyper_Single"',f'"{cfg["id"]}_Single"').replace('타자치는 토끼',cfg['title']).replace('"Desk Typer"',f'"{cfg["product"]}"')
 kt=json.loads(subprocess.run(['node',os.path.join(os.path.dirname(os.path.abspath(__file__)),'keytable.js'),sys.argv[1]],capture_output=True,text=True,check=True).stdout)
