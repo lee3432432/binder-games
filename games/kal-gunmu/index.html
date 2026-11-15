@@ -174,9 +174,9 @@ function drawFrame(src,fr,cs,idx){const w=cv.width,h=cv.height,k=w/W;g.drawImage
   // 아래: 많이 틀린 순서
   const bh=h*.105;
   if(idx!=null){const rk=rankAt(idx).slice(0,5);const rh=h*.042,ry=h-bh-rh;g.fillStyle='rgba(0,0,0,.72)';g.fillRect(0,ry,w,rh);
-    g.textBaseline='middle';g.textAlign='left';g.font=`900 ${Math.round(w*.03)}px "Noto Sans KR",sans-serif`;g.fillStyle='#ff6b4b';const lab='많이 틀린 순서';g.fillText(lab,w*.03,ry+rh/2);
+    g.textBaseline='middle';g.textAlign='left';g.font=`900 ${Math.round(w*.03)}px "Noto Sans KR",sans-serif`;g.fillStyle='#ff6b4b';const lab='많이 틀린 순';g.fillText(lab,w*.03,ry+rh/2);
     let x=w*.03+g.measureText(lab).width+w*.03;g.font=`700 ${Math.round(w*.03)}px "Noto Sans KR",sans-serif`;
-    rk.forEach((m,i)=>{const t=`${i===0&&m.rate>0?'👑':''}${m.no}번 ${(m.rate*100).toFixed(0)}%`;g.fillStyle=i===0?'#ffd84d':'#fff';g.fillText(t,x,ry+rh/2);x+=g.measureText(t).width+w*.035});
+    for(const [i,m] of rk.entries()){const t=`${i===0&&m.rate>0?'👑':''}${m.no}번 ${(m.rate*100).toFixed(0)}%`;const tw=g.measureText(t).width;if(x+tw>w*.97)break;g.fillStyle=i===0?'#ffd84d':'#fff';g.fillText(t,x,ry+rh/2);x+=tw+w*.03}
     if(!rk.length){g.fillStyle='#aab';g.fillText('측정 중…',x,ry+rh/2)}g.textBaseline='top'}
   // 아래: 항목별 일치
   const by=h-bh;g.fillStyle='rgba(0,0,0,.72)';g.fillRect(0,by,w,bh);g.fillStyle='#ffd84d';g.fillRect(0,h-bh*.24,w,bh*.24);
