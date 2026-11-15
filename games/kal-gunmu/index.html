@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>칼군무 일치율 · 커맨드 플레이</title>
+<meta name="description" content="댄스 영상을 올리면 AI가 멤버마다 팔·다리 각도와 박자를 비교해서 칼군무 일치율을 알려줘요. 결과 영상도 저장할 수 있어요.">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:#0d0f14;color:#fff;font-family:"Noto Sans KR",system-ui,sans-serif}
+.top{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #222}
+.top h1{font-family:"Black Han Sans",sans-serif;font-weight:400;font-size:20px;color:#ffd84d;flex:1}
+.top a{color:#ccd;text-decoration:none;font-size:13px;border:1px solid #333;border-radius:8px;padding:5px 10px}
+main{max-width:720px;margin:0 auto;padding:14px}
+#start{display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center;padding:20px 0}
+#start h2{font-family:"Black Han Sans",sans-serif;font-weight:400;font-size:clamp(34px,8vw,54px);color:#ffd84d;line-height:1.1}
+#start p{color:#aab;line-height:1.7;font-size:14px}
+#drop{width:100%;max-width:440px;border:3px dashed #ffd84d;border-radius:18px;padding:30px 16px;cursor:pointer;font-weight:900;font-size:18px;color:#ffd84d;background:rgba(255,216,77,.06)}
+#drop.hot{background:rgba(255,216,77,.18)}
+.rules{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.rule{background:#181b23;border:1px solid #2a2f3a;border-radius:12px;padding:8px 12px;font-size:13px;color:#cfd3dd}
+.rule b{color:#7cf08f}
+.rule input{width:90px;vertical-align:middle;accent-color:#7cf08f}
+#stage{display:none;flex-direction:column;align-items:center;gap:10px}
+#cv{max-width:100%;max-height:78vh;border-radius:10px;background:#000}
+#prog{width:100%;height:10px;background:#222;border-radius:99px;overflow:hidden}
+#prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7cf08f,#ffd84d)}
+#status{font-size:14px;color:#cfd3dd;min-height:20px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.btn{border:0;border-radius:12px;padding:11px 18px;font:inherit;font-weight:900;font-size:15px;cursor:pointer;background:#2a2f3a;color:#fff}
+.btn.y{background:#ffd84d;color:#1a1a1a}
+.btn:disabled{opacity:.4;cursor:default}
+#result{display:none;width:100%;background:#151821;border:1px solid #2a2f3a;border-radius:16px;padding:16px;text-align:center}
+#result .big{font-family:"Black Han Sans",sans-serif;font-size:64px;color:#ffd84d;line-height:1}
+#result .grade{font-size:20px;font-weight:900;margin:6px 0 10px}
+#result .rows{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+#result .rows div{background:#1d212c;border-radius:10px;padding:8px;font-size:12px;color:#aab}
+#result .rows b{display:block;font-size:20px;color:#fff;margin-top:2px}
+#result .note{font-size:12px;color:#889;margin-top:10px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="top"><h1>칼군무 일치율</h1><a href="/">🏠 다른 앱</a></div>
+<main>
+  <section id="start">
+    <h2>칼군무<br>일치율 측정기</h2>
+    <p>댄스 영상을 올리면 AI가 멤버마다 관절을 찾아<br><b>팔 각도 · 다리 각도 · 박자</b>를 서로 비교해요.<br>전원이 맞으면 초록, 어긋나면 빨강으로 표시돼요.</p>
+    <label id="drop" for="file">🎬 댄스 영상 올리기<br><span style="font-size:13px;font-weight:500;color:#cdb">또는 여기로 끌어다 놓기</span></label>
+    <input id="file" type="file" accept="video/*" hidden>
+    <div class="rules">
+      <div class="rule">팔 각도 오차 <b id="armV">30°</b> 이내<br><input id="arm" type="range" min="10" max="50" step="5" value="30"></div>
+      <div class="rule">다리 각도 오차 <b id="legV">20°</b> 이내<br><input id="leg" type="range" min="5" max="40" step="5" value="20"></div>
+      <div class="rule">박자 오차 <b>0.2초</b> 이내</div>
+    </div>
+    <p style="font-size:12px;color:#778">영상은 내 기기 안에서만 분석되고 어디에도 올라가지 않아요.<br>여러 명이 전신으로 나오는 정면 영상일수록 정확해요.</p>
+  </section>
+  <section id="stage">
+    <canvas id="cv"></canvas>
+    <div id="prog"><i></i></div>
+    <div id="status"></div>
+    <div class="btns"><button class="btn y" id="play" disabled>▶ 결과 재생</button><button class="btn" id="save" disabled>⬇ 결과 영상 저장</button><button class="btn" id="again">↺ 다른 영상</button></div>
+    <div id="result"></div>
+  </section>
+</main>
+<video id="vid" playsinline muted style="display:none"></video>
+<video id="pv" playsinline style="display:none"></video>
+<script type="module">
+import {FilesetResolver,PoseLandmarker} from './mp/vision_bundle.mjs';
+const $=id=>document.getElementById(id);
+const cv=$('cv'),g=cv.getContext('2d'),vid=$('vid'),pv=$('pv');
+const FPS=10, BEAT=0.2, WIN=0.5;
+let ARM=30, LEG=20;
+$('arm').oninput=()=>{ARM=+$('arm').value;$('armV').textContent=ARM+'°'};
+$('leg').oninput=()=>{LEG=+$('leg').value;$('legV').textContent=LEG+'°'};
+const ARMS=[[11,13],[13,15],[12,14],[14,16]], LEGS=[[23,25],[25,27],[24,26],[26,28]], BODY=[[11,12],[23,24],[11,23],[12,24]];
+const SEGS=[...ARMS,...LEGS];
+let landmarker=null, frames=[], url=null, W=0, H=0, overall=0;
+
+async function initModel(){if(landmarker)return landmarker;status('AI 모델 불러오는 중…');
+  const fs=await FilesetResolver.forVisionTasks(new URL('./mp',location.href).href);
+  const opts=d=>({baseOptions:{modelAssetPath:'./mp/pose_landmarker_full.task',delegate:d},runningMode:'IMAGE',numPoses:6,minPoseDetectionConfidence:.4,minPosePresenceConfidence:.4,minTrackingConfidence:.4});
+  try{landmarker=await PoseLandmarker.createFromOptions(fs,opts('GPU'))}catch(e){landmarker=await PoseLandmarker.createFromOptions(fs,opts('CPU'))}
+  return landmarker}
+function status(t){$('status').textContent=t}
+const ang=(a,b)=>Math.atan2((b.y-a.y)*H,(b.x-a.x)*W)*180/Math.PI;
+const wrap=d=>{d=((d+180)%360+360)%360-180;return Math.abs(d)};
+
+// 한 사람 → 관절 각도 (안 보이는 관절은 null)
+function feats(lm){return SEGS.map(([a,b])=>{const A=lm[a],B=lm[b];if((A.visibility??1)<.5||(B.visibility??1)<.5)return null;return ang(A,B)})}
+function valid(lm){const v=i=>(lm[i].visibility??1)>.5;if(!(v(11)&&v(12)&&v(23)&&v(24)))return false;
+  const ys=[0,11,12,23,24,25,26,27,28].map(i=>lm[i].y);return Math.max(...ys)-Math.min(...ys)>.12}
+// 프레임 기준 자세 = 멤버들 각도의 평균 방향
+function refOf(people){return SEGS.map((_,j)=>{let sx=0,sy=0,n=0;for(const p of people){const a=p.f[j];if(a==null)continue;sx+=Math.cos(a*Math.PI/180);sy+=Math.sin(a*Math.PI/180);n++}return n>=2?Math.atan2(sy,sx)*180/Math.PI:null})}
+function dist(f,ref,idx){let s=0,n=0;for(const j of idx){if(f[j]==null||ref[j]==null)continue;s+=wrap(f[j]-ref[j]);n++}return n?s/n:0}
+
+// 작은 사람도 잡도록: 전체 화면 + 겹치는 확대 조각(타일)에서 각각 찾고 중복은 합침
+const tc=document.createElement('canvas'),tg=tc.getContext('2d');
+function tiles(){const t=[[0,0,1,1]];const cols=W>=H?3:2,rows=W>=H?2:3;const tw=1/cols*1.5,th=1/rows*1.5;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const x=Math.max(0,Math.min(1-tw,(c+.5)/cols-tw/2)),y=Math.max(0,Math.min(1-th,(r+.5)/rows-th/2));t.push([x,y,Math.min(1,tw),Math.min(1,th)])}return t}
+function detectAll(){const found=[];
+  for(const [x,y,w,h] of tiles()){const sw=Math.round(W*w),sh=Math.round(H*h);const sc=Math.min(1,960/Math.max(sw,sh));tc.width=Math.round(sw*sc);tc.height=Math.round(sh*sc);
+    tg.drawImage(vid,x*W,y*H,sw,sh,0,0,tc.width,tc.height);let res;try{res=landmarker.detect(tc)}catch(e){continue}
+    for(const l of res.landmarks||[]){const lm=l.map(p=>({x:x+p.x*w,y:y+p.y*h,z:p.z,visibility:p.visibility}));if(!valid(lm))continue;
+      const cx=(lm[23].x+lm[24].x)/2,cy=(lm[11].y+lm[23].y)/2,sz=Math.abs(lm[23].y-lm[11].y);
+      const dup=found.find(q=>Math.hypot(q.cx-cx,q.cy-cy)<Math.max(q.sz,sz)*.6);
+      const vis=[11,12,13,14,15,16,23,24,25,26,27,28].reduce((a,i)=>a+(lm[i].visibility??1),0);
+      if(dup){if(vis>dup.vis)Object.assign(dup,{lm,cx,cy,sz,vis})}else found.push({lm,cx,cy,sz,vis})}}
+  return found.map(q=>({lm:q.lm,f:feats(q.lm),cx:q.cx}))}
+async function seek(t){return new Promise(r=>{const h=()=>{vid.removeEventListener('seeked',h);r()};vid.addEventListener('seeked',h);vid.currentTime=t})}
+
+async function analyze(file){
+  $('start').style.display='none';$('stage').style.display='flex';$('result').style.display='none';$('play').disabled=$('save').disabled=true;
+  if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(file);vid.src=url;pv.src=url;
+  await new Promise(r=>vid.onloadedmetadata=r);W=vid.videoWidth;H=vid.videoHeight;
+  const sc=Math.min(1,1080/Math.max(W,H));cv.width=Math.round(W*sc);cv.height=Math.round(H*sc);
+  await initModel();frames=[];const dur=vid.duration,N=Math.floor(dur*FPS);
+  for(let i=0;i<=N;i++){const t=Math.min(dur-.01,i/FPS);await seek(t);
+    const people=detectAll();
+    people.sort((a,b)=>a.cx-b.cx);frames.push({t,people});
+    $('prog').firstElementChild.style.width=(i/N*100)+'%';status(`AI 분석 중… ${Math.round(i/N*100)}% · 프레임 ${i}/${N} · 인원 ${people.length}명`);
+    drawFrame(vid,{t,people,pending:true},null);
+    if(i%5===0)await new Promise(r=>setTimeout(r))}
+  score();showResult();$('play').disabled=$('save').disabled=false;status('분석 완료! ▶ 결과 재생으로 영상에 입혀서 볼 수 있어요.');
+  drawFrame(vid,frames[frames.length-1],cum(frames.length-1));}
+
+function score(){
+  frames.forEach(fr=>fr.ref=fr.people.length>=2?refOf(fr.people):null);
+  const K=Math.round(WIN*FPS),B=Math.round(BEAT*FPS)+0.001;
+  frames.forEach((fr,i)=>{if(!fr.ref){fr.ok=null;return}
+    let a=0,l=0,b=0,p=0;
+    for(const pe of fr.people){
+      pe.seg=SEGS.map((_,j)=>pe.f[j]==null||fr.ref[j]==null?true:wrap(pe.f[j]-fr.ref[j])<=(j<4?ARM:LEG));
+      pe.arm=pe.seg.slice(0,4).every(Boolean);pe.leg=pe.seg.slice(4).every(Boolean);
+      // 박자: 내 자세가 ±0.5초 중 언제의 단체 자세와 가장 비슷한지 → 0.2초 이내면 OK
+      let best=1e9,bd=0;for(let d=-K;d<=K;d++){const o=frames[i+d];if(!o||!o.ref)continue;const v=dist(pe.f,o.ref,[0,1,2,3,4,5,6,7])+Math.abs(d)*.01;if(v<best){best=v;bd=d}}
+      pe.beat=Math.abs(bd)<=B||dist(pe.f,fr.ref,[0,1,2,3,4,5,6,7])<=Math.min(ARM,LEG)*.6;
+      pe.pass=pe.arm&&pe.leg&&pe.beat;a+=pe.arm;l+=pe.leg;b+=pe.beat;p+=pe.pass}
+    const n=fr.people.length;fr.ok={arm:a/n,leg:l/n,beat:b/n,pass:p,n,score:(a+l+b)/(3*n)}});
+  const s=frames.filter(f=>f.ok);overall=s.length?s.reduce((x,f)=>x+f.ok.score,0)/s.length:0}
+function cum(i){let s=0,n=0;for(let k=0;k<=i;k++)if(frames[k].ok){s+=frames[k].ok.score;n++}return n?s/n:null}
+
+function drawFrame(src,fr,cs){const w=cv.width,h=cv.height,k=w/W;g.drawImage(src,0,0,w,h);
+  const lw=Math.max(2.5,w/180);g.lineCap='round';
+  for(const pe of (fr?fr.people:[])){const P=i=>[pe.lm[i].x*w,pe.lm[i].y*h];
+    const col=ok=>fr.pending?'#9ad8ff':ok?'#39e05a':'#ff4b2b';
+    SEGS.forEach(([a,b],j)=>{if(pe.f[j]==null)return;g.strokeStyle=col(pe.seg?pe.seg[j]:true);g.lineWidth=lw;g.beginPath();g.moveTo(...P(a));g.lineTo(...P(b));g.stroke()});
+    g.strokeStyle=col(pe.beat??true);BODY.forEach(([a,b])=>{g.lineWidth=lw;g.beginPath();g.moveTo(...P(a));g.lineTo(...P(b));g.stroke()});
+    const nz=P(0),sh=P(11),sh2=P(12);const r=Math.max(6,Math.hypot(sh[0]-sh2[0],sh[1]-sh2[1])*.33);g.beginPath();g.arc(nz[0],nz[1],r,0,7);g.stroke()}
+  // 위: 제목 + 누적 일치율
+  const top=g.createLinearGradient(0,0,0,h*.2);top.addColorStop(0,'rgba(0,0,0,.75)');top.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=top;g.fillRect(0,0,w,h*.2);
+  g.textAlign='center';g.textBaseline='top';g.fillStyle='#ffd84d';g.font=`400 ${Math.round(w*.06)}px "Black Han Sans",sans-serif`;g.fillText('칼군무 일치율',w/2,h*.012);
+  if(cs!=null){g.fillStyle='#fff';g.font=`900 ${Math.round(w*.11)}px "Noto Sans KR",serif`;g.lineWidth=w*.012;g.strokeStyle='rgba(0,0,0,.6)';const t=(cs*100).toFixed(1)+'%';g.strokeText(t,w/2,h*.012+w*.075);g.fillText(t,w/2,h*.012+w*.075)}
+  // 아래: 항목별 일치
+  const bh=h*.105,by=h-bh;g.fillStyle='rgba(0,0,0,.72)';g.fillRect(0,by,w,bh);g.fillStyle='#ffd84d';g.fillRect(0,h-bh*.24,w,bh*.24);
+  const ok=fr&&fr.ok;const cols=[['팔 동작 일치',ok?ok.arm:null],['다리 동작 일치',ok?ok.leg:null],['박자 일치',ok?ok.beat:null]];
+  cols.forEach(([lab,v],i)=>{const x=w*(i+.5)/3;g.fillStyle='#ffd84d';g.font=`700 ${Math.round(w*.026)}px "Noto Sans KR",sans-serif`;g.fillText(lab,x,by+bh*.06);
+    g.fillStyle='#fff';g.font=`900 ${Math.round(w*.05)}px "Noto Sans KR",serif`;g.fillText(v==null?'-':(v*100).toFixed(1)+'%',x,by+bh*.26)});
+  g.fillStyle='#1a1a1a';g.font=`700 ${Math.round(w*.024)}px "Noto Sans KR",sans-serif`;g.textBaseline='middle';const fy=h-bh*.12;
+  const fi=fr?Math.round(fr.t*FPS):0;g.textAlign='left';g.fillText(`프레임 ${fi}`,w*.03,fy);g.textAlign='center';g.fillText(ok?`통과 인원 수 ${ok.pass}/${ok.n}`:`인원 ${fr?fr.people.length:0}명`,w/2,fy);g.textAlign='right';g.fillText(ok?'일치율 포함':'2명 이상일 때 측정',w*.97,fy);g.textBaseline='top'}
+
+function showResult(){const s=frames.filter(f=>f.ok);const avg=k=>s.length?s.reduce((x,f)=>x+f.ok[k],0)/s.length:0;const pct=(overall*100).toFixed(1);
+  const gr=overall>=.9?['S','🔪 완벽한 칼군무! 한 몸처럼 움직여요']:overall>=.8?['A','✨ 칼군무 인정! 거의 다 맞아요']:overall>=.7?['B','👍 꽤 잘 맞아요, 조금만 더!']:overall>=.55?['C','😅 군데군데 어긋나요']:['D','🙈 각자 다른 춤을 추는 중…'];
+  const best=s.reduce((a,f)=>!a||f.ok.score>a.ok.score?f:a,null),worst=s.reduce((a,f)=>!a||f.ok.score<a.ok.score?f:a,null);
+  const ppl=s.length?Math.round(s.reduce((x,f)=>x+f.ok.n,0)/s.length):0;
+  $('result').innerHTML=`<div style="color:#aab;font-size:13px">최종 칼군무 일치율</div><div class="big">${pct}%</div><div class="grade">${gr[0]}등급 · ${gr[1]}</div>
+   <div class="rows"><div>팔 동작<b>${(avg('arm')*100).toFixed(1)}%</b></div><div>다리 동작<b>${(avg('leg')*100).toFixed(1)}%</b></div><div>박자<b>${(avg('beat')*100).toFixed(1)}%</b></div></div>
+   <div class="note">평균 ${ppl}명 인식 · 측정 프레임 ${s.length}개 · 가장 잘 맞은 순간 ${best?best.t.toFixed(1)+'초':'-'} · 가장 어긋난 순간 ${worst?worst.t.toFixed(1)+'초':'-'}<br>기준: 팔 ${ARM}° · 다리 ${LEG}° · 박자 0.2초 이내 (멤버 전체 평균 자세와 비교)</div>`;
+  $('result').style.display='block';if(!s.length)$('result').innerHTML='<div class="grade">사람을 2명 이상 찾지 못했어요 😢</div><div class="note">전신이 보이는 단체 댄스 영상으로 다시 시도해주세요.</div>'}
+
+// 결과 재생 (+녹화)
+let AC=null,dest=null,src=null,raf=0;
+function frameAt(t){const i=Math.max(0,Math.min(frames.length-1,Math.round(t*FPS)));return i}
+async function play(record){cancelAnimationFrame(raf);pv.currentTime=0;pv.muted=false;
+  if(!AC){AC=new AudioContext();src=AC.createMediaElementSource(pv);dest=AC.createMediaStreamDestination();src.connect(dest);src.connect(AC.destination)}
+  await AC.resume();let rec=null,chunks=[];
+  if(record){const st=cv.captureStream(30);dest.stream.getAudioTracks().forEach(t=>st.addTrack(t));
+    const types=['video/mp4;codecs=avc1,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'];const mt=types.find(t=>MediaRecorder.isTypeSupported(t))||'';
+    rec=new MediaRecorder(st,{mimeType:mt,videoBitsPerSecond:8e6});rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);rec.start(200);status('결과 영상 녹화 중… 끝까지 기다려주세요');}
+  await pv.play();$('play').disabled=$('save').disabled=true;
+  const loop=()=>{const i=frameAt(pv.currentTime);drawFrame(pv,frames[i],cum(i));if(!pv.ended&&!pv.paused)raf=requestAnimationFrame(loop);else done()};
+  const done=()=>{$('play').disabled=$('save').disabled=false;drawFrame(pv,frames[frames.length-1],overall);
+    if(rec){rec.onstop=()=>{const type=rec.mimeType||'video/webm';const b=new Blob(chunks,{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='칼군무_일치율.'+(type.includes('mp4')?'mp4':'webm');a.click();status('저장 완료! 다운로드 폴더를 확인하세요.')};rec.stop()}else status('재생 완료')};
+  raf=requestAnimationFrame(loop)}
+$('play').onclick=()=>play(false);$('save').onclick=()=>play(true);
+$('again').onclick=()=>{pv.pause();cancelAnimationFrame(raf);$('stage').style.display='none';$('start').style.display='flex';$('file').value=''};
+$('file').onchange=e=>e.target.files[0]&&analyze(e.target.files[0]);
+const dz=$('drop');['dragenter','dragover'].forEach(ev=>addEventListener(ev,e=>{e.preventDefault();dz.classList.add('hot')}));
+['dragleave','drop'].forEach(ev=>addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('hot')}));
+addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('video/'))analyze(f)});
+window.__kal={get frames(){return frames},get overall(){return overall}};
+</script>
+</body>
+</html>
