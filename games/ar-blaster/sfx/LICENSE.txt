@@ -1,0 +1,6 @@
+All sound effects are CC0 (public domain) from freesound.org, found via Openverse:
+shot.mp3   - Retro Laser Shot 03 (freesound 414885)
+hit.mp3    - Hitmarker (freesound 322640)
+reload.mp3 - Retro SMG reload (freesound 612165)
+smoke.mp3  - Spray_Can_Hiss (freesound 464424)
+whoosh.mp3 - Swipe Whoosh (freesound 60007)

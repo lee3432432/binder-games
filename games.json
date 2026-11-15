@@ -1,5 +1,17 @@
 [
   {
+    "id": "ar-blaster",
+    "title": "AR 블래스터",
+    "desc": "휴대폰 카메라로 친구를 조준하고 화면을 꾹 누르면 발사! 맞으면 빨갛게 번쩍, 연막을 쏘면 얼굴에 홀로그램 구름이 붙어요.",
+    "thumb": "assets/thumbs/ar-blaster.jpg",
+    "tags": [
+      "카메라",
+      "AR",
+      "슈팅"
+    ],
+    "new": true
+  },
+  {
     "id": "kal-gunmu",
     "title": "칼군무 일치율",
     "desc": "댄스 영상을 올리면 AI가 멤버마다 팔·다리 각도와 박자를 비교해서 칼군무 일치율을 알려줘요. 결과 영상도 저장 가능.",
@@ -9,7 +21,7 @@
       "댄스",
       "영상 분석"
     ],
-    "new": true
+    "new": false
   },
   {
     "id": "croc-typer",

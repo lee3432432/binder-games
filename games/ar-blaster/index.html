@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>AR 블래스터 · 커맨드 플레이</title>
+<meta name="description" content="휴대폰 카메라로 주변을 비추고 화면을 누르면 블래스터 발사! 맞은 사람은 빨갛게 번쩍, 연막을 쏘면 얼굴에 홀로그램 연막이 붙어요.">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#000;color:#fff;font-family:"Noto Sans KR",system-ui,sans-serif;-webkit-user-select:none;user-select:none;touch-action:none}
+#cv{position:fixed;inset:0;width:100%;height:100%;display:block}
+#chip{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 34px);transform:translateX(-50%);background:rgba(25,30,40,.78);border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;white-space:nowrap;pointer-events:none}
+#chip i{width:9px;height:9px;border-radius:50%;background:#ff3b55;box-shadow:0 0 8px #ff3b55}
+#side{position:fixed;left:12px;top:30%;display:flex;flex-direction:column;gap:12px;z-index:3}
+.sb{width:44px;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;color:#fff;font:inherit;font-size:11px;font-weight:700;cursor:pointer;text-shadow:0 1px 3px #000}
+.sb span{width:36px;height:36px;border-radius:9px;background:rgba(30,35,45,.7);border:1px solid rgba(255,255,255,.25);display:grid;place-items:center;font-size:18px}
+.sb.on span{background:rgba(255,59,85,.75);border-color:#ff8a9b}
+#ammo{position:fixed;left:16px;bottom:calc(env(safe-area-inset-bottom) + 22px);font-weight:900;font-size:36px;text-shadow:0 2px 6px #000;pointer-events:none}
+#ammo small{font-size:15px;font-weight:700;opacity:.85;margin-left:4px}
+#ammo:after{content:"";display:block;width:84px;height:2px;background:#fff;margin-top:2px;opacity:.8}
+#home{position:fixed;right:12px;top:calc(env(safe-area-inset-top) + 10px);z-index:3;color:#fff;text-decoration:none;font-size:13px;font-weight:700;background:rgba(25,30,40,.6);border-radius:8px;padding:5px 10px}
+#start{position:fixed;inset:0;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;background:radial-gradient(circle at 50% 30%,#3a1020,#0b0b10 70%)}
+#start.off{display:none}
+#start h1{font-size:40px;font-weight:900;line-height:1.1}#start h1 b{color:#ff3b55}
+#start p{color:#cdd;font-size:14px;line-height:1.7}
+#go{border:0;border-radius:14px;background:#ff3b55;color:#fff;font:inherit;font-weight:900;font-size:20px;padding:13px 36px;box-shadow:0 4px 0 #a01c30;cursor:pointer}
+#err{color:#ffb4b4;font-size:13px}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<a id="home" href="/">🏠</a>
+<div id="chip"><i></i><span id="chipT">화면을 누르고 있으면 발사</span></div>
+<div id="side">
+  <button class="sb" id="bInspect"><span>👁</span>검사</button>
+  <button class="sb" id="bScope"><span>⌖</span>조준</button>
+  <button class="sb" id="bReload"><span>↻</span>재장전</button>
+  <button class="sb" id="bSmoke"><span>☁</span>연막</button>
+</div>
+<div id="ammo"><b id="mag">30</b><small>/ <span id="res">90</span></small></div>
+<div id="start"><h1>AR <b>블래스터</b></h1>
+  <p>카메라로 주변을 비추고 <b>화면을 꾹 누르면 발사!</b><br>조준점에 사람이 있으면 빨갛게 번쩍해요.<br>☁ 연막 버튼 → 화면을 탭하면 얼굴에 홀로그램 연막이 붙어요.</p>
+  <button id="go">카메라 켜고 시작</button>
+  <p style="font-size:12px;color:#889">카메라 화면은 내 기기 안에서만 처리되고 어디에도 저장·전송되지 않아요.<br>장난감 게임이에요. 모르는 사람에게 겨누지 말고 친구랑 즐겨주세요!</p>
+  <div id="err"></div></div>
+<video id="vid" playsinline muted autoplay style="position:fixed;left:-9999px;width:2px;height:2px"></video>
+<script type="module">
+import {FilesetResolver,PoseLandmarker} from '../kal-gunmu/mp/vision_bundle.mjs';
+const $=id=>document.getElementById(id);
+const cv=$('cv'),g=cv.getContext('2d'),vid=$('vid');let W=0,H=0,DPR=1;
+function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;g.setTransform(DPR,0,0,DPR,0,0)}addEventListener('resize',resize);resize();
+const IMG={};for(const n of['gun','smoke']){IMG[n]=new Image();IMG[n].src=n+'.png'}
+const MUZZLE=[.574,.01];
+
+/* 소리 */
+let AC=null;const buf={};
+async function audio(){if(AC)return;AC=new (window.AudioContext||window.webkitAudioContext)();for(const n of['shot','hit','reload','smoke','whoosh']){try{buf[n]=await AC.decodeAudioData(await (await fetch('sfx/'+n+'.mp3')).arrayBuffer())}catch(e){}}}
+function sfx(n,vol=.6,rate=1){if(!AC||!buf[n])return;const s=AC.createBufferSource();s.buffer=buf[n];s.playbackRate.value=rate;const gn=AC.createGain();gn.gain.value=vol;s.connect(gn);gn.connect(AC.destination);s.start()}
+
+/* 사람 인식 (관절 + 사람 모양 마스크) */
+let pose=null,people=[],lastDet=-1,maskCv=document.createElement('canvas'),mg=maskCv.getContext('2d'),small=document.createElement('canvas'),sg=small.getContext('2d');
+async function initPose(){const fs=await FilesetResolver.forVisionTasks(new URL('../kal-gunmu/mp',location.href).href);
+  const o=d=>({baseOptions:{modelAssetPath:'../kal-gunmu/mp/pose_landmarker_full.task',delegate:d},runningMode:'VIDEO',numPoses:4,outputSegmentationMasks:true,minPoseDetectionConfidence:.45,minPosePresenceConfidence:.45,minTrackingConfidence:.45});
+  try{pose=await PoseLandmarker.createFromOptions(fs,o('GPU'))}catch(e){pose=await PoseLandmarker.createFromOptions(fs,o('CPU'))}}
+function detect(now){if(!pose||vid.readyState<2)return;if(now-lastDet<70)return;lastDet=now;
+  const vw=vid.videoWidth,vh=vid.videoHeight,sc=256/Math.max(vw,vh);small.width=Math.round(vw*sc);small.height=Math.round(vh*sc);sg.drawImage(vid,0,0,small.width,small.height);
+  let res;try{res=pose.detectForVideo(small,now)}catch(e){return}
+  const ps=[];(res.landmarks||[]).forEach((lm,i)=>{const m=res.segmentationMasks&&res.segmentationMasks[i];let mask=null,mw=0,mh=0;
+    if(m){mw=m.width;mh=m.height;mask=m.getAsFloat32Array().slice();m.close()}
+    ps.push({lm,mask,mw,mh})});
+  people=ps}
+
+/* 화면 좌표 ↔ 영상 좌표 (cover 맞춤 + 조준 줌) */
+let zoom=1,zoomT=1;
+function view(){const vw=vid.videoWidth||W,vh=vid.videoHeight||H;const s=Math.max(W/vw,H/vh)*zoom;return{s,ox:(W-vw*s)/2,oy:(H-vh*s)/2,vw,vh}}
+const toScreen=(p,v)=>[v.ox+p.x*v.vw*v.s,v.oy+p.y*v.vh*v.s];
+function personAt(x,y){const v=view();const nx=(x-v.ox)/(v.vw*v.s),ny=(y-v.oy)/(v.vh*v.s);
+  for(const p of people){if(p.mask){const mx=Math.floor(nx*p.mw),my=Math.floor(ny*p.mh);if(mx>=0&&my>=0&&mx<p.mw&&my<p.mh&&p.mask[my*p.mw+mx]>.5)return p}
+    else{const xs=p.lm.map(q=>q.x),ys=p.lm.map(q=>q.y);if(nx>Math.min(...xs)&&nx<Math.max(...xs)&&ny>Math.min(...ys)&&ny<Math.max(...ys))return p}}return null}
+
+/* 게임 상태 */
+let mag=30,reserve=90,firing=false,lastShot=0,reloading=0,recoil=0,flash=0,tracers=[],hitFx=[],inspect=0,smokeMode=false,smokeFx=null,stickers=[],t0=performance.now();
+const ammoUI=()=>{$('mag').textContent=mag;$('res').textContent=reserve};
+function shoot(now){if(reloading||mag<=0){if(mag<=0&&!reloading)reload();return}
+  mag--;ammoUI();lastShot=now;recoil=1;flash=now;sfx('shot',.5,.95+Math.random()*.15);
+  const cx=W/2,cy=H/2;tracers.push({t:now});const p=personAt(cx,cy);
+  if(p){hitFx.push({p,t:now});setTimeout(()=>sfx('hit',.7),40)}}
+function reload(){if(reloading||mag===30||reserve<=0)return;reloading=performance.now();sfx('reload',.7);
+  setTimeout(()=>{const n=Math.min(30-mag,reserve);mag+=n;reserve-=n;ammoUI();reloading=0},1200)}
+function throwSmoke(now){smokeFx={t:now};sfx('smoke',.7);
+  setTimeout(()=>{stickers=people.map(p=>({p,t:performance.now(),seed:Math.random()}));if(!stickers.length)stickers=[{p:null,t:performance.now(),seed:0}]},550)}
+
+/* 그리기 */
+function drawMask(p,color,alpha){if(!p.mask)return;const v=view();maskCv.width=p.mw;maskCv.height=p.mh;const id=mg.createImageData(p.mw,p.mh);
+  for(let i=0;i<p.mask.length;i++){const a=p.mask[i];if(a>.3){id.data[i*4]=color[0];id.data[i*4+1]=color[1];id.data[i*4+2]=color[2];id.data[i*4+3]=Math.min(255,a*255*alpha)}}
+  mg.putImageData(id,0,0);g.drawImage(maskCv,v.ox,v.oy,v.vw*v.s,v.vh*v.s)}
+function faceOf(p){const v=view();const n=toScreen(p.lm[0],v),l=toScreen(p.lm[11],v),r=toScreen(p.lm[12],v);const sw=Math.hypot(l[0]-r[0],l[1]-r[1]);return{x:n[0],y:n[1],s:Math.max(50,sw*1.05)}}
+function loop(now){requestAnimationFrame(loop);detect(now);
+  zoom+=(zoomT-zoom)*.18;
+  g.fillStyle='#000';g.fillRect(0,0,W,H);
+  if(vid.readyState>=2){const v=view();g.drawImage(vid,v.ox,v.oy,v.vw*v.s,v.vh*v.s)}
+  if(firing&&now-lastShot>95)shoot(now);
+  // 맞은 사람 빨간 실루엣
+  for(const h of hitFx){const e=(now-h.t)/1000;if(e<.22){const cur=people.find(q=>Math.hypot(q.lm[0].x-h.p.lm[0].x,q.lm[0].y-h.p.lm[0].y)<.12)||h.p;drawMask(cur,[255,20,20],.85*(1-e/.22))}}
+  hitFx=hitFx.filter(h=>now-h.t<250);
+  // 연막 스티커 (얼굴 따라다님)
+  for(const s of stickers){const e=(now-s.t)/1000;if(e>9)continue;let f;
+    if(s.p){const cur=people.reduce((b,q)=>{const d=Math.hypot(q.lm[0].x-s.p.lm[0].x,q.lm[0].y-s.p.lm[0].y);return d<b.d?{q,d}:b},{q:null,d:.2}).q;if(cur)s.p=cur;f=faceOf(s.p)}else f={x:W/2,y:H*.35,s:W*.35};
+    const pop=Math.min(1,e/.25),wob=Math.sin(now/300+s.seed*6)*.04,sz=f.s*(.85+.25*pop)*(1+wob)*(e>8.5?(9-e)*2:1);
+    if(IMG.smoke.complete){g.save();g.translate(f.x,f.y);g.rotate(Math.sin(now/700+s.seed*9)*.08);g.drawImage(IMG.smoke,-sz/2,-sz*.45,sz,sz*IMG.smoke.height/IMG.smoke.width);g.restore()}}
+  stickers=stickers.filter(s=>now-s.t<9000);
+  // 연막 발사 링 효과
+  if(smokeFx){const e=(now-smokeFx.t)/1000;if(e>.9)smokeFx=null;else{const R=Math.min(W,H)*.42*(.6+e*.5),a=1-e/.9;
+    g.save();g.globalAlpha=a;g.fillStyle='rgba(255,140,200,.28)';g.beginPath();g.arc(W/2,H/2,R,0,7);g.fill();g.strokeStyle='#ffe6f4';g.lineWidth=3;g.stroke();
+    g.strokeStyle='rgba(255,255,255,.7)';g.lineWidth=1.5;g.beginPath();g.moveTo(W/2-R,H/2);g.lineTo(W/2+R,H/2);g.moveTo(W/2,H/2-R);g.lineTo(W/2,H/2+R);g.stroke();
+    for(let i=0;i<10;i++){const an=i*.63+e*2,r=R*(.9+.15*Math.sin(i*3+e*8));g.fillStyle='rgba(230,170,255,.5)';g.beginPath();g.arc(W/2+Math.cos(an)*r,H/2+Math.sin(an)*r,R*.12,0,7);g.fill()}g.restore()}}
+  // 조준점
+  const cx=W/2,cy=H/2,cs=zoomT>1?16:9;g.strokeStyle='rgba(255,255,255,.95)';g.lineWidth=1.6;g.beginPath();
+  g.moveTo(cx-cs-6,cy);g.lineTo(cx-6,cy);g.moveTo(cx+6,cy);g.lineTo(cx+cs+6,cy);g.moveTo(cx,cy-cs-6);g.lineTo(cx,cy-6);g.moveTo(cx,cy+6);g.lineTo(cx,cy+cs+6);g.stroke();
+  g.fillStyle=hitFx.some(h=>now-h.t<120)?'#ff3b55':'#fff';g.beginPath();g.arc(cx,cy,1.8,0,7);g.fill();
+  if(hitFx.some(h=>now-h.t<150)){g.strokeStyle='#fff';g.lineWidth=2.4;const k=14;g.beginPath();[[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>{g.moveTo(cx+a*6,cy+b*6);g.lineTo(cx+a*k,cy+b*k)});g.stroke()}
+  if(zoomT>1){g.strokeStyle='rgba(0,0,0,.6)';g.lineWidth=Math.max(W,H);g.beginPath();g.arc(cx,cy,Math.min(W,H)*.42+Math.max(W,H)/2,0,7);g.stroke();g.strokeStyle='rgba(255,255,255,.5)';g.lineWidth=2;g.beginPath();g.arc(cx,cy,Math.min(W,H)*.42,0,7);g.stroke()}
+  // 총 + 반동 + 총구 불꽃 + 탄 궤적
+  recoil*=.78;const gun=IMG.gun;
+  if(gun.complete&&zoomT===1){const gw=Math.min(W*.95,H*.62*gun.width/gun.height),gh=gw*gun.height/gun.width;
+    let gx=W-gw+gw*.06,gy=H-gh+gh*.04+recoil*18,rot=-recoil*.05;
+    if(reloading){const e=(now-reloading)/1200;const d=Math.sin(Math.min(1,e)*Math.PI);gy+=d*gh*.45;rot+=d*.35}
+    if(inspect){const e=(now-inspect)/1300;if(e>=1)inspect=0;else{const d=Math.sin(e*Math.PI);rot+=-d*.9;gx-=d*gw*.25;gy-=d*gh*.1}}
+    const mx=gx+gw*MUZZLE[0],my=gy+gh*MUZZLE[1];
+    for(const tr of tracers){const e=(now-tr.t)/1000;if(e>.08)continue;const k=e/.08;g.strokeStyle=`rgba(255,120,90,${1-k})`;g.lineWidth=3;g.beginPath();g.moveTo(mx+(cx-mx)*k*.6,my+(cy-my)*k*.6);g.lineTo(mx+(cx-mx)*(k*.6+.4),my+(cy-my)*(k*.6+.4));g.stroke()}
+    tracers=tracers.filter(t=>now-t.t<100);
+    g.save();g.translate(gx+gw/2,gy+gh/2);g.rotate(rot);g.drawImage(gun,-gw/2,-gh/2,gw,gh);g.restore();
+    if(now-flash<55){const r=gw*.09*(.8+Math.random()*.5);const grd=g.createRadialGradient(mx,my,0,mx,my,r);grd.addColorStop(0,'rgba(255,255,230,1)');grd.addColorStop(.35,'rgba(255,90,70,.9)');grd.addColorStop(1,'rgba(255,40,40,0)');g.fillStyle=grd;g.beginPath();g.arc(mx,my,r,0,7);g.fill()}}
+  if(reloading){g.fillStyle='#fff';g.font='900 15px "Noto Sans KR"';g.textAlign='center';g.fillText('재장전 중…',W/2,H/2+46)}
+}
+
+/* 입력 */
+const onUI=e=>e.target.closest('.sb,#home,#start');
+cv.addEventListener('pointerdown',e=>{if(onUI(e))return;e.preventDefault();audio();if(smokeMode){throwSmoke(performance.now());return}firing=true;shoot(performance.now())});
+addEventListener('pointerup',()=>firing=false);addEventListener('pointercancel',()=>firing=false);
+addEventListener('keydown',e=>{if(e.code==='Space'){firing=true}if(e.key==='r')reload()});addEventListener('keyup',e=>{if(e.code==='Space')firing=false});
+$('bInspect').onclick=()=>{audio();if(!reloading&&!inspect){inspect=performance.now();sfx('whoosh',.6)}};
+$('bScope').onclick=()=>{zoomT=zoomT>1?1:1.8;$('bScope').classList.toggle('on',zoomT>1)};
+$('bReload').onclick=()=>{audio();if(reserve<=0){reserve=90}reload()};
+$('bSmoke').onclick=()=>{smokeMode=!smokeMode;$('bSmoke').classList.toggle('on',smokeMode);$('chipT').textContent=smokeMode?'화면을 탭하면 연막 발사':'화면을 누르고 있으면 발사';if(!smokeMode)stickers=[]};
+
+$('go').onclick=async()=>{$('err').textContent='';await audio();
+  try{const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});vid.srcObject=st;await vid.play()}
+  catch(e){$('err').textContent='카메라를 켤 수 없어요. 브라우저의 카메라 권한을 허용해주세요.';return}
+  $('start').classList.add('off');$('chipT').textContent='AI 준비 중…';
+  try{await initPose();$('chipT').textContent='화면을 누르고 있으면 발사'}catch(e){$('chipT').textContent='사람 인식 없이 플레이 중'}};
+requestAnimationFrame(loop);
+window.__ar={get people(){return people},shoot:()=>shoot(performance.now()),throwSmoke:()=>throwSmoke(performance.now())};
+</script>
+</body>
+</html>
