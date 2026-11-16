@@ -159,12 +159,18 @@ function drawFrame(src,fr,cs){const w=cv.width,h=cv.height;g.drawImage(src,0,0,w
       g.fillStyle=pe.pass===false?'#ff8a6a':'#7cf08f';g.fillText(`A${pe.A} L${pe.L} ${pe.ms>=0?'+':''}${pe.ms}ms`,P(0)[0],ty)}}
   g.textBaseline='top';
   // 위: 어두운 그라데이션 + 금색 제목 + 큰 흰 숫자
-  const tg=g.createLinearGradient(0,0,0,h*.24);tg.addColorStop(0,'rgba(0,0,0,.92)');tg.addColorStop(.55,'rgba(0,0,0,.55)');tg.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=tg;g.fillRect(0,0,w,h*.24);
-  const ts=Math.round(w*.072);g.font=`400 ${ts}px "Black Han Sans",sans-serif`;g.textAlign='center';
-  const gold=g.createLinearGradient(0,h*.015,0,h*.015+ts);gold.addColorStop(0,'#fff2c4');gold.addColorStop(.5,'#f7c35a');gold.addColorStop(1,'#d9902b');
-  g.lineWidth=ts*.12;g.strokeStyle='rgba(0,0,0,.85)';g.strokeText('칼군무 일치율',w/2,h*.015);g.fillStyle=gold;g.fillText('칼군무 일치율',w/2,h*.015);
-  if(cs!=null){const ns=Math.round(w*.15);g.font=`900 ${ns}px "Noto Serif KR","Times New Roman",serif`;const t=(cs*100).toFixed(1)+'%';
-    g.lineWidth=ns*.08;g.strokeStyle='rgba(0,0,0,.75)';g.strokeText(t,w/2,h*.015+ts*1.05);g.fillStyle='#fff';g.fillText(t,w/2,h*.015+ts*1.05)}
+  const ts=Math.round(w*.066),N=Math.round(w*.085),bl=h*.015+N*.95;
+  const tg=g.createLinearGradient(0,0,0,bl+N*.6);tg.addColorStop(0,'rgba(0,0,0,.85)');tg.addColorStop(.6,'rgba(0,0,0,.45)');tg.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=tg;g.fillRect(0,0,w,bl+N*.6);
+  // 제목과 숫자를 한 줄로 (숫자는 제목 오른쪽)
+  const tTxt='칼군무 일치율',nTxt=cs!=null?(cs*100).toFixed(1)+'%':'';
+  g.font=`400 ${ts}px "Black Han Sans",sans-serif`;const tw=g.measureText(tTxt).width;
+  g.font=`900 ${N}px "Noto Serif KR","Times New Roman",serif`;const nw=nTxt?g.measureText(nTxt).width:0;
+  const gap=nTxt?ts*.35:0,sx=(w-tw-gap-nw)/2;
+  g.save();g.textBaseline='alphabetic';g.textAlign='left';
+  const gold=g.createLinearGradient(0,bl-ts,0,bl);gold.addColorStop(0,'#fff2c4');gold.addColorStop(.5,'#f7c35a');gold.addColorStop(1,'#d9902b');
+  g.font=`400 ${ts}px "Black Han Sans",sans-serif`;g.lineWidth=ts*.12;g.strokeStyle='rgba(0,0,0,.85)';g.strokeText(tTxt,sx,bl);g.fillStyle=gold;g.fillText(tTxt,sx,bl);
+  if(nTxt){g.font=`900 ${N}px "Noto Serif KR","Times New Roman",serif`;g.lineWidth=N*.08;g.strokeStyle='rgba(0,0,0,.75)';g.strokeText(nTxt,sx+tw+gap,bl);g.fillStyle='#fff';g.fillText(nTxt,sx+tw+gap,bl)}
+  g.restore();g.textAlign='center';
   // 아래: 어두운 그라데이션 위에 항목별 일치 + 크림색 하단 바
   const barH=Math.round(h*.045),bh=h*.2,by=h-barH;
   const bg2=g.createLinearGradient(0,by-bh,0,by);bg2.addColorStop(0,'rgba(0,0,0,0)');bg2.addColorStop(1,'rgba(0,0,0,.82)');g.fillStyle=bg2;g.fillRect(0,by-bh,w,bh);
@@ -211,7 +217,7 @@ $('file').onchange=e=>e.target.files[0]&&analyze(e.target.files[0]);
 const dz=$('drop');['dragenter','dragover'].forEach(ev=>addEventListener(ev,e=>{e.preventDefault();dz.classList.add('hot')}));
 ['dragleave','drop'].forEach(ev=>addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('hot')}));
 addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('video/'))analyze(f)});
-window.__kal={get frames(){return frames},get overall(){return overall}};
+window.__kal={get frames(){return frames},get overall(){return overall},drawFrame};
 </script>
 </body>
 </html>
