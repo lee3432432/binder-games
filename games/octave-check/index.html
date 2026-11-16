@@ -193,7 +193,7 @@ async function transcribe(x){status('AI 가사 받아쓰기 모델 불러오는 
     asrPipe=await pipeline('automatic-speech-recognition','Xenova/whisper-base',{dtype:'q8',progress_callback:p=>{if(p.status==='progress'&&p.total>5e6){prog(p.loaded/p.total);status(`AI 모델 받는 중… ${Math.round(p.loaded/1e6)}/${Math.round(p.total/1e6)}MB`)}}})}
   status('AI가 가사를 받아쓰는 중… (곡 길이에 따라 수십 초)');prog(.6);await tick();
   const r=await asrPipe(x,{language:'korean',task:'transcribe',chunk_length_s:30,stride_length_s:5,return_timestamps:true});
-  const cs=(r.chunks||[]).map(c=>({t0:c.timestamp[0]??0,t1:c.timestamp[1]??(c.timestamp[0]+3),text:c.text.trim()})).filter(c=>c.text&&!/^[\s.♪♫…]+$/.test(c.text));
+  const cs=(r.chunks||[]).map(c=>({t0:c.timestamp[0]??0,t1:c.timestamp[1]??(c.timestamp[0]+3),text:c.text.replace(/[\(\[（【][^\)\]）】]*[\)\]）】]/g,'').replace(/[♪♫]/g,'').trim()})).filter(c=>c.text&&!/^[\s.♪♫…]+$/.test(c.text));
   // 같은 문장 반복(받아쓰기 헛소리) 걸러내기
   const out=[];for(const c of cs){const p=out[out.length-1];if(p&&p.text===c.text&&out.filter(o=>o.text===c.text).length>=2)continue;out.push(c)}
   return out}
