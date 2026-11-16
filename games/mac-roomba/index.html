@@ -21,6 +21,7 @@ html,body{height:100%;overflow:hidden;font-family:"Noto Sans KR",-apple-system,s
 #dock{z-index:6;filter:drop-shadow(0 6px 10px rgba(0,0,0,.45))}
 #shadow{z-index:7;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.45),rgba(0,0,0,0))}
 #robot{z-index:30;pointer-events:auto;cursor:pointer}
+.brush{position:absolute;left:0;top:0;z-index:29;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 #led{position:absolute;z-index:31;width:8px;height:8px;border-radius:50%;pointer-events:none;box-shadow:0 0 8px currentColor}
 #hud{position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:60;background:rgba(15,20,30,.62);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:10px 12px;color:#fff;display:flex;flex-direction:column;gap:8px;min-width:250px}
 #stat{display:flex;gap:12px;font-size:13px;font-weight:700;align-items:center}
@@ -46,6 +47,7 @@ html,body{height:100%;overflow:hidden;font-family:"Noto Sans KR",-apple-system,s
 <div id="hint">로봇을 누르면 청소 시작 · 내 파일을 끌어다 놓으면 바탕화면에 올라가요</div>
 <img id="dock" src="dock.png" alt="">
 <div id="shadow"></div>
+<img class="brush" id="brL" src="brush.png" alt=""><img class="brush" id="brR" src="brush.png" alt="">
 <img id="robot" src="robot.png" alt="로봇청소기">
 <div id="led"></div>
 <div id="hud">
@@ -99,7 +101,7 @@ const rb={x:0,y:0,a:-Math.PI/2,v:0,state:'charging',turnTo:null,bat:100,t:0,wob:
 function dockPos(){return{x:W/2,y:H-R*.85}}
 const DOCK_Y=()=>dockPos().y-R*.3;
 function sizeAll(){W=innerWidth;H=innerHeight;R=Math.max(38,Math.min(70,Math.min(W,H)*.075));
-  robotEl.style.width=robotEl.style.height=R*2+'px';dockEl.style.width=R*1.75+'px';shadowEl.style.width=shadowEl.style.height=R*2.4+'px';
+  robotEl.style.width=robotEl.style.height=R*2+'px';for(const b of [brL,brR])b.style.width=b.style.height=R*1.5+'px';dockEl.style.width=R*1.75+'px';shadowEl.style.width=shadowEl.style.height=R*2.4+'px';
   const d=dockPos();dockEl.style.transform=`translate(${d.x-R*.875}px,${d.y-R*.82}px) rotate(180deg)`;
   if(rb.state==='charging'){rb.x=d.x;rb.y=DOCK_Y();rb.a=-Math.PI/2}}
 addEventListener('resize',sizeAll);
@@ -148,7 +150,7 @@ function steer(dt,now){const spd=R*2.1;// 초당 이동 거리
     return}
   if(rb.state==='charging'){rb.v=0;rb.bat=Math.min(100,rb.bat+dt*9);if(autoResume&&rb.bat>=95&&icons.some(i=>i.state==='idle')){autoResume=false;start()}}
   if(rb.state==='paused')rb.v*=.85}
-let bump=0,finish=false,autoResume=false;
+let bump=0,finish=false,autoResume=false,brSpd=0,brAng=0;const brL=$('brL'),brR=$('brR');
 
 /* 흡입 */
 function suck(now,dt){const mouth=R*.78;
@@ -172,6 +174,10 @@ function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;
   const moving=rb.v>5;setHum(moving?.7:(rb.state==="turn"?.55:0),.95+rb.v/(R*2.1)*.1);
   const shake=moving?Math.sin(now/23)*.6:0;const bumpK=Math.max(0,1-(now-bump)/180);
   robotEl.style.transform=`translate(${rb.x-R+shake}px,${rb.y-R-bumpK*3}px) rotate(${rb.a+Math.PI/2}rad)`;
+  // 양옆 사이드 브러시: 앞쪽 좌우에서 서로 안쪽으로 쓸어 담듯 회전
+  const active=rb.state==='clean'||rb.state==='turn'||rb.state==='leaving'||rb.state==='returning';brSpd+=((active?16:0)-brSpd)*Math.min(1,dt*(active?3:1.5));brAng+=brSpd*dt;
+  for(const [el,side] of [[brL,-1],[brR,1]]){const pa=rb.a+side*.95,bx=rb.x+Math.cos(pa)*R*.74+shake,by=rb.y+Math.sin(pa)*R*.74,bs=R*.75;
+    el.style.transform=`translate(${bx-bs}px,${by-bs}px) rotate(${side<0?brAng:-brAng}rad) scaleX(${side<0?1:-1})`}
   shadowEl.style.transform=`translate(${rb.x-R*1.2}px,${rb.y-R*1.2+R*.12}px)`;
   const ledC=rb.state==='charging'?(rb.bat>=99?'#3ddc6e':`rgba(255,190,40,${.4+.6*Math.abs(Math.sin(now/400))})`):rb.state==='returning'?'#ffbe28':rb.state==='paused'?'#ffffff':'#3ddc6e';
   ledEl.style.background=ledEl.style.color=ledC;const lx=rb.x+Math.cos(rb.a+Math.PI)*R*.62,ly=rb.y+Math.sin(rb.a+Math.PI)*R*.62;ledEl.style.transform=`translate(${lx-4}px,${ly-4}px)`;
