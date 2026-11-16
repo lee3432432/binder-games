@@ -169,7 +169,7 @@ function suck(now,dt){const mouth=R*.78;
 let last=performance.now();
 function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;
   steer(dt,now);suck(now,dt);
-  const moving=rb.v>5;setHum(moving?.28:(rb.state==='turn'?.22:0),.95+rb.v/(R*2.1)*.1);
+  const moving=rb.v>5;setHum(moving?.7:(rb.state==="turn"?.55:0),.95+rb.v/(R*2.1)*.1);
   const shake=moving?Math.sin(now/23)*.6:0;const bumpK=Math.max(0,1-(now-bump)/180);
   robotEl.style.transform=`translate(${rb.x-R+shake}px,${rb.y-R-bumpK*3}px) rotate(${rb.a+Math.PI/2}rad)`;
   shadowEl.style.transform=`translate(${rb.x-R*1.2}px,${rb.y-R*1.2+R*.12}px)`;
