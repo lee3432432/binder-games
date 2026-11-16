@@ -1,5 +1,17 @@
 [
   {
+    "id": "octave-check",
+    "title": "옥타브 체크",
+    "desc": "노래 영상을 올리면 AI가 음정을 뽑아서 가사 한 글자마다 몇 옥타브 무슨 음인지 노래방처럼 보여줘요. 최고음도 찾아주고 결과 영상 저장까지.",
+    "thumb": "assets/thumbs/octave-check.jpg",
+    "tags": [
+      "노래",
+      "AI",
+      "음역대"
+    ],
+    "new": true
+  },
+  {
     "id": "ar-blaster",
     "title": "AR 블래스터",
     "desc": "휴대폰 카메라로 친구를 조준하고 화면을 꾹 누르면 발사! 맞으면 빨갛게 번쩍, 연막을 쏘면 얼굴에 홀로그램 구름이 붙어요.",
@@ -9,7 +21,7 @@
       "AR",
       "슈팅"
     ],
-    "new": true
+    "new": false
   },
   {
     "id": "kal-gunmu",
