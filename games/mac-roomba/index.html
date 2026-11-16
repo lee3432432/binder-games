@@ -98,7 +98,7 @@ function bindDrag(ic){let off=null;
 
 /* 로봇 */
 const rb={x:0,y:0,a:-Math.PI/2,v:0,state:'charging',turnTo:null,bat:100,t:0,wob:0};
-function dockPos(){return{x:W/2,y:H-R*.85}}
+function dockPos(){let x=W/2;const hr=document.getElementById('hud').getBoundingClientRect();if(hr.top>H*.5&&hr.right+R*1.1>W/2-R)x=Math.min(W-R*1.3,hr.right+(W-hr.right)/2);return{x,y:H-R*.85}}
 const DOCK_Y=()=>dockPos().y-R*.3;
 function sizeAll(){W=innerWidth;H=innerHeight;R=Math.max(38,Math.min(70,Math.min(W,H)*.075));
   robotEl.style.width=robotEl.style.height=R*2+'px';for(const b of [brL,brR])b.style.width=b.style.height=R*1.5+'px';dockEl.style.width=R*1.75+'px';shadowEl.style.width=shadowEl.style.height=R*2.4+'px';
