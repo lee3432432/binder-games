@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>바탕화면 로봇청소기 · 커맨드 플레이</title>
+<meta name="description" content="지저분한 바탕화면을 로봇청소기가 돌아다니며 파일 아이콘을 쭉쭉 빨아들여요. 내 파일을 끌어다 놓아도 먹어요.">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:"Noto Sans KR",-apple-system,system-ui,sans-serif;-webkit-user-select:none;user-select:none;touch-action:none;background:#0b3b46}
+#desk{position:fixed;inset:0;background:url(wallpaper.jpg) center/cover no-repeat}
+#bar{position:fixed;left:0;right:0;top:0;height:26px;background:rgba(20,30,40,.35);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:flex;align-items:center;gap:16px;padding:0 12px;color:#fff;font-size:13px;font-weight:700;z-index:50}
+#bar a{color:#fff;text-decoration:none}#bar .sp{flex:1}#bar span{opacity:.92}
+.ic{position:absolute;width:86px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:grab;z-index:5;transform-origin:50% 35%}
+.ic img{width:58px;height:58px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));pointer-events:none}
+.ic img.thumb{object-fit:cover;border:3px solid #fff;border-radius:4px;width:56px;height:46px;margin:6px 0}
+.ic b{font-size:11.5px;font-weight:700;color:#fff;text-align:center;line-height:1.25;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 4px rgba(0,0,0,.6);max-width:86px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all;pointer-events:none}
+.ic.drag{cursor:grabbing;z-index:40}
+#dock,#robot,#shadow{position:absolute;left:0;top:0;pointer-events:none}
+#dock{z-index:6;filter:drop-shadow(0 6px 10px rgba(0,0,0,.45))}
+#shadow{z-index:7;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.45),rgba(0,0,0,0))}
+#robot{z-index:30;pointer-events:auto;cursor:pointer}
+#led{position:absolute;z-index:31;width:8px;height:8px;border-radius:50%;pointer-events:none;box-shadow:0 0 8px currentColor}
+#hud{position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:60;background:rgba(15,20,30,.62);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:10px 12px;color:#fff;display:flex;flex-direction:column;gap:8px;min-width:250px}
+#stat{display:flex;gap:12px;font-size:13px;font-weight:700;align-items:center}
+#bat{display:inline-block;width:34px;height:14px;border:2px solid #fff;border-radius:3px;position:relative;vertical-align:-2px;margin-right:4px}
+#bat:after{content:"";position:absolute;right:-5px;top:3px;width:3px;height:5px;background:#fff;border-radius:1px}
+#bat i{position:absolute;left:1px;top:1px;bottom:1px;background:#3ddc6e;border-radius:1px}
+#state{opacity:.85;font-weight:500}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+.btns button{border:0;border-radius:10px;padding:8px 11px;font:inherit;font-size:13px;font-weight:900;cursor:pointer;background:rgba(255,255,255,.16);color:#fff}
+.btns button.main{background:#3ddc6e;color:#082;}
+.btns button:active{transform:scale(.96)}
+#hint{position:fixed;left:50%;top:40px;transform:translateX(-50%);z-index:55;background:rgba(15,20,30,.55);backdrop-filter:blur(8px);color:#fff;font-size:13px;font-weight:700;padding:7px 14px;border-radius:99px;white-space:nowrap;transition:opacity 1s;pointer-events:none}
+#drop{position:fixed;inset:0;z-index:70;background:rgba(61,220,110,.18);border:4px dashed #3ddc6e;display:none;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:900;text-shadow:0 2px 8px #000}
+#done{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%) scale(.8);z-index:65;background:rgba(15,20,30,.7);backdrop-filter:blur(10px);color:#fff;border-radius:20px;padding:18px 26px;text-align:center;opacity:0;transition:.4s;pointer-events:none}
+#done.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#done h2{font-size:26px;font-weight:900}#done p{font-size:14px;opacity:.85;margin-top:4px}
+@media (max-width:600px){.ic{width:70px}.ic img{width:46px;height:46px}.ic b{font-size:10px}#hud{min-width:0;right:12px;bottom:auto;top:34px}#clock,#bar>span:nth-child(2){display:none}#hint{top:auto;bottom:16px;white-space:normal;width:90%;text-align:center}}
+</style>
+</head>
+<body>
+<div id="desk"></div>
+<div id="bar"><a href="/">🏠 커맨드 플레이</a><span>바탕화면 로봇청소기</span><div class="sp"></div><span id="clock"></span></div>
+<div id="hint">로봇을 누르면 청소 시작 · 내 파일을 끌어다 놓으면 바탕화면에 올라가요</div>
+<img id="dock" src="dock.png" alt="">
+<div id="shadow"></div>
+<img id="robot" src="robot.png" alt="로봇청소기">
+<div id="led"></div>
+<div id="hud">
+  <div id="stat"><span><span id="bat"><i></i></span><span id="batv">100%</span></span><span>🗑 흡입 <b id="cnt">0</b>개</span><span id="state">충전 중</span></div>
+  <div class="btns"><button class="main" id="bGo">▶ 청소 시작</button><button id="bHome">🏠 충전 복귀</button><button id="bMess">📂 더 어지르기</button><button id="bEmpty">♻️ 먼지통 비우기</button><button id="bSnd">🔊</button></div>
+</div>
+<div id="done"><h2>청소 완료 ✨</h2><p id="doneP"></p></div>
+<div id="drop">여기에 놓으면 바탕화면에 올라가요 📂</div>
+<script>
+const $=id=>document.getElementById(id);
+const robotEl=$('robot'),dockEl=$('dock'),shadowEl=$('shadow'),ledEl=$('led');
+let W=innerWidth,H=innerHeight,R=60;
+const KINDS={folder:'i_folder',doc:'i_doc',photo:'i_photo',zip:'i_zip',video:'i_video',sheet:'i_sheet',music:'i_music'};
+const NAMES=[['photo','스크린샷 2026-11-17 오후 3.42.12'],['photo','스크린샷 2026-11-17 오후 3.42.58'],['photo','스크린샷 2026-11-16 오전 1.07.33'],['doc','최종.docx'],['doc','최종_진짜최종.docx'],['doc','최종_진짜최종_이게찐.docx'],['folder','새 폴더'],['folder','새 폴더 (2)'],['folder','새 폴더 (3)'],['doc','제목 없음.txt'],['photo','IMG_4821.jpg'],['photo','IMG_4822.jpg'],['zip','다운로드한거.zip'],['video','화면 기록 2026-11-15.mov'],['sheet','예산안_v12.xlsx'],['sheet','예산안_v12_수정.xlsx'],['music','노래방 연습.mp3'],['doc','회의록_아무도안읽음.hwp'],['folder','정리할거'],['folder','진짜 정리할거'],['zip','압축풀기전.zip'],['photo','짤 모음 (1).png'],['photo','짤 모음 (2).png'],['video','녹화_001.mp4'],['doc','할일 목록.txt'],['sheet','가계부_3월.xlsx'],['photo','캡처.PNG'],['doc','이력서_최종본.pdf'],['music','음성 메모 12.m4a'],['folder','바탕화면 정리'],['photo','Screenshot (37).png'],['zip','설치파일.zip'],['doc','비밀번호 아님.txt'],['video','브이로그_편집전.mp4'],['sheet','정산.xlsx'],['photo','카톡 받은 사진.jpg'],['doc','복사본 - 최종.docx'],['folder','나중에 볼 거']];
+const MORE=['스크린샷','새 폴더','최종','캡처','다운로드','복사본','제목 없음','IMG_','화면 기록','정리할거'];
+let icons=[],eaten=[],count=0;
+
+/* 소리 */
+let AC=null,buf={},hum=null,humG=null,sndOn=true;
+async function audio(){if(AC){if(AC.state==='suspended')AC.resume();return}AC=new (window.AudioContext||window.webkitAudioContext)();
+  for(const n of['hum','pop','pop2','beep']){try{buf[n]=await AC.decodeAudioData(await (await fetch('sfx/'+n+'.mp3')).arrayBuffer())}catch(e){}}
+  humG=AC.createGain();humG.gain.value=0;humG.connect(AC.destination);if(buf.hum){hum=AC.createBufferSource();hum.buffer=buf.hum;hum.loop=true;hum.connect(humG);hum.start()}}
+function sfx(n,vol=.6,rate=1){if(!AC||!buf[n]||!sndOn)return;const s=AC.createBufferSource();s.buffer=buf[n];s.playbackRate.value=rate;const g=AC.createGain();g.gain.value=vol;s.connect(g);g.connect(AC.destination);s.start()}
+function setHum(v,rate){if(!humG)return;humG.gain.setTargetAtTime(sndOn?v:0,AC.currentTime,.25);if(hum&&rate)hum.playbackRate.setTargetAtTime(rate,AC.currentTime,.3)}
+
+/* 아이콘 */
+function makeIcon(kind,name,x,y,thumb){const el=document.createElement('div');el.className='ic';
+  el.innerHTML=`<img ${thumb?'class="thumb"':''} src="${thumb||KINDS[kind]+'.png'}" alt=""><b></b>`;el.querySelector('b').textContent=name;document.body.appendChild(el);
+  const ic={el,kind,name,thumb,x,y,vx:0,vy:0,state:'idle',t:0,rot:0,sc:1};place(ic);icons.push(ic);bindDrag(ic);return ic}
+function place(ic){ic.el.style.transform=`translate(${ic.x-43}px,${ic.y-32}px) rotate(${ic.rot}deg) scale(${ic.sc})`;ic.el.style.opacity=ic.sc<1?Math.max(0,ic.sc*1.2):1}
+function slots(){// 오른쪽에서부터 세로로 줄 맞춘 칸 (진짜 바탕화면처럼)
+  const cw=W<600?74:92,ch=W<600?84:96,out=[],top=W<600?150:34;const cols=Math.floor((W-30)/cw),rows=Math.floor((H-top-R*2.2)/ch);
+  for(let c=0;c<cols;c++)for(let r=0;r<rows;r++)out.push([W-cw/2-12-c*cw,top+ch/2-6+r*ch]);return out}
+function freeSlot(){const sl=slots();const busy=icons.filter(i=>i.state!=='gone');for(const [x,y] of sl){if(!busy.some(i=>Math.abs((i.tx??i.x)-x)<60&&Math.abs((i.ty??i.y)-y)<70))return[x,y]}return[60+Math.random()*(W-120),60+Math.random()*(H-220)]}
+function messUp(n,arr){const sl=slots();const used=new Set(icons.filter(i=>i.state==='idle').map(i=>Math.round(i.x/10)+','+Math.round(i.y/10)));
+  let k=0,si=0;const list=arr||Array.from({length:n},()=>{const b=NAMES[Math.random()*NAMES.length|0];const m=MORE[Math.random()*MORE.length|0];return Math.random()<.5?b:[b[0],m+' ('+(2+Math.random()*30|0)+')'+b[1].slice(b[1].lastIndexOf('.'))]});
+  const dk=dockPos();
+  for(const [kind,name] of list){let x,y,tries=0;
+    do{if(Math.random()<.7){[x,y]=freeSlot()}else{x=60+Math.random()*(W-120);y=60+Math.random()*(H-200)}tries++}
+    while(tries<40&&(icons.some(i=>i.state!=='gone'&&Math.abs(i.x-x)<70&&Math.abs(i.y-y)<80)||(Math.abs(x-dk.x)<R*1.8&&y>dk.y-R*3)));
+    const ic=makeIcon(kind,name,x,y);ic.sc=0;ic.state='spawn';ic.t=performance.now()+k*25;k++}}
+
+/* 드래그 */
+function bindDrag(ic){let off=null;
+  ic.el.addEventListener('pointerdown',e=>{if(ic.state!=='idle')return;e.preventDefault();ic.el.setPointerCapture(e.pointerId);off=[e.clientX-ic.x,e.clientY-ic.y];ic.el.classList.add('drag');ic.drag=true});
+  ic.el.addEventListener('pointermove',e=>{if(!off)return;ic.x=e.clientX-off[0];ic.y=e.clientY-off[1];place(ic)});
+  const up=()=>{off=null;ic.drag=false;ic.el.classList.remove('drag')};ic.el.addEventListener('pointerup',up);ic.el.addEventListener('pointercancel',up)}
+
+/* 로봇 */
+const rb={x:0,y:0,a:-Math.PI/2,v:0,state:'charging',turnTo:null,bat:100,t:0,wob:0};
+function dockPos(){return{x:W/2,y:H-R*.85}}
+const DOCK_Y=()=>dockPos().y-R*.3;
+function sizeAll(){W=innerWidth;H=innerHeight;R=Math.max(38,Math.min(70,Math.min(W,H)*.075));
+  robotEl.style.width=robotEl.style.height=R*2+'px';dockEl.style.width=R*1.75+'px';shadowEl.style.width=shadowEl.style.height=R*2.4+'px';
+  const d=dockPos();dockEl.style.transform=`translate(${d.x-R*.875}px,${d.y-R*.82}px) rotate(180deg)`;
+  if(rb.state==='charging'){rb.x=d.x;rb.y=DOCK_Y();rb.a=-Math.PI/2}}
+addEventListener('resize',sizeAll);
+const ang=a=>Math.atan2(Math.sin(a),Math.cos(a));
+function setState(s){rb.state=s;const L={charging:'충전 중',clean:'청소 중',turn:'청소 중',returning:'충전하러 가는 중',paused:'일시정지',leaving:'출발!'};$('state').textContent=L[s]||s;
+  $('bGo').textContent=(s==='clean'||s==='turn'||s==='leaving')?'⏸ 일시정지':'▶ 청소 시작'}
+function start(){audio();$('hint').style.opacity=0;$('done').classList.remove('on');
+  if(rb.state==='charging'){if(rb.bat<20){flash('배터리가 부족해요. 조금만 충전할게요 🔌');return}sfx('beep',.5);setState('leaving');rb.t=0}
+  else if(rb.state==='paused'||rb.state==='returning')setState('clean')}
+function pause(){if(rb.state==='clean'||rb.state==='turn'||rb.state==='leaving')setState('paused')}
+function goHome(){audio();if(rb.state!=='charging'){setState('returning');sfx('beep',.4,1.1)}}
+function flash(t){const h=$('hint');h.textContent=t;h.style.opacity=1;clearTimeout(flash.t);flash.t=setTimeout(()=>h.style.opacity=0,2600)}
+robotEl.addEventListener('pointerdown',e=>{e.stopPropagation();if(rb.state==='clean'||rb.state==='turn'||rb.state==='leaving')pause();else start()});
+$('bGo').onclick=()=>{if(rb.state==='clean'||rb.state==='turn'||rb.state==='leaving')pause();else start()};
+$('bHome').onclick=goHome;
+$('bMess').onclick=()=>{audio();messUp(14);$('done').classList.remove('on')};
+$('bSnd').onclick=()=>{sndOn=!sndOn;$('bSnd').textContent=sndOn?'🔊':'🔇';if(!sndOn&&humG)humG.gain.value=0};
+$('bEmpty').onclick=()=>{audio();if(!eaten.length){flash('먼지통이 비어 있어요');return}// 먹은 파일을 도크에서 다시 뱉어냄
+  const d=dockPos();const list=eaten.splice(0);let k=0;for(const e of list){const ic=makeIcon(e.kind,e.name,d.x,d.y-R,e.thumb);ic.state='spit';ic.t=performance.now()+k*60;ic.sc=0;
+    const [tx,ty]=freeSlot();ic.tx=tx;ic.ty=ty;ic.sx=d.x;ic.sy=d.y-R;k++}
+  count=0;$('cnt').textContent=0;$('done').classList.remove('on')};
+
+function steer(dt,now){const spd=R*2.1;// 초당 이동 거리
+  if(rb.state==='leaving'){rb.t+=dt;rb.v=spd*.6;rb.x+=Math.cos(rb.a)*rb.v*dt;rb.y+=Math.sin(rb.a)*rb.v*dt;if(rb.t>1.1){setState('clean');rb.a=-Math.PI/2+(Math.random()-.5)*1.2}return}
+  if(rb.state==='turn'){const d=ang(rb.turnTo-rb.a);const st=Math.sign(d)*Math.min(Math.abs(d),3.2*dt);rb.a+=st;rb.v=0;if(Math.abs(d)<.03)setState('clean');return}
+  if(rb.state==='clean'){
+    // 가까운 파일 쪽으로 살짝 끌리면서(흡입력) 랜덤 주행
+    let best=null,bd=1e9;for(const ic of icons){if(ic.state!=='idle'||ic.drag)continue;const dd=Math.hypot(ic.x-rb.x,ic.y-rb.y);if(dd<bd){bd=dd;best=ic}}
+    rb.wob+=dt*(.6+Math.random());let want=rb.a+Math.sin(rb.wob)*.25*dt;
+    if(best&&bd<R*9){const ta=Math.atan2(best.y-rb.y,best.x-rb.x);want=rb.a+ang(ta-rb.a)*Math.min(1,dt*1.6)}
+    rb.a=want;rb.v+= (spd-rb.v)*Math.min(1,dt*3);
+    const nx=rb.x+Math.cos(rb.a)*rb.v*dt,ny=rb.y+Math.sin(rb.a)*rb.v*dt;const pad=R*.95;
+    if(nx<pad||nx>W-pad||ny<26+pad||ny>H-pad){// 벽에 부딪히면 살짝 후진 후 제자리 회전
+      rb.x-=Math.cos(rb.a)*R*.08;rb.y-=Math.sin(rb.a)*R*.08;rb.v=0;const toC=Math.atan2(H/2-rb.y,W/2-rb.x);rb.turnTo=rb.a+ang(toC+(Math.random()-.5)*2.2-rb.a);setState('turn');bump=now;return}
+    rb.x=nx;rb.y=ny;
+    rb.bat-=dt*1.6;if(rb.bat<12){flash('배터리 부족! 충전하러 가요 🔋');setState('returning');sfx('beep',.4,.9)}
+    if(!icons.some(i=>i.state==='idle')){setState('returning');finish=true}
+    return}
+  if(rb.state==='returning'){const d=dockPos();const tx=d.x,ty=DOCK_Y(),ax=tx,ay=ty-R*1.6;
+    const far=Math.hypot(ax-rb.x,ay-rb.y);let ta;
+    if(rb.approach){ta=Math.atan2(ty-rb.y,tx-rb.x)}else{ta=Math.atan2(ay-rb.y,ax-rb.x);if(far<R*.3){rb.approach=true}}
+    rb.a+=ang(ta-rb.a)*Math.min(1,dt*4);const go=rb.approach?spd*.4:spd;rb.v+=(go-rb.v)*Math.min(1,dt*3);
+    rb.x+=Math.cos(rb.a)*rb.v*dt;rb.y+=Math.sin(rb.a)*rb.v*dt;rb.bat=Math.max(1,rb.bat-dt*.8);
+    if(rb.approach&&Math.hypot(tx-rb.x,ty-rb.y)<R*.08){rb.x=tx;rb.y=ty;rb.v=0;rb.approach=false;rb.a=-Math.PI/2;setState('charging');sfx('beep',.45,1.2);
+      if(finish||!icons.some(i=>i.state==='idle')){finish=false;$('doneP').textContent=`파일 ${count}개를 먹어치웠어요. ♻️ 먼지통 비우기로 되돌릴 수 있어요`;$('done').classList.add('on');setTimeout(()=>$('done').classList.remove('on'),4500)}}
+    return}
+  if(rb.state==='charging'){rb.v=0;rb.bat=Math.min(100,rb.bat+dt*9);if(autoResume&&rb.bat>=95&&icons.some(i=>i.state==='idle')){autoResume=false;start()}}
+  if(rb.state==='paused')rb.v*=.85}
+let bump=0,finish=false,autoResume=false;
+
+/* 흡입 */
+function suck(now,dt){const mouth=R*.78;
+  for(const ic of icons){
+    if(ic.state==='spawn'){if(now<ic.t)continue;ic.sc=Math.min(1,ic.sc+dt*5);ic.rot=(1-ic.sc)*20;place(ic);if(ic.sc>=1){ic.state='idle';ic.rot=0;place(ic)}continue}
+    if(ic.state==='spit'){if(now<ic.t)continue;const e=Math.min(1,(now-ic.t)/600);const k=1-Math.pow(1-e,3);ic.x=ic.sx+(ic.tx-ic.sx)*k;ic.y=ic.sy+(ic.ty-ic.sy)*k-Math.sin(e*Math.PI)*R*1.5;ic.sc=Math.min(1,e*1.6);ic.rot=(1-e)*360;place(ic);if(e>=1){ic.state='idle';ic.rot=0;ic.sc=1;delete ic.tx;delete ic.ty;place(ic)}continue}
+    if(ic.state==='sucked'){const e=Math.min(1,(now-ic.t)/320);ic.x+=(rb.x-ic.x)*Math.min(1,dt*14);ic.y+=(rb.y-ic.y)*Math.min(1,dt*14);ic.sc=1-e;ic.rot+=dt*720;place(ic);if(e>=1){ic.state='gone';ic.el.remove()}continue}
+    if(ic.state!=='idle'||ic.drag)continue;
+    const moving=rb.state==='clean'||rb.state==='turn'||rb.state==='returning'||rb.state==='leaving';if(!moving)continue;
+    const dx=rb.x-ic.x,dy=rb.y-(ic.y+4),d=Math.hypot(dx,dy);
+    if(d<mouth){ic.state='sucked';ic.t=now;count++;$('cnt').textContent=count;eaten.push({kind:ic.kind,name:ic.name,thumb:ic.thumb});sfx(Math.random()<.5?'pop':'pop2',.55,.85+Math.random()*.4)}
+    else if(d<R*1.7){// 빨려 들어가기 직전 바들바들
+      const f=(1-d/(R*1.7));ic.x+=dx/d*f*dt*R*.9;ic.y+=dy/d*f*dt*R*.9;ic.rot=Math.sin(now/40+ic.x)*6*f;place(ic)}
+    else if(ic.rot){ic.rot*=.8;if(Math.abs(ic.rot)<.2)ic.rot=0;place(ic)}}
+  icons=icons.filter(i=>i.state!=='gone')}
+
+/* 그리기 */
+let last=performance.now();
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;
+  steer(dt,now);suck(now,dt);
+  const moving=rb.v>5;setHum(moving?.28:(rb.state==='turn'?.22:0),.95+rb.v/(R*2.1)*.1);
+  const shake=moving?Math.sin(now/23)*.6:0;const bumpK=Math.max(0,1-(now-bump)/180);
+  robotEl.style.transform=`translate(${rb.x-R+shake}px,${rb.y-R-bumpK*3}px) rotate(${rb.a+Math.PI/2}rad)`;
+  shadowEl.style.transform=`translate(${rb.x-R*1.2}px,${rb.y-R*1.2+R*.12}px)`;
+  const ledC=rb.state==='charging'?(rb.bat>=99?'#3ddc6e':`rgba(255,190,40,${.4+.6*Math.abs(Math.sin(now/400))})`):rb.state==='returning'?'#ffbe28':rb.state==='paused'?'#ffffff':'#3ddc6e';
+  ledEl.style.background=ledEl.style.color=ledC;const lx=rb.x+Math.cos(rb.a+Math.PI)*R*.62,ly=rb.y+Math.sin(rb.a+Math.PI)*R*.62;ledEl.style.transform=`translate(${lx-4}px,${ly-4}px)`;
+  $('bat').firstElementChild.style.width=Math.max(2,rb.bat/100*28)+'px';$('bat').firstElementChild.style.background=rb.bat<20?'#ff5a4a':'#3ddc6e';$('batv').textContent=Math.round(rb.bat)+'%';
+  requestAnimationFrame(frame)}
+
+/* 내 파일 끌어다 놓기 */
+let dragDepth=0;
+addEventListener('dragenter',e=>{e.preventDefault();dragDepth++;$('drop').style.display='flex'});
+addEventListener('dragleave',e=>{e.preventDefault();if(--dragDepth<=0){dragDepth=0;$('drop').style.display='none'}});
+addEventListener('dragover',e=>e.preventDefault());
+addEventListener('drop',e=>{e.preventDefault();dragDepth=0;$('drop').style.display='none';audio();
+  const fs=[...e.dataTransfer.files].slice(0,40);let k=0;for(const f of fs){const ext=(f.name.split('.').pop()||'').toLowerCase();
+    const kind=f.type.startsWith('image/')?'photo':f.type.startsWith('video/')?'video':f.type.startsWith('audio/')?'music':/zip|rar|7z|tar|gz/.test(ext)?'zip':/xls|csv|numbers/.test(ext)?'sheet':'doc';
+    const thumb=f.type.startsWith('image/')?URL.createObjectURL(f):null;const x=e.clientX+(k%5-2)*78,y=e.clientY+Math.floor(k/5)*90;
+    const ic=makeIcon(kind,f.name,Math.max(50,Math.min(W-50,x)),Math.max(60,Math.min(H-120,y)),thumb);ic.sc=0;ic.state='spawn';ic.t=performance.now()+k*40;k++}
+  flash(`파일 ${fs.length}개 올라감! 로봇을 눌러 청소 시작 🤖`)});
+
+/* 시계 */
+function clock(){const d=new Date();$('clock').textContent=`${d.getMonth()+1}월 ${d.getDate()}일 (${'일월화수목금토'[d.getDay()]}) ${d.getHours()<12?'오전':'오후'} ${(d.getHours()%12)||12}:${String(d.getMinutes()).padStart(2,'0')}`}
+setInterval(clock,10000);clock();
+
+sizeAll();messUp(0,NAMES.slice(0,Math.min(NAMES.length,Math.floor(W*H/(W<600?17000:26000)))));
+setTimeout(()=>$('hint').style.opacity=0,7000);
+requestAnimationFrame(frame);
+window.__rb={rb,get icons(){return icons},start,goHome,get count(){return count}};
+</script>
+</body>
+</html>

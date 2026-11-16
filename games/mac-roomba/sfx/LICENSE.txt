@@ -1,0 +1,5 @@
+All sounds CC0 from freesound.org via Openverse:
+hum.mp3  - Sound of Roomba robot vacuum (freesound 495547), trimmed loop
+pop.mp3  - cartoon pop or drip (freesound 221091)
+pop2.mp3 - Pop (freesound 319107)
+beep.mp3 - Robot beep (freesound 460824)
