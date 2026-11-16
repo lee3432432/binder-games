@@ -54,6 +54,7 @@ main{max-width:720px;margin:0 auto;padding:14px}
       <div class="row2"><div><label>노래 제목</label><input type="text" id="song" placeholder="예) After You've Gone"></div><div><label>가수</label><input type="text" id="singer" placeholder="예) 박완규"></div></div>
       <label>가사 (한 줄 = 한 소절 · 비워두면 AI가 받아써요)</label>
       <textarea id="lyrics" placeholder="난 아니야~ 이대로&#10;받아들이긴 싫어&#10;…"></textarea>
+      <label class="chk" style="cursor:pointer"><span>🎚 <b>정밀 분석 파일(.json)</b> 불러오기 <span style="color:#889">(선택)</span><br><span id="anaName" style="color:#889">목소리만 분리해서 뽑은 음정 파일이 있으면 넣어주세요. 훨씬 정확해져요.</span></span><input type="file" id="ana" accept=".json,application/json" hidden></label>
       <label class="chk"><input type="checkbox" id="asr" checked><span>가사가 비어 있으면 <b>AI로 자동 받아쓰기</b><br><span style="color:#889">처음 1회 AI 모델(약 80MB)을 받아요. 노래는 말보다 받아쓰기가 어려워서 틀린 곳은 고쳐서 다시 돌려주세요.</span></span></label>
       <button class="btn y" id="go" disabled style="margin-top:4px">🎼 옥타브 체크 시작</button>
     </div>
@@ -72,7 +73,7 @@ main{max-width:720px;margin:0 auto;padding:14px}
 const $=id=>document.getElementById(id);
 const cv=$('cv'),g=cv.getContext('2d'),pv=$('pv');const W=720,H=1280;
 const SR=16000,HOP=160,FR=SR/HOP; // 10ms 프레임
-let file=null,isVideo=false,audio=null,track=null,notes=[],chunks=[],gmax=null,asrChunks=null,asrText='';
+let anaData=null,file=null,isVideo=false,audio=null,track=null,notes=[],chunks=[],gmax=null,asrChunks=null,asrText='';
 const status=t=>$('status').innerHTML=t,prog=p=>$('prog').firstElementChild.style.width=(p*100).toFixed(1)+'%';
 const tick=()=>new Promise(r=>setTimeout(r,0));
 
@@ -155,15 +156,16 @@ function chunkify(ph,a){const out=[];const MAX=9;const K=a.syl.length;const part
     out.push({t0:a.syl[s0].t,chars,sylIdx:a.sylIdx.slice(s0,s1).map(i=>i-off),syl:a.syl.slice(s0,s1),t1:s1<K?a.syl[s1].t:ph.t1})}
   return out}
 
-/* 6) 소절 해설 한 줄 */
-function comment(c){const ms=c.syl.map(s=>s.midi).filter(v=>v!=null);if(!ms.length)return'';
+/* 6) 소절 해설 한 줄 (같은 문장 반복 안 되게 여러 말투 돌려씀) */
+const pickT=(arr,k)=>arr[k%arr.length];
+function comment(c,k=0){const ms=c.syl.map(s=>s.midi).filter(v=>v!=null);if(!ms.length)return'';
   const s=ms[0],e=ms[ms.length-1],mx=Math.max(...ms),mn=Math.min(...ms);let jump=null;for(let i=1;i<ms.length;i++)if(Math.abs(ms[i]-ms[i-1])>=7&&(!jump||Math.abs(ms[i]-ms[i-1])>Math.abs(jump[1]-jump[0])))jump=[ms[i-1],ms[i]];
-  if(c.hasMax)return mx===s?`시작부터 ${lab(mx)}! 이 무대의 최고음이에요`:`${lab(s)}에서 ${lab(mx)}까지 질러요, 이 무대의 최고음이에요`;
-  if(mx-mn<=2)return`${lab(mx)} 근처에서 흔들림 없이 버텨요`;
-  if(jump)return`${lab(jump[0])}에서 ${lab(jump[1])}로 한 번에 ${jump[1]>jump[0]?'뛰어올라요':'뚝 떨어져요'}`;
-  if(e-s<=-3)return`${lab(s)}에서 순차 하행해 ${lab(e)}에서 마무리해요`;
-  if(e-s>=3)return`${lab(s)}에서 ${lab(e)}까지 차근차근 끌어올려요`;
-  return`${lab(mn)}~${lab(mx)} 사이를 오가며 불러요`}
+  if(c.hasMax)return mx===s?`시작부터 ${lab(mx)}! 이 무대의 최고음이에요`:pickT([`${lab(s)}에서 ${lab(mx)}까지 질러요, 이 무대의 최고음이에요`,`${lab(mx)}까지 치고 올라가요, 여기가 이 무대의 최고음`],k);
+  if(mx-mn<=2)return pickT([`${lab(mx)} 근처에서 흔들림 없이 버텨요`,`${lab(mx)}에 머무르며 힘을 모아요`,`${lab(mx)} 언저리에서 담담하게 이어가요`],k);
+  if(jump)return jump[1]>jump[0]?pickT([`${lab(jump[0])}에서 ${lab(jump[1])}로 한 번에 뛰어올라요`,`${lab(jump[0])}에서 ${lab(jump[1])}까지 단숨에 점프!`],k):pickT([`${lab(jump[0])}에서 ${lab(jump[1])}로 뚝 떨어져요`,`${lab(jump[0])}에서 ${lab(jump[1])}까지 확 내려놔요`],k);
+  if(e-s<=-3)return pickT([`${lab(s)}에서 순차 하행해 ${lab(e)}에서 마무리해요`,`${lab(s)}에서 한 계단씩 내려와 ${lab(e)}에 안착해요`,`${lab(s)}부터 천천히 풀어서 ${lab(e)}로 닫아요`],k);
+  if(e-s>=3)return pickT([`${lab(s)}에서 ${lab(e)}까지 차근차근 끌어올려요`,`${lab(s)}로 시작해 ${lab(e)}까지 밀어 올려요`,`${lab(s)}에서 출발, ${lab(e)}로 감정을 쌓아요`],k);
+  return pickT([`${lab(mn)}~${lab(mx)} 사이를 오가며 불러요`,`${lab(mn)}와 ${lab(mx)} 사이에서 흔들며 이어가요`,`${lab(mn)}~${lab(mx)}를 넘나들며 그루브를 타요`],k)}
 
 /* 전체 분석 */
 async function build(){
@@ -178,9 +180,9 @@ async function build(){
   chunks.sort((a,b)=>a.t0-b.t0);
   // 최고음: 실제로 화면에 나오는 글자 기준
   let best=null;chunks.forEach(c=>c.syl.forEach(s=>{if(s.midi!=null&&(best==null||s.midi>best))best=s.midi}));gmax=best;
-  chunks.forEach(c=>{c.hasMax=gmax!=null&&c.syl.some(s=>s.midi===gmax);c.comment=comment(c)});
+  chunks.forEach((c,k)=>{c.hasMax=gmax!=null&&c.syl.some(s=>s.midi===gmax);c.comment=comment(c,k)});
   // 최고음 소절은 하나만 MAX HIGH 표시 (가장 먼저 나오는 것)
-  let seen=false;chunks.forEach(c=>{if(c.hasMax){if(seen){c.hasMax=false;c.comment=comment(c)}seen=true}});
+  let seen=false;chunks.forEach(c=>{if(c.hasMax){if(seen){c.hasMax=false;c.comment=comment(c,chunks.indexOf(c))}seen=true}});
   const all=chunks.flatMap(c=>c.syl.map(s=>s.midi)).filter(v=>v!=null);
   const lo=all.length?Math.min(...all):null;
   $('summary').style.display='block';
@@ -206,16 +208,21 @@ const VY=300; // 영상 영역 시작
 function drawHeader(){
   const hg=g.createLinearGradient(0,0,0,VY);hg.addColorStop(0,'#1b2233');hg.addColorStop(1,'#11151f');g.fillStyle=hg;g.fillRect(0,0,W,VY);
   g.textAlign='center';g.textBaseline='alphabetic';
-  g.font='400 58px "Black Han Sans"';const og=g.createLinearGradient(0,30,0,90);og.addColorStop(0,'#ffd27a');og.addColorStop(1,'#ff8a12');
-  g.lineWidth=6;g.strokeStyle='#4a2500';g.strokeText('옥타브 체크',W/2,88);g.fillStyle=og;g.fillText('옥타브 체크',W/2,88);
+  const noInfo=!$('song').value.trim()&&!$('singer').value.trim(),LS=noInfo?92:58,LY=noInfo?175:88;
+  g.font=`400 ${LS}px "Black Han Sans"`;const og=g.createLinearGradient(0,LY-LS,0,LY);og.addColorStop(0,'#ffd27a');og.addColorStop(1,'#ff8a12');
+  g.lineWidth=noInfo?8:6;g.strokeStyle='#4a2500';g.strokeText('옥타브 체크',W/2,LY);g.fillStyle=og;g.fillText('옥타브 체크',W/2,LY);
   const kv=(y,k,v)=>{g.font='500 38px "Noto Sans KR"';const kw=g.measureText(k+' - ').width;g.font='900 42px "Noto Sans KR"';const vw=g.measureText(v).width;const x0=W/2-(kw+vw)/2;
     g.textAlign='left';g.font='500 38px "Noto Sans KR"';g.fillStyle='#c9ced8';g.fillText(k+' - ',x0,y);g.font='900 42px "Noto Sans KR"';g.fillStyle='#fff';g.fillText(v,x0+kw,y);g.textAlign='center'};
-  const song=$('song').value.trim(),singer=$('singer').value.trim();
+  const song=$('song').value.trim(),singer=$('singer').value.trim();const solo=!song&&!singer;
   if(song)kv(singer?150:170,'노래',song);if(singer)kv(song?214:170,'가수',singer);
   g.font='900 21px "Noto Sans KR"';const a='라이브 음원 옥타브 체크!',b=' · 반주와 관객 소리로 일부 오차가 있을 수 있어요';g.font='900 21px "Noto Sans KR"';const aw=g.measureText(a).width;g.font='400 19px "Noto Sans KR"';const bw=g.measureText(b).width;
   let x0=W/2-(aw+bw)/2;g.textAlign='left';g.font='900 21px "Noto Sans KR"';g.fillStyle='#ffab2e';g.fillText(a,x0,272);g.font='400 19px "Noto Sans KR"';g.fillStyle='#d6d9e0';g.fillText(b,x0+aw,272);g.textAlign='center'}
 function drawMedia(t){g.save();g.beginPath();g.rect(0,VY,W,H-VY);g.clip();
-  if(isVideo&&pv.readyState>=2){const vw=pv.videoWidth,vh=pv.videoHeight,s=Math.max(W/vw,(H-VY)/vh);g.drawImage(pv,(W-vw*s)/2,VY+(H-VY-vh*s)/2,vw*s,vh*s)}
+  if(isVideo&&pv.readyState>=2){const vw=pv.videoWidth,vh=pv.videoHeight;
+    if(vw/vh>1.05){// 가로 영상: 흐린 배경 + 화면 위쪽에 가로 꽉 차게
+      const s=Math.max(W/vw,(H-VY)/vh);g.filter='blur(18px) brightness(.55)';g.drawImage(pv,(W-vw*s)/2,VY+(H-VY-vh*s)/2,vw*s,vh*s);g.filter='none';
+      const s2=W/vw,h2=vh*s2;g.drawImage(pv,0,VY+Math.max(0,(435-h2)/2),W,h2)}
+    else{const s=Math.max(W/vw,(H-VY)/vh);g.drawImage(pv,(W-vw*s)/2,VY+(H-VY-vh*s)/2,vw*s,vh*s)}}
   else{const bg=g.createLinearGradient(0,VY,0,H);bg.addColorStop(0,'#1a1f3a');bg.addColorStop(1,'#07080d');g.fillStyle=bg;g.fillRect(0,VY,W,H-VY);
     for(let i=0;i<24;i++){const hgt=40+Math.abs(Math.sin(t*3+i*.7))*160;g.fillStyle=`hsla(${210+i*4},80%,60%,.25)`;g.fillRect(i*30+4,VY+330-hgt/2,20,hgt)}}
   g.restore()}
@@ -232,6 +239,8 @@ function drawChunk(c,t,alpha){g.save();g.globalAlpha=alpha;
     // 음표 머리 + 짧은 줄
     g.strokeStyle='rgba(255,255,255,.85)';g.lineWidth=2;g.beginPath();g.moveTo(x-cell*.3,ny+20);g.lineTo(x+cell*.3,ny+20);g.stroke();
     g.beginPath();g.arc(x,ny+20,cell*.11,0,7);g.fillStyle=on?OCT_COL[octOf(s.midi)]:'#fff';g.fill();g.lineWidth=2;g.strokeStyle=on?'#fff':'rgba(0,0,0,.5)';g.stroke()});
+  // 가사가 없으면 가사 자리에 옥타브 표시
+  if(!c.chars.length){g.textAlign='center';c.syl.forEach((s,i)=>{if(s.midi==null)return;const x=x0+cell*(i+.5),on=t>=s.t-.02;italic(()=>{g.font=`900 ${Math.round(cell*.42)}px "Noto Sans KR"`;const col=on?OCT_COL[octOf(s.midi)]:'#ffffff';outlined(octOf(s.midi)+'옥',x+1030*.2,1030,col,on?'#ffffff':'rgba(0,0,0,.9)',on?5:6);if(on){g.lineWidth=2;g.strokeStyle='rgba(0,0,0,.5)';g.strokeText(octOf(s.midi)+'옥',x+1030*.2,1030);g.fillStyle=col;g.fillText(octOf(s.midi)+'옥',x+1030*.2,1030)}})})}
   // 가사 줄
   if(c.chars.length){const ly=1030;g.font='900 58px "Noto Sans KR"';const ws=c.chars.map(ch=>g.measureText(ch).width+(ch===' '?6:4));const tw=ws.reduce((a,b)=>a+b,0);let sc=Math.min(1,660/tw);
     g.font=`900 ${Math.round(58*sc)}px "Noto Sans KR"`;let x=W/2-tw*sc/2;let lastCol=null,si=0;
@@ -267,6 +276,7 @@ function draw(t){g.clearRect(0,0,W,H);drawMedia(t);drawHeader();
 function pickFile(f){if(!f)return;file=f;isVideo=f.type.startsWith('video/')||/\.(mp4|mov|webm|m4v)$/i.test(f.name);$('fname').textContent='✅ '+f.name;$('drop').classList.add('has');$('go').disabled=false;
   if(!$('song').value)$('song').value=f.name.replace(/\.[^.]+$/,'').replace(/[_]+/g,' ').slice(0,30);asrChunks=null;audio=null}
 $('file').onchange=e=>pickFile(e.target.files[0]);
+$('ana').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());if(!Array.isArray(j.notes))throw 0;anaData=j;$('anaName').textContent='✅ '+f.name+` (음 ${j.notes.length}개)`;audio=null}catch(_){anaData=null;$('anaName').textContent='⚠️ 읽을 수 없는 파일이에요'}};
 const dz=$('drop');['dragenter','dragover'].forEach(ev=>addEventListener(ev,e=>{e.preventDefault();dz.classList.add('hot')}));
 ['dragleave','drop'].forEach(ev=>addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('hot')}));
 addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f&&/^(video|audio)\//.test(f.type))pickFile(f)});
@@ -276,7 +286,8 @@ async function run(){$('start').style.display='none';$('stage').style.display='f
     if(!audio){status('소리 꺼내는 중…');prog(.02);await tick();audio=await decode(file);
       if(audio.length/SR>180){status('3분이 넘는 영상은 앞 3분만 분석해요.');audio=audio.slice(0,SR*180)}
       pv.src=URL.createObjectURL(file);pv.load();
-      status('음정 찾는 중… 🎼');track=await pitchTrack(audio);notes=segNotes(track)}
+      if(anaData){notes=anaData.notes.map(n=>({t0:+n.t0,t1:+n.t1,midi:Math.round(+n.midi)}));status('정밀 분석 파일 적용 🎚')}
+      else{status('음정 찾는 중… 🎼');track=await pitchTrack(audio);notes=segNotes(track)}}
     if(!$('lyrics').value.trim()&&$('asr').checked){try{asrChunks=await transcribe(audio);asrText=asrChunks.map(c=>c.text).join('\n');$('lyrics').value=asrText}catch(e){console.error(e);asrChunks=null;status('가사 받아쓰기에 실패했어요. 음 이름만 보여줄게요.')}}
     else if(asrChunks&&$('lyrics').value.split('\n').filter(s=>s.trim()).length!==asrChunks.length)asrChunks=null;
     prog(.95);status('결과 만드는 중…');await tick();build();prog(1);
