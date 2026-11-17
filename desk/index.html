@@ -54,7 +54,7 @@ th{font-size:12px;color:var(--sub)}
 .maker canvas{width:100%;border-radius:16px;background:#fdeef3}
 .bases{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .bases button{border:2px solid var(--line);background:#fff;border-radius:14px;padding:6px;cursor:pointer;font:inherit;font-weight:900;font-size:13px}
-.bases button img{width:100%;height:64px;object-fit:cover;object-position:50% 0;border-radius:10px;display:block;margin-bottom:4px}
+
 .bases button.on{border-color:var(--pink);background:#fff2f6}
 .sw{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .sw button{width:32px;height:32px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer}
@@ -98,7 +98,7 @@ input[type=range]{width:100%;accent-color:var(--pink)}
 </section>
 <section id="make">
   <div class="card maker">
-    <div><canvas id="mkCv" width="768" height="512"></canvas><p class="note" id="mkNote"></p></div>
+    <div><canvas id="mkCv" width="768" height="446"></canvas><p class="note" id="mkNote"></p></div>
     <div>
       <label class="f" style="margin-top:0">📸 내 사진으로 캐릭터 만들기</label>
       <label class="upl" id="mkUpl"><input type="file" id="mkFile" accept="image/*" hidden><span id="mkUplT">얼굴이 잘 보이는 사진 올리기</span></label>
@@ -127,18 +127,12 @@ const qs=new URLSearchParams(location.search);const hk=new URLSearchParams(locat
 if(qs.get('u')&&/^[a-f0-9]{16,40}$/.test(qs.get('u'))){if(qs.get('u')!==UID)KEY=null;UID=qs.get('u');if(hk.get('k'))KEY=hk.get('k');try{localStorage.setItem('desk-uid',UID);if(KEY)localStorage.setItem('desk-key',KEY)}catch(e){}history.replaceState(null,'',location.pathname+(qs.get('tab')?'?tab='+qs.get('tab'):''))}
 
 /* 캐릭터 그림: 모자 부분만 색 입히기 */
-const IMG={},MASK=new Image();MASK.src='hoodmask.png';for(const b in BASES){IMG[b]=new Image();IMG[b].src=b+'.png'}
-const ready=Promise.all([MASK,...Object.values(IMG)].map(i=>i.complete?1:new Promise(r=>{i.onload=r;i.onerror=r})));
-let maskData=null;
-function tinted(base,color,amt,w=768,h=512){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.drawImage(IMG[base],0,0,w,h);
-  if(!color||amt<=0)return c;
-  if(!maskData||maskData.width!==w){const m=document.createElement('canvas');m.width=w;m.height=h;const mg=m.getContext('2d');mg.drawImage(MASK,0,0,w,h);maskData=mg.getImageData(0,0,w,h)}
-  const d=g.getImageData(0,0,w,h),p=d.data,M=maskData.data,ref=BASES[base].ref;const cr=parseInt(color.slice(1,3),16),cg=parseInt(color.slice(3,5),16),cb=parseInt(color.slice(5,7),16);
-  for(let i=0;i<p.length;i+=4){const k=M[i]/255*amt;if(k<=0||p[i+3]===0)continue;const lum=Math.min(1.15,(.3*p[i]+.59*p[i+1]+.11*p[i+2])/255/ref);
-    p[i]=p[i]*(1-k)+Math.min(255,cr*lum)*k;p[i+1]=p[i+1]*(1-k)+Math.min(255,cg*lum)*k;p[i+2]=p[i+2]*(1-k)+Math.min(255,cb*lum)*k}
-  g.putImageData(d,0,0);return c}
+const SW=1805,SH=1048,DW=768,DH=446; // 장면 원본 크기 / 화면용 크기
+const IMG={croc:new Image()};IMG.croc.src='croc.png?v=2';
+const ready=new Promise(r=>{const i=IMG.croc;if(i.complete)r();else{i.onload=r;i.onerror=r}});
+function tinted(base,color,amt,w=DW,h=DH){const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(IMG.croc,0,0,w,h);return c}
 const avCache={};
-function avatar(base,color,amt,face){base=BASES[base]?base:'croc';const id=base+color+amt+(face?1:0)+(face&&face.src||'');if(avCache[id])return avCache[id];const c=face?sceneWith(face,384,256):tinted(base,color,amt,384,256);const o=document.createElement('canvas');o.width=200;o.height=150;o.getContext('2d').drawImage(c,60,0,240,180,0,0,200,150);return avCache[id]=o.toDataURL('image/png')}
+function avatar(base,color,amt,face){const id=face?face.src:'base';if(avCache[id])return avCache[id];const c=sceneWith(face,451,262);const o=document.createElement('canvas');o.width=200;o.height=150;o.getContext('2d').drawImage(c,90,0,200,150,0,0,200,150);return avCache[id]=o.toDataURL('image/png')}
 
 async function api(a,q='',body,ep){const r=await fetch((ep?API.replace('desk/',ep+'/'):API)+'?a='+a+q,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw Object.assign(new Error(j.error||('HTTP '+r.status)),{status:r.status});return j}
 
@@ -156,7 +150,7 @@ async function loadMe(){const box=$('me');
   await ready;const d=ME.days,t=ME.today,td=d[t]||[0,0];let K=0,C=0,best=null;for(const [day,v] of Object.entries(d)){K+=v[0];C+=v[1];if(!best||v[0]>d[best][0])best=day}
   let streak=0;for(let i=0;i<400;i++){const v=d[kst(i)];if(v&&(v[0]+v[1])>0)streak++;else if(i>0)break}
   const r=ME.rank,p=ME.profile;
-  box.innerHTML=`<div class="card hero"><canvas id="meCv" width="768" height="512"></canvas><div><div class="me-name">${esc(p.name)}</div><div class="me-sub">🔥 ${streak}일 연속 기록 ${KEY?'':'· <span style="color:#c93a68">이 기기에서는 수정 불가</span>'}</div>
+  box.innerHTML=`<div class="card hero"><canvas id="meCv" width="768" height="446"></canvas><div><div class="me-name">${esc(p.name)}</div><div class="me-sub">🔥 ${streak}일 연속 기록 ${KEY?'':'· <span style="color:#c93a68">이 기기에서는 수정 불가</span>'}</div>
    <div class="stats"><div class="stat"><small>오늘 타자</small><b class="k">${fmt(td[0])}</b><i>${r.todayKeys?r.todayKeys+'위 / '+r.todayUsers+'명':''}</i></div><div class="stat"><small>오늘 마우스 클릭</small><b class="m">${fmt(td[1])}</b><i>${r.todayClicks?r.todayClicks+'위':''}</i></div>
    <div class="stat"><small>지금까지 타자</small><b>${fmt(K)}</b><i>${r.allKeys?'전체 '+r.allKeys+'위':''}</i></div><div class="stat"><small>지금까지 클릭</small><b>${fmt(C)}</b><i>${r.allClicks?'전체 '+r.allClicks+'위':''}</i></div></div></div></div>
    <div class="card"><h2>📅 날짜별 기록<span class="sp"></span><span class="seg" id="rng"><button data-v="7">7일</button><button data-v="30" class="on">30일</button></span></h2><canvas id="chart"></canvas><div class="legend"><span><i style="background:var(--key)"></i>타자</span><span><i style="background:var(--mouse)"></i>마우스 클릭</span>${best?`<span>· 최고 기록 ${best.slice(5).replace('-','/')} 타자 ${fmt(d[best][0])}회</span>`:''}</div></div>
@@ -184,19 +178,19 @@ async function loadRank(){const ul=$('rkList');ul.innerHTML='<div class="empty">
   catch(e){ul.innerHTML=`<div class="empty">랭킹을 불러오지 못했어요 (${esc(e.message)})</div>`}}
 
 /* 내 얼굴 캐릭터: 사진 → AI(우리 그림체) → 모자 속 얼굴만 교체 */
-const REF={x:300,y:0,w:900,h:600},FB={x:429,y:194,w:631,h:327}; // 장면(1536) 좌표
-const FMASK=new Image();FMASK.src='facemask.png';
+const REF={x:380,y:0,w:1000,h:667},FB={x:550,y:164,w:649,h:351}; // 장면(1805x1048) 좌표
+const FMASK=new Image();FMASK.src='facemask.png?v=2';
 const faceCache={};
 function loadFace(key){if(!key)return Promise.resolve(null);if(faceCache[key])return faceCache[key];const [u,v]=key.split('/');
   return faceCache[key]=new Promise(r=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>r(i);i.onerror=()=>r(null);i.src=API.replace('desk/','desk-face/')+'?u='+u+'&v='+v})}
-function sceneWith(face,w=768,h=512){const c=tinted('croc','',0,w,h);if(face){const g=c.getContext('2d'),k=w/1536;g.drawImage(face,FB.x*k,FB.y*k,FB.w*k,FB.h*k)}return c}
+function sceneWith(face,w=DW,h=DH){const c=tinted('croc','',0,w,h);if(face){const g=c.getContext('2d'),k=w/SW;g.drawImage(face,FB.x*k,FB.y*k,FB.w*k,FB.h*k)}return c}
 async function faceLayerFrom(genImg){await ready;if(!FMASK.complete)await new Promise(r=>FMASK.onload=r);
   const crop=document.createElement('canvas');crop.width=REF.w;crop.height=REF.h;crop.getContext('2d').drawImage(genImg,0,0,REF.w,REF.h);
   const L=document.createElement('canvas');L.width=FB.w;L.height=FB.h;const g=L.getContext('2d');
   g.filter='blur(1.2px)';g.drawImage(FMASK,FB.x,FB.y,FB.w,FB.h,0,0,FB.w,FB.h);g.filter='none';
   g.globalCompositeOperation='source-in';g.drawImage(crop,FB.x-REF.x,FB.y-REF.y,FB.w,FB.h,0,0,FB.w,FB.h);
   // 생성 그림에서 투명하게 빠진 부분은 원래 그림으로 채움
-  const base=document.createElement('canvas');base.width=FB.w;base.height=FB.h;const bg=base.getContext('2d');bg.drawImage(IMG.croc,FB.x/2,FB.y/2,FB.w/2,FB.h/2,0,0,FB.w,FB.h);bg.globalCompositeOperation='destination-in';bg.drawImage(L,0,0);
+  const base=document.createElement('canvas');base.width=FB.w;base.height=FB.h;const bg=base.getContext('2d');const kk=IMG.croc.naturalWidth/SW;bg.drawImage(IMG.croc,FB.x*kk,FB.y*kk,FB.w*kk,FB.h*kk,0,0,FB.w,FB.h);bg.globalCompositeOperation='destination-in';bg.drawImage(L,0,0);
   const out=document.createElement('canvas');out.width=FB.w;out.height=FB.h;const og=out.getContext('2d');og.drawImage(base,0,0);og.drawImage(L,0,0);return out}
 let pending=null;
 function buildMaker(){
@@ -213,7 +207,7 @@ function buildMaker(){
   $('mkReset').onclick=async()=>{if(!(UID&&KEY)){drawMakerWith(null);return}if(!confirm('원래 캐릭터 얼굴로 돌아갈까요?'))return;try{await api('save','',{uid:UID,key:KEY,png:null},'desk-face');pending=null;toast('원래 얼굴로 돌아갔어요');loadMe().then(drawMaker)}catch(e){toast(e.message)}};
   $('mkNameSave').onclick=async()=>{const n=$('mkName').value.trim();if(!n)return toast('닉네임을 적어주세요');if(!(UID&&KEY))return toast('앱에서 캐릭터를 클릭해 열어주세요');try{await api('profile','',{uid:UID,key:KEY,name:n});toast('닉네임 저장!');loadMe()}catch(e){toast(e.message)}}}
 function shrink(file,max){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>{const s=Math.min(1,max/Math.max(i.width,i.height));const c=document.createElement('canvas');c.width=Math.round(i.width*s);c.height=Math.round(i.height*s);c.getContext('2d').drawImage(i,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.9))};i.onerror=()=>rej(new Error('사진을 읽을 수 없어요'));i.src=URL.createObjectURL(file)})}
-function drawMakerWith(face){const g=$('mkCv').getContext('2d');g.clearRect(0,0,768,512);g.drawImage(sceneWith(face),0,0)}
+function drawMakerWith(face){const g=$('mkCv').getContext('2d');g.clearRect(0,0,DW,DH);g.drawImage(sceneWith(face),0,0)}
 async function drawMaker(){await ready;const f=pending||(ME&&ME.profile.face?await loadFace(UID+'/'+ME.profile.face):null);drawMakerWith(f);
   if(ME&&document.activeElement!==$('mkName'))$('mkName').value=ME.profile.name;
   $('mkNote').innerHTML=UID&&KEY?'':'미리보기만 돼요. 만들려면 <b>앱을 켠 뒤 캐릭터를 클릭</b>해서 이 페이지를 열어주세요.'}
