@@ -1,5 +1,8 @@
 // 타자치는 친구들 — 사진으로 "내 얼굴 캐릭터" 만들기
-// POST ?a=make  {uid,key,photo}  → OpenAI 이미지 편집으로 우리 그림체 얼굴 생성 (사진은 저장하지 않음)
+// [파일럿] POST ?a=request {uid,key,photo} → 사진을 변환 대기열에 올림 (운영자가 ChatGPT로 변환 후 업로드, 끝나면 사진 삭제)
+// POST ?a=status  {uid,key}         → 내 신청 상태
+// GET  ?a=queue&t=관리자토큰          → 대기열(사진 포함) / POST ?a=done {t,uid,png} → 결과 저장 + 사진 삭제
+// POST ?a=make  {uid,key,photo}  → (나중에) OpenAI API로 바로 생성 — OPENAI_API_KEY 있을 때만
 // POST ?a=save  {uid,key,png}    → 완성된 얼굴 조각 저장, 프로필에 face 버전 기록
 // GET  ?u=uid                    → 저장된 얼굴 조각 PNG (앱·웹이 받아서 캐릭터에 합성)
 const crypto = require('crypto');
@@ -7,6 +10,8 @@ const URL_ = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const OPENAI = process.env.OPENAI_API_KEY;
 const DAILY = 3;
+const ADMIN_HASH = '44fe66fe656136362570c68bba6163c0824223459572e2fd13b82dc0fe6012a2';
+const isAdmin = t => !!t && sha(t) === ADMIN_HASH;
 
 async function redis(cmds) {
   const r = await fetch(URL_ + '/pipeline', { method: 'POST', headers: { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(cmds) });
@@ -48,6 +53,37 @@ async function make(b, host) {
   return [200, { ok: true, image: 'data:image/png;base64,' + j.data[0].b64_json, left: Math.max(0, DAILY - n) }];
 }
 
+async function request(b) {
+  if (!(await auth(b.uid, b.key))) return [403, { error: '앱에서 캐릭터를 클릭해 열어주세요' }];
+  const photo = b64(b.photo); if (!photo || photo.buf.length > 700000) return [400, { error: '사진을 다시 골라주세요' }];
+  const day = 'desk:face:n:' + b.uid + ':' + kstDate();
+  const [n] = await redis([['INCR', day], ['EXPIRE', day, 172800]]);
+  if (n > DAILY) return [429, { error: `오늘은 ${DAILY}번까지만 신청할 수 있어요. 내일 다시 해주세요!` }];
+  const [name] = await redis([['HGET', 'desk:p:' + b.uid, 'name'], ['SET', 'desk:face:req:' + b.uid, b.photo, 'EX', 1209600], ['HSET', 'desk:face:q', b.uid, Date.now()], ['HSET', 'desk:p:' + b.uid, 'faceReq', Date.now()]]);
+  return [200, { ok: true, status: 'waiting' }];
+}
+async function status(b) {
+  if (!(await auth(b.uid, b.key))) return [403, { error: 'bad key' }];
+  const [q, f] = await redis([['HGET', 'desk:face:q', b.uid], ['HGET', 'desk:p:' + b.uid, 'face']]);
+  return [200, { waiting: !!q, since: q ? +q : 0, face: f || '' }];
+}
+async function queue(q) {
+  if (!isAdmin(q.t)) return [403, { error: 'no' }];
+  const [h] = await redis([['HGETALL', 'desk:face:q']]); const ids = []; for (let i = 0; h && i < h.length; i += 2) ids.push([h[i], +h[i + 1]]);
+  ids.sort((a, b) => a[1] - b[1]);
+  const photos = ids.length ? await redis(ids.map(([u]) => ['GET', 'desk:face:req:' + u])) : [];
+  const names = ids.length ? await redis(ids.map(([u]) => ['HGET', 'desk:p:' + u, 'name'])) : [];
+  return [200, { list: ids.map(([u, t], i) => ({ uid: u, t, name: names[i] || '', photo: q.nophoto ? undefined : photos[i] })).filter(x => q.nophoto || x.photo) }];
+}
+async function done(b) {
+  if (!isAdmin(b.t) || !okUid(b.uid)) return [403, { error: 'no' }];
+  if (b.skip) { await redis([['HDEL', 'desk:face:q', b.uid], ['DEL', 'desk:face:req:' + b.uid], ['HSET', 'desk:p:' + b.uid, 'faceErr', String(b.skip).slice(0, 60)]]); return [200, { ok: true }]; }
+  const img = b64(b.png); if (!img || img.type !== 'png' || img.buf.length > 900000) return [400, { error: 'bad png' }];
+  const ver = Date.now().toString(36);
+  await redis([['SET', 'desk:face:img:' + b.uid, img.buf.toString('base64')], ['HSET', 'desk:p:' + b.uid, 'face', ver, 'base', 'croc'], ['HDEL', 'desk:p:' + b.uid, 'faceErr', 'color'], ['HDEL', 'desk:face:q', b.uid], ['DEL', 'desk:face:req:' + b.uid]]);
+  return [200, { ok: true, face: ver }];
+}
+
 async function save(b) {
   if (!(await auth(b.uid, b.key))) return [403, { error: '앱에서 캐릭터를 클릭해 열어주세요' }];
   if (b.png === null) { await redis([['DEL', 'desk:face:img:' + b.uid], ['HDEL', 'desk:p:' + b.uid, 'face']]); return [200, { ok: true, face: '' }]; }
@@ -65,6 +101,7 @@ module.exports = async (req, res) => {
   if (!URL_ || !TOKEN) return res.status(503).json({ error: 'db not connected' });
   const q = req.query || {};
   try {
+    if (req.method === 'GET' && q.a === 'queue') { res.setHeader('Cache-Control', 'no-store'); const o = await queue(q); return res.status(o[0]).json(o[1]); }
     if (req.method === 'GET') {
       if (!okUid(q.u)) return res.status(400).json({ error: 'bad id' });
       const [s] = await redis([['GET', 'desk:face:img:' + q.u]]);
@@ -74,7 +111,8 @@ module.exports = async (req, res) => {
     }
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
     res.setHeader('Cache-Control', 'no-store');
-    const out = q.a === 'make' ? await make(body || {}, req.headers.host) : q.a === 'save' ? await save(body || {}) : [400, { error: 'unknown action' }];
+    const A = { make: () => make(body || {}, req.headers.host), save: () => save(body || {}), request: () => request(body || {}), status: () => status(body || {}), done: () => done(body || {}) };
+    const out = A[q.a] ? await A[q.a]() : [400, { error: 'unknown action' }];
     res.status(out[0]).json(out[1]);
   } catch (e) { res.status(500).json({ error: String(e.message || e) }); }
 };

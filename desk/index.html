@@ -65,6 +65,8 @@ input[type=text]{width:100%;border:1px solid var(--line);border-radius:12px;padd
 input[type=range]{width:100%;accent-color:var(--pink)}
 .save{width:100%;margin-top:16px;border:0;border-radius:14px;background:var(--ink);color:#fff;font:inherit;font-weight:900;font-size:16px;padding:13px;cursor:pointer}
 .save:disabled{opacity:.4}
+.bases{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bases button{border:2px solid var(--line);background:#fff;border-radius:14px;padding:6px;cursor:pointer;font:inherit;font-weight:900;font-size:13px}.bases button img{width:100%;height:64px;object-fit:cover;object-position:62% 0;border-radius:10px;display:block;margin-bottom:4px}.bases button.on{border-color:var(--pink);background:#fff2f6}
+.sw{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.sw button{width:32px;height:32px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer}.sw button.on{box-shadow:0 0 0 3px var(--ink)}.sw input[type=color]{width:40px;height:34px;border:0;background:none;cursor:pointer}
 .upl{display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed var(--pink);border-radius:16px;padding:22px 12px;font-weight:900;color:var(--pink);background:#fff7fa;cursor:pointer;text-align:center}
 .upl.busy{opacity:.6;pointer-events:none}
 .btns2{display:flex;gap:8px;align-items:stretch;margin-top:10px}.btns2 .save{margin-top:0;flex:1}
@@ -84,7 +86,7 @@ input[type=range]{width:100%;accent-color:var(--pink)}
 <body>
 <div class="top">
   <div class="in"><a class="home" href="/">🏠</a><h1>타자치는 <b>친구들</b></h1><a class="dl" href="TypingFriends-win.zip" download>⬇ <span class="t">윈도우 앱</span> 받기</a></div>
-  <div class="tabs"><button data-t="me" class="on">📊 내 기록</button><button data-t="rank">🏆 랭킹</button><button data-t="make">📸 내 얼굴로</button></div>
+  <div class="tabs"><button data-t="me" class="on">📊 내 기록</button><button data-t="rank">🏆 랭킹</button><button data-t="make">🎨 내 캐릭터</button></div>
 </div>
 <main>
 <section id="me" class="on"></section>
@@ -100,10 +102,23 @@ input[type=range]{width:100%;accent-color:var(--pink)}
   <div class="card maker">
     <div><canvas id="mkCv" width="768" height="446"></canvas><p class="note" id="mkNote"></p></div>
     <div>
-      <label class="f" style="margin-top:0">📸 내 사진으로 캐릭터 만들기</label>
-      <label class="upl" id="mkUpl"><input type="file" id="mkFile" accept="image/*" hidden><span id="mkUplT">얼굴이 잘 보이는 사진 올리기</span></label>
-      <p class="note">AI가 사진 속 얼굴을 <b>우리 그림체</b>로 다시 그려서 모자 속 얼굴만 바꿔요. 하루 3번까지 만들 수 있어요.<br>사진은 그림을 만드는 데만 쓰고 저장하지 않아요. <b>본인 사진</b>이나 허락받은 사진만 올려주세요.</p>
-      <div class="btns2"><button class="save" id="mkSave" disabled>💾 이 얼굴로 저장</button><button class="ghost" id="mkReset">원래 얼굴로</button></div>
+      <div class="seg" id="mkMode" style="width:100%;display:flex"><button data-v="pick" class="on" style="flex:1">🎨 캐릭터 고르기</button><button data-v="photo" style="flex:1">📸 내 사진으로</button></div>
+      <div id="mkPick">
+        <label class="f">모자 고르기</label>
+        <div class="bases" id="mkBase"></div>
+        <label class="f">모자 색</label>
+        <div class="sw" id="mkSw"></div>
+        <label class="f">색 진하기 <span id="mkAmtV"></span></label>
+        <input type="range" id="mkAmt" min="0" max="100" value="85">
+        <button class="save" id="mkPickSave">💾 이 캐릭터로 저장</button>
+      </div>
+      <div id="mkPhoto" style="display:none">
+        <label class="f">내 얼굴 사진 올리기</label>
+        <label class="upl" id="mkUpl"><input type="file" id="mkFile" accept="image/*" hidden><span id="mkUplT">얼굴이 잘 보이는 사진 올리기</span></label>
+        <div id="mkWait" class="note" style="display:none;background:#fff7e0;border:1px solid #ffe2a0;border-radius:12px;padding:10px 12px;color:#7a5a00"></div>
+        <p class="note">올린 사진은 운영자가 <b>우리 그림체</b>로 다시 그려서 악어 모자 속 얼굴만 바꿔드려요. (지금은 테스트 기간이라 보통 하루 안에 완성돼요) 완성되면 바탕화면 캐릭터도 자동으로 바뀌어요.<br>완성 후 사진은 바로 지워요. <b>본인 사진</b>이나 허락받은 사진만 올려주세요.</p>
+        <button class="ghost" id="mkReset" style="margin-top:8px;padding:10px 14px">원래 얼굴로 돌아가기</button>
+      </div>
       <label class="f">닉네임 (랭킹에 보여요)</label>
       <div class="btns2"><input type="text" id="mkName" maxlength="12" placeholder="1~12자"><button class="ghost" id="mkNameSave" style="flex:0 0 auto">저장</button></div>
       <p class="note">저장하면 1분 안에 바탕화면 캐릭터도 같은 모습으로 바뀌어요.</p>
@@ -115,7 +130,7 @@ input[type=range]{width:100%;accent-color:var(--pink)}
 <script>
 const $=id=>document.getElementById(id);
 const API='/api/desk/';
-const BASES={bunny:{name:'토끼',ref:.996},dog:{name:'강아지',ref:.934},croc:{name:'악어',ref:.644}};
+const BASES={bunny:{name:'토끼',ref:.996},dog:{name:'강아지',ref:.929},croc:{name:'악어',ref:.661}};
 const COLORS=['','#ff7eb0','#ff5a5a','#ffa43a','#ffd84a','#7ad65a','#3cc8b4','#4f8cff','#8b6cff','#a87b52','#5b5b66','#ffffff'];
 const fmt=n=>(+n||0).toLocaleString('ko-KR');
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2200)}
@@ -128,11 +143,17 @@ if(qs.get('u')&&/^[a-f0-9]{16,40}$/.test(qs.get('u'))){if(qs.get('u')!==UID)KEY=
 
 /* 캐릭터 그림: 모자 부분만 색 입히기 */
 const SW=1805,SH=1048,DW=768,DH=446; // 장면 원본 크기 / 화면용 크기
-const IMG={croc:new Image()};IMG.croc.src='croc.png?v=2';
-const ready=new Promise(r=>{const i=IMG.croc;if(i.complete)r();else{i.onload=r;i.onerror=r}});
-function tinted(base,color,amt,w=DW,h=DH){const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(IMG.croc,0,0,w,h);return c}
+const IMG={},HM={};for(const b in BASES){IMG[b]=new Image();IMG[b].src=b+'.png?v=3';HM[b]=new Image();HM[b].src='hood_'+b+'.png?v=3'}
+const ready=Promise.all([...Object.values(IMG),...Object.values(HM)].map(i=>i.complete?1:new Promise(r=>{i.onload=r;i.onerror=r})));
+const hmData={};
+function tinted(base,color,amt,w=DW,h=DH){base=BASES[base]?base:'croc';const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.drawImage(IMG[base],0,0,w,h);
+  if(!color||!(amt>0))return c;const key=base+w;if(!hmData[key]){const m=document.createElement('canvas');m.width=w;m.height=h;const mg=m.getContext('2d');mg.drawImage(HM[base],0,0,w,h);hmData[key]=mg.getImageData(0,0,w,h).data}
+  const d=g.getImageData(0,0,w,h),p=d.data,M=hmData[key],ref=BASES[base].ref;const cr=parseInt(color.slice(1,3),16),cg=parseInt(color.slice(3,5),16),cb=parseInt(color.slice(5,7),16);
+  for(let i=0;i<p.length;i+=4){const k=M[i]/255*amt;if(k<=0||p[i+3]===0)continue;const lum=Math.min(1.15,(.3*p[i]+.59*p[i+1]+.11*p[i+2])/255/ref);
+    p[i]=p[i]*(1-k)+Math.min(255,cr*lum)*k;p[i+1]=p[i+1]*(1-k)+Math.min(255,cg*lum)*k;p[i+2]=p[i+2]*(1-k)+Math.min(255,cb*lum)*k}
+  g.putImageData(d,0,0);return c}
 const avCache={};
-function avatar(base,color,amt,face){const id=face?face.src:'base';if(avCache[id])return avCache[id];const c=sceneWith(face,451,262);const o=document.createElement('canvas');o.width=200;o.height=150;o.getContext('2d').drawImage(c,90,0,200,150,0,0,200,150);return avCache[id]=o.toDataURL('image/png')}
+function avatar(base,color,amt,face){const id=face?face.src:base+color+amt;if(avCache[id])return avCache[id];const c=face?sceneWith(face,451,262):tinted(base,color,amt,451,262);const o=document.createElement('canvas');o.width=200;o.height=150;o.getContext('2d').drawImage(c,90,0,200,150,0,0,200,150);return avCache[id]=o.toDataURL('image/png')}
 
 async function api(a,q='',body,ep){const r=await fetch((ep?API.replace('desk/',ep+'/'):API)+'?a='+a+q,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw Object.assign(new Error(j.error||('HTTP '+r.status)),{status:r.status});return j}
 
@@ -192,28 +213,34 @@ async function faceLayerFrom(genImg){await ready;if(!FMASK.complete)await new Pr
   // 생성 그림에서 투명하게 빠진 부분은 원래 그림으로 채움
   const base=document.createElement('canvas');base.width=FB.w;base.height=FB.h;const bg=base.getContext('2d');const kk=IMG.croc.naturalWidth/SW;bg.drawImage(IMG.croc,FB.x*kk,FB.y*kk,FB.w*kk,FB.h*kk,0,0,FB.w,FB.h);bg.globalCompositeOperation='destination-in';bg.drawImage(L,0,0);
   const out=document.createElement('canvas');out.width=FB.w;out.height=FB.h;const og=out.getContext('2d');og.drawImage(base,0,0);og.drawImage(L,0,0);return out}
-let pending=null;
+let mode='pick',mk={base:'croc',color:'',amt:.85},waitInfo=null;
 function buildMaker(){
-  $('mkFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(!(UID&&KEY)){toast('앱에서 캐릭터를 클릭해 이 페이지를 열어야 만들 수 있어요');return}
-    const up=$('mkUpl');up.classList.add('busy');$('mkUplT').textContent='🎨 AI가 그리는 중… (20~40초)';
-    try{const photo=await shrink(f,1024);const j=await api('make','',{uid:UID,key:KEY,photo},'desk-face');
-      const gi=new Image();await new Promise((r,x)=>{gi.onload=r;gi.onerror=x;gi.src=j.image});pending=await faceLayerFrom(gi);
-      drawMakerWith(pending);$('mkSave').disabled=false;toast(`완성! 마음에 들면 저장을 눌러주세요 (오늘 ${j.left}번 더 가능)`)}
+  $('mkMode').querySelectorAll('button').forEach(b=>b.onclick=()=>{mode=b.dataset.v;$('mkMode').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));$('mkPick').style.display=mode==='pick'?'':'none';$('mkPhoto').style.display=mode==='photo'?'':'none';drawMaker()});
+  $('mkBase').innerHTML=Object.entries(BASES).map(([k,v])=>`<button data-b="${k}"><img src="${k}.png?v=3" alt="">${v.name}</button>`).join('');
+  $('mkBase').querySelectorAll('button').forEach(b=>b.onclick=()=>{mk.base=b.dataset.b;drawMaker()});
+  $('mkSw').innerHTML=COLORS.map(c=>`<button data-c="${c}" title="${c||'원래 색'}" style="background:${c||'conic-gradient(#fff 0 25%,#ddd 0 50%,#fff 0 75%,#ddd 0)'}"></button>`).join('')+'<input type="color" id="mkPick2" value="#ff7eb0" title="직접 고르기">';
+  $('mkSw').querySelectorAll('button').forEach(b=>b.onclick=()=>{mk.color=b.dataset.c;drawMaker()});$('mkPick2').oninput=e=>{mk.color=e.target.value;drawMaker()};
+  $('mkAmt').oninput=e=>{mk.amt=e.target.value/100;drawMaker()};
+  $('mkPickSave').onclick=async()=>{if(!(UID&&KEY))return toast('앱에서 캐릭터를 클릭해 이 페이지를 열어주세요');const b=$('mkPickSave');b.disabled=true;
+    try{if(ME&&ME.profile.face)await api('save','',{uid:UID,key:KEY,png:null},'desk-face');await api('profile','',{uid:UID,key:KEY,base:mk.base,color:mk.color,amt:mk.amt});toast('저장했어요! 1분 안에 바탕화면 캐릭터도 바뀌어요 ✨');await loadMe()}catch(e){toast('저장 실패: '+e.message)}b.disabled=false};
+  $('mkFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(!(UID&&KEY)){toast('앱에서 캐릭터를 클릭해 이 페이지를 열어야 올릴 수 있어요');return}
+    const up=$('mkUpl');up.classList.add('busy');$('mkUplT').textContent='올리는 중…';
+    try{const photo=await shrink(f,800);await api('request','',{uid:UID,key:KEY,photo},'desk-face');toast('사진을 받았어요! 완성되면 캐릭터가 자동으로 바뀌어요 📸');await checkWait()}
     catch(err){toast(err.message)}
-    up.classList.remove('busy');$('mkUplT').textContent='다른 사진으로 다시 만들기'};
-  $('mkSave').onclick=async()=>{if(!pending)return;const b=$('mkSave');b.disabled=true;b.textContent='저장 중…';
-    try{await api('save','',{uid:UID,key:KEY,png:pending.toDataURL('image/png')},'desk-face');pending=null;toast('저장했어요! 1분 안에 바탕화면 캐릭터도 바뀌어요 ✨');loadMe()}catch(e){toast('저장 실패: '+e.message);b.disabled=false}
-    b.textContent='💾 이 얼굴로 저장'};
-  $('mkReset').onclick=async()=>{if(!(UID&&KEY)){drawMakerWith(null);return}if(!confirm('원래 캐릭터 얼굴로 돌아갈까요?'))return;try{await api('save','',{uid:UID,key:KEY,png:null},'desk-face');pending=null;toast('원래 얼굴로 돌아갔어요');loadMe().then(drawMaker)}catch(e){toast(e.message)}};
+    up.classList.remove('busy');$('mkUplT').textContent='다른 사진으로 다시 신청하기'};
+  $('mkReset').onclick=async()=>{if(!(UID&&KEY))return;if(!confirm('원래 캐릭터 얼굴로 돌아갈까요?'))return;try{await api('save','',{uid:UID,key:KEY,png:null},'desk-face');toast('원래 얼굴로 돌아갔어요');await loadMe();drawMaker()}catch(e){toast(e.message)}};
   $('mkNameSave').onclick=async()=>{const n=$('mkName').value.trim();if(!n)return toast('닉네임을 적어주세요');if(!(UID&&KEY))return toast('앱에서 캐릭터를 클릭해 열어주세요');try{await api('profile','',{uid:UID,key:KEY,name:n});toast('닉네임 저장!');loadMe()}catch(e){toast(e.message)}}}
+async function checkWait(){if(!(UID&&KEY))return;try{waitInfo=await api('status','',{uid:UID,key:KEY},'desk-face')}catch(e){waitInfo=null}
+  const w=$('mkWait');if(waitInfo&&waitInfo.waiting){w.style.display='';w.innerHTML='⏳ <b>내 얼굴 캐릭터 만드는 중</b> · '+new Date(waitInfo.since).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})+' 신청'}else w.style.display='none'}
 function shrink(file,max){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>{const s=Math.min(1,max/Math.max(i.width,i.height));const c=document.createElement('canvas');c.width=Math.round(i.width*s);c.height=Math.round(i.height*s);c.getContext('2d').drawImage(i,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.9))};i.onerror=()=>rej(new Error('사진을 읽을 수 없어요'));i.src=URL.createObjectURL(file)})}
-function drawMakerWith(face){const g=$('mkCv').getContext('2d');g.clearRect(0,0,DW,DH);g.drawImage(sceneWith(face),0,0)}
-async function drawMaker(){await ready;const f=pending||(ME&&ME.profile.face?await loadFace(UID+'/'+ME.profile.face):null);drawMakerWith(f);
+function drawMakerWith(face){const g=$('mkCv').getContext('2d');g.clearRect(0,0,DW,DH);g.drawImage(face?sceneWith(face):tinted(mk.base,mk.color,mk.amt),0,0)}
+async function drawMaker(){await ready;const f=mode==='photo'&&ME&&ME.profile.face?await loadFace(UID+'/'+ME.profile.face):null;{const g=$('mkCv').getContext('2d');g.clearRect(0,0,DW,DH);g.drawImage(mode==='photo'?(f?sceneWith(f):tinted('croc','',0)):tinted(mk.base,mk.color,mk.amt),0,0)}
+  $('mkBase').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.b===mk.base));$('mkSw').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.c===mk.color));$('mkAmt').value=Math.round(mk.amt*100);$('mkAmtV').textContent=Math.round(mk.amt*100)+'%';
   if(ME&&document.activeElement!==$('mkName'))$('mkName').value=ME.profile.name;
-  $('mkNote').innerHTML=UID&&KEY?'':'미리보기만 돼요. 만들려면 <b>앱을 켠 뒤 캐릭터를 클릭</b>해서 이 페이지를 열어주세요.'}
+  $('mkNote').innerHTML=UID&&KEY?'':'미리보기만 돼요. 저장하려면 <b>앱을 켠 뒤 캐릭터를 클릭</b>해서 이 페이지를 열어주세요.'}
 
 buildMaker();
-loadMe().then(()=>{if(qs.get('tab'))show(qs.get('tab'))});
+loadMe().then(()=>{if(ME){const p=ME.profile;mk={base:p.base,color:p.color,amt:p.color?p.amt:.85};if(p.face){mode='photo';$('mkMode').querySelectorAll('button')[1].click()}}checkWait();if(qs.get('tab'))show(qs.get('tab'))});
 </script>
 </body>
 </html>

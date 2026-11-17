@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>얼굴 변환 대기열 · 운영자</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Noto Sans KR",system-ui,sans-serif;background:#f6f3f5;color:#222;padding:16px}
+h1{font-size:20px;margin-bottom:6px}p.s{color:#777;font-size:13px;margin-bottom:14px;line-height:1.6}
+.item{background:#fff;border:1px solid #e6dde2;border-radius:16px;padding:14px;margin-bottom:14px;display:grid;grid-template-columns:180px 1fr 300px;gap:14px;align-items:start}
+.item img.ph{width:180px;border-radius:10px}
+.item h3{font-size:15px}.item small{color:#888}
+.drop{border:2px dashed #ff5d8f;border-radius:12px;padding:16px;text-align:center;color:#ff5d8f;font-weight:900;cursor:pointer;margin-top:8px}
+canvas{width:300px;border-radius:10px;background:#fdeef3}
+button{border:0;border-radius:10px;padding:9px 12px;font:inherit;font-weight:900;cursor:pointer;background:#222;color:#fff;margin:6px 6px 0 0}
+button.g{background:#eee;color:#222}
+textarea{width:100%;height:110px;font-size:12px;margin-top:8px}
+#login{max-width:420px}input{width:100%;padding:10px;border:1px solid #ccc;border-radius:10px;font:inherit;margin:8px 0}
+</style>
+</head>
+<body>
+<h1>📸 얼굴 변환 대기열 (파일럿)</h1>
+<p class="s">① 사진·캐릭터 원본 받기 → ② ChatGPT에 둘 다 올리고 아래 지시문 붙여넣기 → ③ 완성 그림을 끌어다 놓기 → ④ 미리보기 확인 후 <b>완료</b>. 완료하면 사용자 사진은 서버에서 지워져요.</p>
+<div id="login" style="display:none"><input id="tok" placeholder="운영자 토큰"><button id="go">열기</button></div>
+<div id="list"></div>
+<script>
+const API='/api/desk-face/';const SW=1805,REF={x:380,y:0,w:1000,h:667},FB={x:550,y:164,w:649,h:351};
+const PROMPT=`Create an image. Image 1 (character.png) is our cartoon character illustration. Image 2 (photo.jpg) is a photo of a person. Redraw image 1 EXACTLY: identical composition, framing, camera angle and canvas; the same green crocodile hood with white teeth in exactly the same place and size; the same wooden desk edge, keyboard and bottle; the same art style (thick clean black outlines, flat cel colors, soft pink blush, cute chibi anime look). Change ONLY the face and hair visible inside the hood opening so the character clearly resembles the person in image 2: hair color and hairstyle/bangs, eyebrow shape, eye shape, face shape, skin tone, and glasses or facial hair if the person has them. Keep the face in the same position and size inside the hood, still peeking over the desk. Keep it a cute cartoon, not realistic. Transparent background outside the drawing. No text. Output 3:2 landscape.`;
+let T=new URLSearchParams(location.hash.slice(1)).get('t')||'';try{T=T||localStorage.getItem('desk-admin')||''}catch(e){}
+const $=id=>document.getElementById(id);
+const load=src=>new Promise((r,x)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>r(i);i.onerror=x;i.src=src});
+let croc,mask;
+async function faceLayer(gen){
+  const crop=document.createElement('canvas');crop.width=REF.w;crop.height=REF.h;const cg=crop.getContext('2d');cg.drawImage(gen,0,0,REF.w,REF.h);
+  // 초록 배경으로 받은 경우 투명 처리
+  const d=cg.getImageData(0,0,REF.w,REF.h),p=d.data;for(let i=0;i<p.length;i+=4){const a=Math.max(0,Math.min(1,(p[i]+(255-p[i+1])+p[i+2]-70)/90));if(a<1){p[i+3]=Math.min(p[i+3],a*255);p[i+1]=Math.min(p[i+1],Math.max(p[i],p[i+2])+25)}}cg.putImageData(d,0,0);
+  const L=document.createElement('canvas');L.width=FB.w;L.height=FB.h;const g=L.getContext('2d');
+  g.filter='blur(1.2px)';g.drawImage(mask,FB.x,FB.y,FB.w,FB.h,0,0,FB.w,FB.h);g.filter='none';g.globalCompositeOperation='source-in';g.drawImage(crop,FB.x-REF.x,FB.y-REF.y,FB.w,FB.h,0,0,FB.w,FB.h);
+  const kk=croc.naturalWidth/SW;const base=document.createElement('canvas');base.width=FB.w;base.height=FB.h;const bg=base.getContext('2d');bg.drawImage(croc,FB.x*kk,FB.y*kk,FB.w*kk,FB.h*kk,0,0,FB.w,FB.h);bg.globalCompositeOperation='destination-in';bg.drawImage(L,0,0);
+  const out=document.createElement('canvas');out.width=FB.w;out.height=FB.h;const og=out.getContext('2d');og.drawImage(base,0,0);og.drawImage(L,0,0);return out}
+function preview(cv,layer){const g=cv.getContext('2d');cv.width=600;cv.height=348;g.drawImage(croc,0,0,600,348);if(layer){const k=600/SW;g.drawImage(layer,FB.x*k,FB.y*k,FB.w*k,FB.h*k)}}
+function dl(href,name){const a=document.createElement('a');a.href=href;a.download=name;document.body.appendChild(a);a.click();a.remove()}
+async function render(){
+  const r=await fetch(API+'?a=queue&t='+encodeURIComponent(T));if(r.status===403){$('login').style.display='';return}
+  try{localStorage.setItem('desk-admin',T)}catch(e){}
+  const j=await r.json();croc=await load('croc.png?v=3');mask=await load('facemask.png?v=2');
+  const L=$('list');if(!j.list.length){L.innerHTML='<p class="s">대기 중인 신청이 없어요 🎉</p>';return}
+  L.innerHTML='';
+  for(const it of j.list){const el=document.createElement('div');el.className='item';
+    el.innerHTML=`<div><img class="ph" src="${it.photo}"><br><button class="g b1">⬇ 사진</button><button class="g b2">⬇ 캐릭터 원본</button></div>
+      <div><h3>${(it.name||'익명').replace(/[<>&]/g,'')}</h3><small>${new Date(it.t).toLocaleString('ko-KR')} · ${it.uid}</small>
+      <textarea readonly>${PROMPT}</textarea><button class="g b3">📋 지시문 복사</button>
+      <label class="drop">ChatGPT 완성 그림을 여기에 끌어다 놓거나 클릭<input type="file" accept="image/*" hidden></label></div>
+      <div><canvas></canvas><br><button class="ok" disabled>✅ 완료 (저장)</button><button class="g skip">❌ 반려</button></div>`;
+    L.appendChild(el);const cv=el.querySelector('canvas');preview(cv,null);let layer=null;
+    el.querySelector('.b1').onclick=()=>dl(it.photo,'photo.jpg');el.querySelector('.b2').onclick=()=>dl('face_ref.png','character.png');
+    el.querySelector('.b3').onclick=()=>{navigator.clipboard.writeText(PROMPT);el.querySelector('.b3').textContent='복사됨!'};
+    const take=async f=>{const img=await load(URL.createObjectURL(f));layer=await faceLayer(img);preview(cv,layer);el.querySelector('.ok').disabled=false};
+    const inp=el.querySelector('input[type=file]');inp.onchange=e=>e.target.files[0]&&take(e.target.files[0]);
+    const dz=el.querySelector('.drop');dz.ondragover=e=>e.preventDefault();dz.ondrop=e=>{e.preventDefault();e.dataTransfer.files[0]&&take(e.dataTransfer.files[0])};
+    el.querySelector('.ok').onclick=async()=>{const b=el.querySelector('.ok');b.disabled=true;b.textContent='저장 중…';
+      const rr=await fetch(API+'?a=done',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:T,uid:it.uid,png:layer.toDataURL('image/png')})});
+      if(rr.ok){el.style.opacity=.4;b.textContent='완료됨'}else{b.disabled=false;b.textContent='실패: '+(await rr.text()).slice(0,60)}};
+    el.querySelector('.skip').onclick=async()=>{const why=prompt('반려 이유 (사용자에게는 안 보여요)','얼굴이 안 보임');if(why===null)return;await fetch(API+'?a=done',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:T,uid:it.uid,skip:why||'반려'})});el.remove()};
+  }}
+$('go').onclick=()=>{T=$('tok').value.trim();$('login').style.display='none';render()};
+render();
+window.__adm={faceLayer,get T(){return T}};
+</script>
+</body>
+</html>
