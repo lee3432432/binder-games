@@ -84,6 +84,14 @@ async function done(b) {
   return [200, { ok: true, face: ver }];
 }
 
+async function purge(b) {
+  if (!isAdmin(b.t) || !okUid(b.uid)) return [403, { error: 'no' }];
+  const u = b.uid, days = [...Array(10)].map((_, i) => new Date(Date.now() + 9 * 3600e3 - i * 86400e3).toISOString().slice(0, 10));
+  const cmds = [['DEL', 'desk:p:' + u, 'desk:d:' + u, 'desk:face:img:' + u, 'desk:face:req:' + u], ['HDEL', 'desk:face:q', u], ['SREM', 'desk:users', u], ['ZREM', 'desk:z:k:all', u], ['ZREM', 'desk:z:c:all', u]];
+  for (const d of days) cmds.push(['ZREM', 'desk:z:k:' + d, u], ['ZREM', 'desk:z:c:' + d, u], ['DEL', 'desk:face:n:' + u + ':' + d]);
+  await redis(cmds); return [200, { ok: true }];
+}
+
 async function save(b) {
   if (!(await auth(b.uid, b.key))) return [403, { error: '앱에서 캐릭터를 클릭해 열어주세요' }];
   if (b.png === null) { await redis([['DEL', 'desk:face:img:' + b.uid], ['HDEL', 'desk:p:' + b.uid, 'face']]); return [200, { ok: true, face: '' }]; }
@@ -111,7 +119,7 @@ module.exports = async (req, res) => {
     }
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
     res.setHeader('Cache-Control', 'no-store');
-    const A = { make: () => make(body || {}, req.headers.host), save: () => save(body || {}), request: () => request(body || {}), status: () => status(body || {}), done: () => done(body || {}) };
+    const A = { make: () => make(body || {}, req.headers.host), save: () => save(body || {}), request: () => request(body || {}), status: () => status(body || {}), done: () => done(body || {}), purge: () => purge(body || {}) };
     const out = A[q.a] ? await A[q.a]() : [400, { error: 'unknown action' }];
     res.status(out[0]).json(out[1]);
   } catch (e) { res.status(500).json({ error: String(e.message || e) }); }
