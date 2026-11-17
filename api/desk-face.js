@@ -80,7 +80,7 @@ async function done(b) {
   if (b.skip) { await redis([['HDEL', 'desk:face:q', b.uid], ['DEL', 'desk:face:req:' + b.uid], ['HSET', 'desk:p:' + b.uid, 'faceErr', String(b.skip).slice(0, 60)]]); return [200, { ok: true }]; }
   const img = b64(b.png); if (!img || img.type !== 'png' || img.buf.length > 900000) return [400, { error: 'bad png' }];
   const ver = Date.now().toString(36);
-  await redis([['SET', 'desk:face:img:' + b.uid, img.buf.toString('base64')], ['HSET', 'desk:p:' + b.uid, 'face', ver, 'base', 'croc'], ['HDEL', 'desk:p:' + b.uid, 'faceErr', 'color'], ['HDEL', 'desk:face:q', b.uid], ['DEL', 'desk:face:req:' + b.uid]]);
+  await redis([['SET', 'desk:face:img:' + b.uid, img.buf.toString('base64')], ['HSET', 'desk:p:' + b.uid, 'face', ver], ['HDEL', 'desk:p:' + b.uid, 'faceErr'], ['HDEL', 'desk:face:q', b.uid], ['DEL', 'desk:face:req:' + b.uid]]);
   return [200, { ok: true, face: ver }];
 }
 
