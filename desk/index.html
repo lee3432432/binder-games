@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>타자치는 친구들 · 내 기록과 랭킹</title>
+<meta name="description" content="바탕화면 위에서 내 키보드·마우스를 따라 치는 캐릭터. 날짜별 타자·마우스 기록, 전체 랭킹, 나만의 캐릭터 만들기.">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff6f8;--card:#fff;--ink:#2a1f2d;--sub:#8a7a8e;--line:#f1dfe6;--pink:#ff5d8f;--pink2:#ffe1ea;--key:#4f8cff;--mouse:#ffaa2b}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",system-ui,sans-serif}
+a{color:inherit}
+.top{position:sticky;top:0;z-index:10;background:rgba(255,246,248,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top .in{max-width:880px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 14px}
+.top h1{font-size:18px;font-weight:900;flex:1;white-space:nowrap}.top h1 b{color:var(--pink)}
+.top a.home{text-decoration:none;font-size:13px;font-weight:700;border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:#fff}
+.dl{display:inline-flex;align-items:center;gap:6px;text-decoration:none;background:var(--pink);color:#fff!important;font-weight:900;font-size:14px;border-radius:12px;padding:9px 14px;box-shadow:0 3px 0 #c93a68;white-space:nowrap}
+.tabs{max-width:880px;margin:0 auto;display:flex;gap:6px;padding:0 14px 10px}
+.tabs button{flex:1;border:0;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 6px;font:inherit;font-weight:900;font-size:14px;color:var(--sub);cursor:pointer}
+.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+main{max-width:880px;margin:0 auto;padding:14px}
+section{display:none}section.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:12px;box-shadow:0 2px 0 rgba(0,0,0,.02)}
+.hero{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:center}
+.hero canvas{width:100%;border-radius:14px;background:#fdeef3}
+.me-name{font-size:22px;font-weight:900}.me-sub{color:var(--sub);font-size:13px;margin-top:2px}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
+.stat{background:#fff7fa;border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.stat small{display:block;color:var(--sub);font-size:12px;font-weight:700}
+.stat b{font-size:24px;font-weight:900}.stat i{font-style:normal;font-size:12px;color:var(--sub);margin-left:4px}
+.k{color:var(--key)}.m{color:var(--mouse)}
+h2{font-size:16px;font-weight:900;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+h2 .sp{flex:1}
+.seg{display:inline-flex;background:#f6eef1;border-radius:10px;padding:3px}
+.seg button{border:0;background:none;font:inherit;font-size:12.5px;font-weight:900;color:var(--sub);padding:6px 10px;border-radius:8px;cursor:pointer}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+#chart{width:100%;height:220px;display:block}
+.legend{display:flex;gap:12px;font-size:12px;color:var(--sub);font-weight:700;margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right}td:first-child,th:first-child{text-align:left}
+th{font-size:12px;color:var(--sub)}
+.rank{list-style:none}
+.rank li{display:grid;grid-template-columns:34px 48px 1fr auto;gap:10px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--line)}
+.rank li.me{background:#fff2f6;border-radius:12px}
+.rank .n{font-weight:900;font-size:16px;text-align:center}
+.rank li:nth-child(1) .n{color:#e6a400}.rank li:nth-child(2) .n{color:#8f9bab}.rank li:nth-child(3) .n{color:#c27b4a}
+.rank img{width:48px;height:36px;object-fit:cover;object-position:50% 0;border-radius:10px;background:#fdeef3}
+.rank .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank .v{font-weight:900;font-variant-numeric:tabular-nums}
+.empty{color:var(--sub);text-align:center;padding:30px 10px;font-size:14px;line-height:1.7}
+.maker{display:grid;grid-template-columns:1.3fr 1fr;gap:16px}
+.maker canvas{width:100%;border-radius:16px;background:#fdeef3}
+.bases{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.bases button{border:2px solid var(--line);background:#fff;border-radius:14px;padding:6px;cursor:pointer;font:inherit;font-weight:900;font-size:13px}
+.bases button img{width:100%;height:64px;object-fit:cover;object-position:50% 0;border-radius:10px;display:block;margin-bottom:4px}
+.bases button.on{border-color:var(--pink);background:#fff2f6}
+.sw{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sw button{width:32px;height:32px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer}
+.sw button.on{box-shadow:0 0 0 3px var(--ink)}
+.sw input[type=color]{width:40px;height:34px;border:0;background:none;cursor:pointer}
+label.f{display:block;font-size:13px;font-weight:900;color:var(--sub);margin:14px 0 6px}
+input[type=text]{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 12px;font:inherit;font-size:15px;background:#fff}
+input[type=range]{width:100%;accent-color:var(--pink)}
+.save{width:100%;margin-top:16px;border:0;border-radius:14px;background:var(--ink);color:#fff;font:inherit;font-weight:900;font-size:16px;padding:13px;cursor:pointer}
+.save:disabled{opacity:.4}
+.note{font-size:12.5px;color:var(--sub);line-height:1.6;margin-top:8px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-weight:700;font-size:14px;padding:10px 16px;border-radius:12px;opacity:0;transition:.3s;pointer-events:none;z-index:50}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.intro{text-align:center;padding:10px 6px 4px}
+.intro h3{font-size:24px;font-weight:900;line-height:1.35}.intro h3 b{color:var(--pink)}
+.intro p{color:var(--sub);font-size:14px;line-height:1.7;margin:8px 0 14px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;text-align:left}
+.steps div{background:#fff7fa;border:1px solid var(--line);border-radius:14px;padding:10px;font-size:13px;line-height:1.5}
+.steps b{display:block;font-size:14px;margin-bottom:2px}
+@media (max-width:640px){.hero,.maker{grid-template-columns:1fr}.hero canvas{max-width:320px;margin:0 auto;display:block}.steps{grid-template-columns:1fr}.top h1{font-size:16px}.dl span.t{display:none}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="in"><a class="home" href="/">🏠</a><h1>타자치는 <b>친구들</b></h1><a class="dl" href="TypingFriends-win.zip" download>⬇ <span class="t">윈도우 앱</span> 받기</a></div>
+  <div class="tabs"><button data-t="me" class="on">📊 내 기록</button><button data-t="rank">🏆 랭킹</button><button data-t="make">🎨 내 캐릭터</button></div>
+</div>
+<main>
+<section id="me" class="on"></section>
+<section id="rank">
+  <div class="card">
+    <h2>🏆 누가 제일 많이 쳤나<span class="sp"></span><span class="seg" id="rkM"><button data-v="k" class="on">⌨ 타자</button><button data-v="c">🖱 마우스</button></span></h2>
+    <div class="seg" id="rkP" style="margin-bottom:8px"><button data-v="today" class="on">오늘</button><button data-v="week">최근 7일</button><button data-v="all">전체</button></div>
+    <ul class="rank" id="rkList"></ul>
+    <p class="note" id="rkNote"></p>
+  </div>
+</section>
+<section id="make">
+  <div class="card maker">
+    <div><canvas id="mkCv" width="768" height="512"></canvas><p class="note" id="mkNote"></p></div>
+    <div>
+      <label class="f" style="margin-top:0">모자 고르기</label>
+      <div class="bases" id="mkBase"></div>
+      <label class="f">모자 색</label>
+      <div class="sw" id="mkSw"></div>
+      <label class="f">색 진하기 <span id="mkAmtV"></span></label>
+      <input type="range" id="mkAmt" min="0" max="100" value="85">
+      <label class="f">닉네임 (랭킹에 보여요)</label>
+      <input type="text" id="mkName" maxlength="12" placeholder="1~12자">
+      <button class="save" id="mkSave">💾 저장하고 앱에 적용</button>
+      <p class="note">저장하면 1분 안에 바탕화면 캐릭터도 같은 모습으로 바뀌어요.</p>
+    </div>
+  </div>
+</section>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const $=id=>document.getElementById(id);
+const API='/api/desk';
+const BASES={bunny:{name:'토끼',ref:.996},dog:{name:'강아지',ref:.934},croc:{name:'악어',ref:.644}};
+const COLORS=['','#ff7eb0','#ff5a5a','#ffa43a','#ffd84a','#7ad65a','#3cc8b4','#4f8cff','#8b6cff','#a87b52','#5b5b66','#ffffff'];
+const fmt=n=>(+n||0).toLocaleString('ko-KR');
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2200)}
+
+/* 내 아이디: 앱에서 열면 ?u=아이디#k=비밀키 로 들어옴 → 이 브라우저에 기억 */
+let UID=null,KEY=null;
+try{UID=localStorage.getItem('desk-uid');KEY=localStorage.getItem('desk-key')}catch(e){}
+const qs=new URLSearchParams(location.search);const hk=new URLSearchParams(location.hash.slice(1));
+if(qs.get('u')&&/^[a-f0-9]{16,40}$/.test(qs.get('u'))){if(qs.get('u')!==UID)KEY=null;UID=qs.get('u');if(hk.get('k'))KEY=hk.get('k');try{localStorage.setItem('desk-uid',UID);if(KEY)localStorage.setItem('desk-key',KEY)}catch(e){}history.replaceState(null,'',location.pathname+(qs.get('tab')?'?tab='+qs.get('tab'):''))}
+
+/* 캐릭터 그림: 모자 부분만 색 입히기 */
+const IMG={},MASK=new Image();MASK.src='hoodmask.png';for(const b in BASES){IMG[b]=new Image();IMG[b].src=b+'.png'}
+const ready=Promise.all([MASK,...Object.values(IMG)].map(i=>i.complete?1:new Promise(r=>{i.onload=r;i.onerror=r})));
+let maskData=null;
+function tinted(base,color,amt,w=768,h=512){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.drawImage(IMG[base],0,0,w,h);
+  if(!color||amt<=0)return c;
+  if(!maskData||maskData.width!==w){const m=document.createElement('canvas');m.width=w;m.height=h;const mg=m.getContext('2d');mg.drawImage(MASK,0,0,w,h);maskData=mg.getImageData(0,0,w,h)}
+  const d=g.getImageData(0,0,w,h),p=d.data,M=maskData.data,ref=BASES[base].ref;const cr=parseInt(color.slice(1,3),16),cg=parseInt(color.slice(3,5),16),cb=parseInt(color.slice(5,7),16);
+  for(let i=0;i<p.length;i+=4){const k=M[i]/255*amt;if(k<=0||p[i+3]===0)continue;const lum=Math.min(1.15,(.3*p[i]+.59*p[i+1]+.11*p[i+2])/255/ref);
+    p[i]=p[i]*(1-k)+Math.min(255,cr*lum)*k;p[i+1]=p[i+1]*(1-k)+Math.min(255,cg*lum)*k;p[i+2]=p[i+2]*(1-k)+Math.min(255,cb*lum)*k}
+  g.putImageData(d,0,0);return c}
+const avCache={};
+function avatar(base,color,amt){base=BASES[base]?base:'croc';const id=base+color+amt;if(avCache[id])return avCache[id];const c=tinted(base,color,amt,384,256);const o=document.createElement('canvas');o.width=200;o.height=150;o.getContext('2d').drawImage(c,60,0,240,180,0,0,200,150);return avCache[id]=o.toDataURL('image/png')}
+
+async function api(a,q='',body){const r=await fetch(API+'?a='+a+q,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw Object.assign(new Error(j.error||('HTTP '+r.status)),{status:r.status});return j}
+
+/* 탭 */
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>show(b.dataset.t));
+function show(t){document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.t===t));document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id===t));if(t==='rank')loadRank();if(t==='make')drawMaker()}
+
+/* 내 기록 */
+let ME=null;
+const kst=(o=0)=>new Date(Date.now()+9*3600e3-o*86400e3).toISOString().slice(0,10);
+async function loadMe(){const box=$('me');
+  if(!UID){box.innerHTML=`<div class="card intro"><h3>내가 하루에 키보드를<br><b>몇 번</b> 누르는지 아세요?</h3><p>바탕화면 위 책상 뒤에서 캐릭터가 내 키보드·마우스를 똑같이 따라 쳐요.<br>날짜별 기록이 쌓이고, 다른 사람들과 랭킹도 겨룰 수 있어요.</p><a class="dl" href="TypingFriends-win.zip" download>⬇ 윈도우 앱 무료로 받기</a><div class="steps"><div><b>① 압축 풀고 실행</b>카톡처럼 다음부터는 컴퓨터 켜면 자동으로 떠요</div><div><b>② 캐릭터를 클릭</b>내 기록 페이지가 열려요 (이 페이지!)</div><div><b>③ 랭킹·캐릭터</b>순위를 보고 나만의 모자를 만들어요</div></div><p class="note">무슨 키를 눌렀는지는 절대 저장하지 않아요. 누른 <b>횟수</b>만 세요.</p></div>`;return}
+  box.innerHTML='<div class="card empty">불러오는 중…</div>';
+  try{ME=await api('user','&u='+UID)}catch(e){box.innerHTML=`<div class="card empty">${e.status===404?'아직 기록이 없어요. 앱을 켜두면 1분 안에 첫 기록이 올라와요 🙂':'기록을 불러오지 못했어요 ('+e.message+')'}</div>`;return}
+  await ready;const d=ME.days,t=ME.today,td=d[t]||[0,0];let K=0,C=0,best=null;for(const [day,v] of Object.entries(d)){K+=v[0];C+=v[1];if(!best||v[0]>d[best][0])best=day}
+  let streak=0;for(let i=0;i<400;i++){const v=d[kst(i)];if(v&&(v[0]+v[1])>0)streak++;else if(i>0)break}
+  const r=ME.rank,p=ME.profile;
+  box.innerHTML=`<div class="card hero"><canvas id="meCv" width="768" height="512"></canvas><div><div class="me-name">${esc(p.name)}</div><div class="me-sub">${BASES[p.base].name} 모자 · 🔥 ${streak}일 연속 기록 ${KEY?'':'· <span style="color:#c93a68">이 기기에서는 수정 불가</span>'}</div>
+   <div class="stats"><div class="stat"><small>오늘 타자</small><b class="k">${fmt(td[0])}</b><i>${r.todayKeys?r.todayKeys+'위 / '+r.todayUsers+'명':''}</i></div><div class="stat"><small>오늘 마우스 클릭</small><b class="m">${fmt(td[1])}</b><i>${r.todayClicks?r.todayClicks+'위':''}</i></div>
+   <div class="stat"><small>지금까지 타자</small><b>${fmt(K)}</b><i>${r.allKeys?'전체 '+r.allKeys+'위':''}</i></div><div class="stat"><small>지금까지 클릭</small><b>${fmt(C)}</b><i>${r.allClicks?'전체 '+r.allClicks+'위':''}</i></div></div></div></div>
+   <div class="card"><h2>📅 날짜별 기록<span class="sp"></span><span class="seg" id="rng"><button data-v="7">7일</button><button data-v="30" class="on">30일</button></span></h2><canvas id="chart"></canvas><div class="legend"><span><i style="background:var(--key)"></i>타자</span><span><i style="background:var(--mouse)"></i>마우스 클릭</span>${best?`<span>· 최고 기록 ${best.slice(5).replace('-','/')} 타자 ${fmt(d[best][0])}회</span>`:''}</div></div>
+   <div class="card"><h2>🗒 일별 표</h2><table><thead><tr><th>날짜</th><th>타자</th><th>마우스</th></tr></thead><tbody>${Object.keys(d).sort().reverse().slice(0,31).map(day=>`<tr><td>${day.slice(5).replace('-','/')} ${'일월화수목금토'[new Date(day+'T00:00:00+09:00').getDay()]}</td><td class="k">${fmt(d[day][0])}</td><td class="m">${fmt(d[day][1])}</td></tr>`).join('')}</tbody></table></div>`;
+  $('meCv').getContext('2d').drawImage(tinted(p.base,p.color,p.amt),0,0);
+  let range=30;$('rng').querySelectorAll('button').forEach(b=>b.onclick=()=>{range=+b.dataset.v;$('rng').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));chart(range)});chart(range);addEventListener('resize',()=>chart(range))}
+function chart(n){const cv=$('chart');if(!cv)return;const dpr=devicePixelRatio||1,W=cv.clientWidth,H=220;cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext('2d');g.scale(dpr,dpr);
+  const days=[...Array(n)].map((_,i)=>kst(n-1-i)),vals=days.map(x=>ME.days[x]||[0,0]);const mx=Math.max(10,...vals.map(v=>Math.max(v[0],v[1])));
+  const L=44,B=24,T=10,cw=(W-L-6)/n,bw=Math.max(2,cw*.36);g.font='11px "Noto Sans KR"';g.fillStyle='#8a7a8e';g.strokeStyle='#f1dfe6';
+  for(let i=0;i<=4;i++){const y=T+(H-T-B)*(1-i/4);g.beginPath();g.moveTo(L,y);g.lineTo(W,y);g.stroke();const v=mx*i/4;g.textAlign='right';g.fillText(v>=1e4?(v/1e4).toFixed(1)+'만':Math.round(v),L-6,y+4)}
+  vals.forEach((v,i)=>{const x=L+i*cw+cw/2;const hk=(H-T-B)*v[0]/mx,hc=(H-T-B)*v[1]/mx;
+    g.fillStyle='#4f8cff';rrect(g,x-bw-1,H-B-hk,bw,hk,3);g.fillStyle='#ffaa2b';rrect(g,x+1,H-B-hc,bw,hc,3);
+    if(n<=7||i%5===n%5||i===n-1){g.fillStyle=i===n-1?'#2a1f2d':'#8a7a8e';g.textAlign='center';g.fillText(i===n-1?'오늘':days[i].slice(5).replace('-','/'),x,H-6)}})}
+function rrect(g,x,y,w,h,r){if(h<=0)return;r=Math.min(r,h/2,w/2);g.beginPath();g.moveTo(x,y+h);g.lineTo(x,y+r);g.quadraticCurveTo(x,y,x+r,y);g.lineTo(x+w-r,y);g.quadraticCurveTo(x+w,y,x+w,y+r);g.lineTo(x+w,y+h);g.fill()}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* 랭킹 */
+let rkM='k',rkP='today';
+for(const [id,set] of [['rkM',v=>rkM=v],['rkP',v=>rkP=v]])$(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{set(b.dataset.v);$(id).querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));loadRank()});
+async function loadRank(){const ul=$('rkList');ul.innerHTML='<div class="empty">불러오는 중…</div>';
+  try{const j=await api('top','&p='+rkP+'&m='+rkM);await ready;
+    if(!j.list.length){ul.innerHTML='<div class="empty">아직 기록이 없어요. 첫 1등이 되어보세요 🥇</div>';$('rkNote').textContent='';return}
+    ul.innerHTML=j.list.map((u,i)=>`<li class="${UID&&UID.startsWith(u.id)?'me':''}"><span class="n">${i<3?['🥇','🥈','🥉'][i]:i+1}</span><img src="${avatar(u.base,u.color,u.amt)}" alt=""><span class="nm">${esc(u.name)}${UID&&UID.startsWith(u.id)?' (나)':''}</span><span class="v ${rkM==='k'?'k':'m'}">${fmt(u.v)}회</span></li>`).join('');
+    $('rkNote').textContent=`참여 ${fmt(j.users)}명 · 상위 50명까지 보여요 · 앱을 켜둔 동안 1분마다 갱신돼요`}
+  catch(e){ul.innerHTML=`<div class="empty">랭킹을 불러오지 못했어요 (${esc(e.message)})</div>`}}
+
+/* 내 캐릭터 만들기 */
+let mk={base:'croc',color:'',amt:.85,name:''};
+function buildMaker(){const bb=$('mkBase');bb.innerHTML=Object.entries(BASES).map(([k,v])=>`<button data-b="${k}"><img src="${k}.png" alt="">${v.name}</button>`).join('');
+  bb.querySelectorAll('button').forEach(b=>b.onclick=()=>{mk.base=b.dataset.b;drawMaker()});
+  const sw=$('mkSw');sw.innerHTML=COLORS.map(c=>`<button data-c="${c}" title="${c||'원래 색'}" style="background:${c||'conic-gradient(#fff 0 25%,#ddd 0 50%,#fff 0 75%,#ddd 0)'}"></button>`).join('')+'<input type="color" id="mkPick" value="#ff7eb0" title="직접 고르기">';
+  sw.querySelectorAll('button').forEach(b=>b.onclick=()=>{mk.color=b.dataset.c;drawMaker()});$('mkPick').oninput=e=>{mk.color=e.target.value;drawMaker()};
+  $('mkAmt').oninput=e=>{mk.amt=e.target.value/100;drawMaker()};$('mkName').oninput=e=>mk.name=e.target.value;
+  $('mkSave').onclick=save}
+async function drawMaker(){await ready;$('mkBase').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.b===mk.base));$('mkSw').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.c===mk.color));
+  $('mkAmt').value=Math.round(mk.amt*100);$('mkAmtV').textContent=Math.round(mk.amt*100)+'%';if(document.activeElement!==$('mkName'))$('mkName').value=mk.name;
+  $('mkCv').getContext('2d').clearRect(0,0,768,512);$('mkCv').getContext('2d').drawImage(tinted(mk.base,mk.color,mk.amt),0,0);
+  $('mkSave').disabled=!(UID&&KEY);$('mkNote').innerHTML=UID&&KEY?'':'미리보기만 돼요. 저장하려면 <b>앱을 켠 뒤 캐릭터를 클릭</b>해서 이 페이지를 열어주세요.'}
+async function save(){const b=$('mkSave');b.disabled=true;b.textContent='저장 중…';
+  try{const j=await api('profile','',{uid:UID,key:KEY,base:mk.base,color:mk.color,amt:mk.amt,name:mk.name.trim()||undefined});mk={...mk,...j.profile};toast('저장했어요! 1분 안에 바탕화면 캐릭터도 바뀌어요 ✨');loadMe()}
+  catch(e){toast(e.status===403?'이 기기에서는 수정할 수 없어요. 앱에서 캐릭터를 클릭해 열어주세요':'저장 실패: '+e.message)}
+  b.disabled=false;b.textContent='💾 저장하고 앱에 적용'}
+
+buildMaker();
+loadMe().then(()=>{if(ME){mk={base:ME.profile.base,color:ME.profile.color,amt:ME.profile.color?ME.profile.amt:.85,name:ME.profile.name}}if(qs.get('tab'))show(qs.get('tab'))});
+</script>
+</body>
+</html>
