@@ -1,6 +1,19 @@
 {
   "trailingSlash": true,
   "headers": [
-    { "source": "/games.json", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
-  ]
+    {
+      "source": "/games.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    }
+  ],
+  "functions": {
+    "api/desk-face.js": {
+      "maxDuration": 60
+    }
+  }
 }

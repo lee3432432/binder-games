@@ -21,7 +21,7 @@ const okUid = u => /^[a-f0-9]{16,40}$/.test(u || '');
 const okColor = c => /^#[0-9a-fA-F]{6}$/.test(c || '');
 const clean = s => String(s || '').replace(/[<>"'`\\\n\r\t]/g, '').trim().slice(0, 12);
 function profileOut(h) {
-  return { name: h.name || '익명', base: BASES.includes(h.base) ? h.base : 'croc', color: okColor(h.color) ? h.color : '', amt: Math.max(0, Math.min(1, +h.amt || 0)) };
+  return { name: h.name || '익명', base: BASES.includes(h.base) ? h.base : 'croc', color: okColor(h.color) ? h.color : '', amt: Math.max(0, Math.min(1, +h.amt || 0)), face: /^[a-z0-9]{4,12}$/.test(h.face || '') ? h.face : '' };
 }
 const toObj = arr => { const o = {}; for (let i = 0; arr && i < arr.length; i += 2) o[arr[i]] = arr[i + 1]; return o; };
 
@@ -87,8 +87,8 @@ async function top(q) {
   }
   const [arr, n] = await redis([['ZREVRANGE', key, 0, 49, 'WITHSCORES'], ['ZCARD', key]]);
   const ids = [], scores = []; for (let i = 0; i < (arr || []).length; i += 2) { if (+arr[i + 1] > 0) { ids.push(arr[i]); scores.push(+arr[i + 1]); } }
-  const ps = ids.length ? await redis(ids.map(id => ['HMGET', 'desk:p:' + id, 'name', 'base', 'color', 'amt'])) : [];
-  const list = ids.map((id, i) => ({ id: id.slice(0, 6), name: ps[i][0] || '익명', base: ps[i][1] || 'croc', color: ps[i][2] || '', amt: +ps[i][3] || 0, v: scores[i] }));
+  const ps = ids.length ? await redis(ids.map(id => ['HMGET', 'desk:p:' + id, 'name', 'base', 'color', 'amt', 'face'])) : [];
+  const list = ids.map((id, i) => ({ id: id.slice(0, 6), name: ps[i][0] || '익명', base: ps[i][1] || 'croc', color: ps[i][2] || '', amt: +ps[i][3] || 0, face: ps[i][4] ? id + '/' + ps[i][4] : '', v: scores[i] }));
   return [200, { period, metric, users: n || 0, list }];
 }
 
