@@ -64,8 +64,16 @@ async function render(){
       if(rr.ok){el.style.opacity=.4;b.textContent='완료됨'}else{b.disabled=false;b.textContent='실패: '+(await rr.text()).slice(0,60)}};
     el.querySelector('.skip').onclick=async()=>{const why=prompt('반려 이유 (사용자에게는 안 보여요)','얼굴이 안 보임');if(why===null)return;await fetch(API+'?a=done',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:T,uid:it.uid,skip:why||'반려'})});el.remove()};
   }}
+// 자동 처리 모드: #t=토큰&uid=아이디&img=ChatGPT결과(jpeg base64) → 얼굴만 잘라 바로 완료
+async function auto(){const h=new URLSearchParams(location.hash.slice(1));const uid=h.get('uid'),img=h.get('img');if(!uid||!img)return false;
+  document.body.innerHTML='<h1>자동 처리 중… '+uid+'</h1>';
+  try{croc=await load('croc.png?v=3');mask=await load('facemask.png?v=2');const gen=await load('data:image/jpeg;base64,'+img);const layer=await faceLayer(gen);
+    const rr=await fetch(API+'?a=done',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:T,uid,png:layer.toDataURL('image/png')})});
+    const txt=await rr.text();const cv=document.createElement('canvas');preview(cv,layer);document.body.innerHTML='<h1 id="result">'+(rr.ok?'AUTO_DONE '+uid:'AUTO_FAIL '+txt.slice(0,80))+'</h1>';document.body.appendChild(cv)}
+  catch(e){document.body.innerHTML='<h1 id="result">AUTO_FAIL '+e.message+'</h1>'}
+  history.replaceState(null,'',location.pathname);return true}
 $('go').onclick=()=>{T=$('tok').value.trim();$('login').style.display='none';render()};
-render();
+auto().then(x=>{if(!x)render()});
 window.__adm={faceLayer,get T(){return T}};
 </script>
 </body>
