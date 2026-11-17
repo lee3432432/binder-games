@@ -200,7 +200,7 @@ async function loadRank(){const ul=$('rkList');ul.innerHTML='<div class="empty">
 
 /* 내 얼굴 캐릭터: 사진 → AI(우리 그림체) → 모자 속 얼굴만 교체 */
 const REF={x:380,y:0,w:1000,h:667},FB={x:550,y:164,w:649,h:351}; // 장면(1805x1048) 좌표
-const FMASK=new Image();FMASK.src='facemask.png?v=2';
+const FMASK=new Image();FMASK.src='facemask.png?v=4';
 const faceCache={};
 function loadFace(key){if(!key)return Promise.resolve(null);if(faceCache[key])return faceCache[key];const [u,v]=key.split('/');
   return faceCache[key]=new Promise(r=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>r(i);i.onerror=()=>r(null);i.src=API.replace('desk/','desk-face/')+'?u='+u+'&v='+v})}
