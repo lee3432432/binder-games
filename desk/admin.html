@@ -71,19 +71,36 @@ async function headLayer(gen){const c=document.createElement('canvas');c.width=H
   const d=g.getImageData(0,0,HB.w,HB.h),p=d.data;for(let i=0;i<p.length;i+=4){const a=Math.max(0,Math.min(1,(p[i]+(255-p[i+1])+p[i+2]-70)/90));if(a<1){p[i+3]=Math.min(p[i+3],a*255);p[i+1]=Math.min(p[i+1],Math.max(p[i],p[i+2])+25)}}
   const W=HB.w,H=HB.h,ry=H-9;for(let y=H-8;y<H;y++)for(let x=0;x<W;x++){let m=0;for(let k=-4;k<=4;k++){const xx=x+k;if(xx>=0&&xx<W)m=Math.max(m,p[(ry*W+xx)*4+3])}const i=(y*W+x)*4+3;p[i]=Math.min(p[i],m)}
   g.putImageData(d,0,0);return c}
-// 자동 처리 모드: #t=토큰&uid=아이디&img=모자 쓴 결과(jpeg b64)&head=모자 벗은 결과(jpeg b64) → 조각만 잘라 바로 완료 (head만 보내면 머리만 추가)
-async function auto(){const h=new URLSearchParams(location.hash.slice(1));const uid=h.get('uid'),img=h.get('img'),hd=h.get('head');if(!uid||!(img||hd))return false;
+// 눈 감은 그림 → 눈 주변만 바뀐 조각 (뜬 그림과 달라진 곳만 남기고 가장자리는 부드럽게) — 앱이 마실 때 눈을 감김
+const EB={x:670,y:356,w:476,h:190};
+function ebCrop(gen){const c=document.createElement('canvas');c.width=EB.w;c.height=EB.h;c.getContext('2d').drawImage(gen,REF.x-EB.x,REF.y-EB.y,REF.w,REF.h);return c}
+function mm(src,W,H,r,mx){const t=new Float32Array(W*H),o=new Float32Array(W*H),f=mx?Math.max:Math.min;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let v=src[y*W+x];for(let k=-r;k<=r;k++){const xx=x+k;if(xx>=0&&xx<W)v=f(v,src[y*W+xx])}t[y*W+x]=v}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let v=t[y*W+x];for(let k=-r;k<=r;k++){const yy=y+k;if(yy>=0&&yy<H)v=f(v,t[yy*W+x])}o[y*W+x]=v}return o}
+function bx(src,W,H,r){const t=new Float32Array(W*H),o=new Float32Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let v=0,n=0;for(let k=-r;k<=r;k++){const xx=x+k;if(xx>=0&&xx<W){v+=src[y*W+xx];n++}}t[y*W+x]=v/n}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){let v=0,n=0;for(let k=-r;k<=r;k++){const yy=y+k;if(yy>=0&&yy<H){v+=t[yy*W+x];n++}}o[y*W+x]=v/n}return o}
+async function eyesLayer(open,closed){const W=EB.w,H=EB.h,a=ebCrop(open).getContext('2d').getImageData(0,0,W,H).data,c=ebCrop(closed),g=c.getContext('2d'),d=g.getImageData(0,0,W,H),p=d.data;
+  let m=new Float32Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x,j=i*4,df=Math.max(Math.abs(a[j]-p[j]),Math.abs(a[j+1]-p[j+1]),Math.abs(a[j+2]-p[j+2]));
+    const e1=((x-130)/118)**2+((y-95)/93)**2,e2=((x-330)/118)**2+((y-95)/93)**2;m[i]=df>46&&Math.min(e1,e2)<1?1:0}   // 두 눈 둘레만
+  m=mm(mm(m,W,H,2,false),W,H,2,true);m=mm(m,W,H,13,true);m=bx(bx(m,W,H,6),W,H,6);
+  for(let i=0;i<W*H;i++)p[i*4+3]=Math.round(255*Math.max(0,Math.min(1,m[i])));g.putImageData(d,0,0);return c}
+// 자동 처리 모드: #t=토큰&uid=아이디&img=모자 쓴 결과(jpeg b64)&head=모자 벗은 결과(jpeg b64)&eyes=눈 감은 결과(jpeg b64) → 조각만 잘라 바로 완료
+//   head만 보내면 머리만 추가.  눈만 추가할 때는 &ref=눈 뜬 그림(비교용)&eyes=눈 감은 그림
+async function auto(){const h=new URLSearchParams(location.hash.slice(1));const uid=h.get('uid'),img=h.get('img'),hd=h.get('head'),ey=h.get('eyes'),rf=h.get('ref');if(!uid||!(img||hd||(ey&&rf)))return false;
   document.body.innerHTML='<h1>자동 처리 중… '+uid+'</h1>';
   try{croc=await load('croc.png?v=10');mask=await load('facemask.png?v=10');const body={t:T,uid};let layer=null;
     if(img){layer=await faceLayer(await load('data:image/jpeg;base64,'+img));body.png=layer.toDataURL('image/png')}
     if(hd){body.head=(await headLayer(await load('data:image/jpeg;base64,'+hd))).toDataURL('image/png')}
+    if(ey&&(img||rf)){body.eyes=(await eyesLayer(await load('data:image/jpeg;base64,'+(img||rf)),await load('data:image/jpeg;base64,'+ey))).toDataURL('image/png')}
     const rr=await fetch(API+'?a=done',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const txt=await rr.text();const cv=document.createElement('canvas');preview(cv,layer);document.body.innerHTML='<h1 id="result">'+(rr.ok?'AUTO_DONE '+uid:'AUTO_FAIL '+txt.slice(0,80))+'</h1>';document.body.appendChild(cv)}
   catch(e){document.body.innerHTML='<h1 id="result">AUTO_FAIL '+e.message+'</h1>'}
   history.replaceState(null,'',location.pathname);return true}
 $('go').onclick=()=>{T=$('tok').value.trim();$('login').style.display='none';render()};
 auto().then(x=>{if(!x)render()});
-window.__adm={faceLayer,get T(){return T}};
+window.__adm={faceLayer,headLayer,eyesLayer,load,get T(){return T}};
 </script>
 </body>
 </html>

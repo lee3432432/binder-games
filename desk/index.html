@@ -127,7 +127,7 @@ const API='/api/desk/';
 const BASES={bunny:{name:'토끼',ref:.996},dog:{name:'강아지',ref:.918},croc:{name:'악어',ref:.676},shark:{name:'상어',ref:.96},cat:{name:'고양이',ref:.5},none:{name:'모자 없음',ref:1}};
 const FACES=[['','기본'],['f1','단정 소년'],['f2','안경 소녀'],['f3','금발 양갈래'],['f4','곱슬 소년'],['f5','은발 단발']];
 const ITEMS=[['cola','콜라'],['americano','아이스 아메리카노'],['coffee','따뜻한 커피'],['bananamilk','바나나우유'],['bubbletea','버블티'],['energy','에너지 드링크'],['ramen','컵라면'],['strawberrymilk','딸기우유'],['','없음']];
-const ITEM_AT={x:245,y:847,maxW:290},ITIMG={};for(const [id] of ITEMS)if(id){ITIMG[id]=new Image();ITIMG[id].src='items/'+id+'.png?v=1'}
+const ITEM_AT={x:245,y:847,maxW:290},ITIMG={};for(const [id] of ITEMS)if(id){ITIMG[id]=new Image();ITIMG[id].src='items/'+id+'.png?v=2'}
 const PRESET={};for(const [id] of FACES)if(id){PRESET[id]=new Image();PRESET[id].crossOrigin='anonymous';PRESET[id].src='faces/'+id+'.png?v=1'}
 const HB={x:470,y:40,w:860,h:522},HEADP={};FACES.forEach(([id],i)=>{HEADP[id]=new Image();HEADP[id].crossOrigin='anonymous';HEADP[id].src='faces/h'+i+'.png?v=1'});
 const fmt=n=>(+n||0).toLocaleString('ko-KR');
@@ -231,7 +231,7 @@ function buildFaces(){const L=$('mkFace');const list=FACES.slice();if(ownImg)lis
   $('mkAdd').onclick=()=>{if(!(UID&&KEY))return toast('앱에서 캐릭터를 클릭해 이 페이지를 열어야 올릴 수 있어요');$('mkFile').click()}}
 function buildBases(){$('mkBase').innerHTML=Object.entries(BASES).map(([k,v])=>`<button data-b="${k}"><img src="${headThumb(fimg(mk.face,k),k,'')}" alt="">${v.name}</button>`).join('');
   $('mkBase').querySelectorAll('button').forEach(b=>b.onclick=()=>{mk.base=b.dataset.b;drawMaker(true)})}
-function buildItems(){$('mkItem').innerHTML=ITEMS.map(([id,n])=>`<button data-i="${id}">${id?`<img src="items/${id}.png?v=1" alt="">`:'<b style="font-size:26px">🚫</b>'}${n}</button>`).join('');
+function buildItems(){$('mkItem').innerHTML=ITEMS.map(([id,n])=>`<button data-i="${id}">${id?`<img src="items/${id}.png?v=2" alt="">`:'<b style="font-size:26px">🚫</b>'}${n}</button>`).join('');
   $('mkItem').querySelectorAll('button').forEach(b=>b.onclick=()=>{mk.item=b.dataset.i;drawMaker(false)})}
 function imgToPng(im){const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;c.getContext('2d').drawImage(im,0,0);return c.toDataURL('image/png')}
 function buildMaker(){
