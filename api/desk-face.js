@@ -27,7 +27,7 @@ function b64(dataUrl) { const m = /^data:image\/(png|jpeg|webp);base64,(.+)$/.ex
 const PROMPT = `Image 1 is our cartoon character illustration. Image 2 is a photo of a real person.
 Redraw image 1 EXACTLY: identical composition, framing, camera angle and canvas; the same green crocodile hood with white teeth in exactly the same place and size; the same wooden desk edge, keyboard and bottle; the same art style (thick clean black outlines, flat cel colors, soft pink blush, cute chibi anime look).
 Change ONLY the face and hair visible inside the hood opening so the character clearly resembles the person in image 2: hair color and hairstyle/bangs, eyebrow shape, eye shape, face shape, skin tone, and glasses or facial hair if the person has them.
-Keep the face in the same position and size inside the hood, still peeking over the desk. Keep it a cute cartoon, not realistic. Transparent background outside the drawing. No text.`;
+Keep the face in the same position and size inside the hood, still peeking over the desk. Keep it a cute cartoon, not realistic. Solid flat pure green #00FF00 background outside the drawing. No text.`;
 
 async function make(b, host) {
   if (!OPENAI) return [503, { error: '아직 AI 키가 연결되지 않았어요 (관리자 설정 필요)' }];

@@ -25,8 +25,8 @@ textarea{width:100%;height:110px;font-size:12px;margin-top:8px}
 <div id="login" style="display:none"><input id="tok" placeholder="운영자 토큰"><button id="go">열기</button></div>
 <div id="list"></div>
 <script>
-const API='/api/desk-face/';const SW=1805,REF={x:380,y:0,w:1000,h:667},FB={x:550,y:164,w:649,h:351};
-const PROMPT=`Create an image. Image 1 (character.png) is our cartoon character illustration. Image 2 (photo.jpg) is a photo of a person. Redraw image 1 EXACTLY: identical composition, framing, camera angle and canvas; the same green crocodile hood with white teeth in exactly the same place and size; the same wooden desk edge, keyboard and bottle; the same art style (thick clean black outlines, flat cel colors, soft pink blush, cute chibi anime look). Change ONLY the face and hair visible inside the hood opening so the character clearly resembles the person in image 2: hair color and hairstyle/bangs, eyebrow shape, eye shape, face shape, skin tone, and glasses or facial hair if the person has them. Keep the face in the same position and size inside the hood, still peeking over the desk. Keep it a cute cartoon, not realistic. Transparent background outside the drawing. No text. Output 3:2 landscape.`;
+const API='/api/desk-face/';const SW=1805,REF={x:52,y:-15,w:1704,h:1136},FB={x:569,y:248,w:627,h:316};
+const PROMPT=`Create an image. Image 1 (character.png) is our cartoon character illustration. Image 2 (photo.jpg) is a photo of a person. Redraw image 1 EXACTLY: identical composition, framing, camera angle and canvas; the same green crocodile hood with white teeth in exactly the same place and size; the same wooden desk edge, keyboard and bottle; the same art style (thick clean black outlines, flat cel colors, soft pink blush, cute chibi anime look). Change ONLY the face and hair visible inside the hood opening so the character clearly resembles the person in image 2: hair color and hairstyle/bangs, eyebrow shape, eye shape, face shape, skin tone, and glasses or facial hair if the person has them. Keep the face in the same position and size inside the hood, still peeking over the desk. Keep it a cute cartoon, not realistic. Solid flat pure green #00FF00 background outside the drawing. No text. Output 3:2 landscape.`;
 let T=new URLSearchParams(location.hash.slice(1)).get('t')||'';try{T=T||localStorage.getItem('desk-admin')||''}catch(e){}
 const $=id=>document.getElementById(id);
 const load=src=>new Promise((r,x)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>r(i);i.onerror=x;i.src=src});
@@ -44,7 +44,7 @@ function dl(href,name){const a=document.createElement('a');a.href=href;a.downloa
 async function render(){
   const r=await fetch(API+'?a=queue&t='+encodeURIComponent(T));if(r.status===403){$('login').style.display='';return}
   try{localStorage.setItem('desk-admin',T)}catch(e){}
-  const j=await r.json();croc=await load('croc.png?v=6');mask=await load('facemask.png?v=4');
+  const j=await r.json();croc=await load('croc.png?v=7');mask=await load('facemask.png?v=7');
   const L=$('list');if(!j.list.length){L.innerHTML='<p class="s">대기 중인 신청이 없어요 🎉</p>';return}
   L.innerHTML='';
   for(const it of j.list){const el=document.createElement('div');el.className='item';
@@ -67,7 +67,7 @@ async function render(){
 // 자동 처리 모드: #t=토큰&uid=아이디&img=ChatGPT결과(jpeg base64) → 얼굴만 잘라 바로 완료
 async function auto(){const h=new URLSearchParams(location.hash.slice(1));const uid=h.get('uid'),img=h.get('img');if(!uid||!img)return false;
   document.body.innerHTML='<h1>자동 처리 중… '+uid+'</h1>';
-  try{croc=await load('croc.png?v=6');mask=await load('facemask.png?v=4');const gen=await load('data:image/jpeg;base64,'+img);const layer=await faceLayer(gen);
+  try{croc=await load('croc.png?v=7');mask=await load('facemask.png?v=7');const gen=await load('data:image/jpeg;base64,'+img);const layer=await faceLayer(gen);
     const rr=await fetch(API+'?a=done',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:T,uid,png:layer.toDataURL('image/png')})});
     const txt=await rr.text();const cv=document.createElement('canvas');preview(cv,layer);document.body.innerHTML='<h1 id="result">'+(rr.ok?'AUTO_DONE '+uid:'AUTO_FAIL '+txt.slice(0,80))+'</h1>';document.body.appendChild(cv)}
   catch(e){document.body.innerHTML='<h1 id="result">AUTO_FAIL '+e.message+'</h1>'}

@@ -129,7 +129,7 @@ input[type=range]{width:100%;accent-color:var(--pink)}
 <script>
 const $=id=>document.getElementById(id);
 const API='/api/desk/';
-const BASES={bunny:{name:'토끼',ref:.996},dog:{name:'강아지',ref:.929},croc:{name:'악어',ref:.661}};
+const BASES={bunny:{name:'토끼',ref:.996},dog:{name:'강아지',ref:.918},croc:{name:'악어',ref:.676}};
 const COLORS=['','#ff7eb0','#ff5a5a','#ffa43a','#ffd84a','#7ad65a','#3cc8b4','#4f8cff','#8b6cff','#a87b52','#5b5b66','#ffffff'];
 const fmt=n=>(+n||0).toLocaleString('ko-KR');
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2200)}
@@ -142,7 +142,7 @@ if(qs.get('u')&&/^[a-f0-9]{16,40}$/.test(qs.get('u'))){if(qs.get('u')!==UID)KEY=
 
 /* 캐릭터 그림: 모자 부분만 색 입히기 */
 const SW=1805,SH=1048,DW=768,DH=446; // 장면 원본 크기 / 화면용 크기
-const IMG={},HM={},IN={};for(const b in BASES){IMG[b]=new Image();IMG[b].src=b+'.png?v=6';HM[b]=new Image();HM[b].src='hood_'+b+'.png?v=5';IN[b]=new Image();IN[b].src='inner_'+b+'.png?v=5'}
+const IMG={},HM={},IN={};for(const b in BASES){IMG[b]=new Image();IMG[b].src=b+'.png?v=7';HM[b]=new Image();HM[b].src='hood_'+b+'.png?v=7';IN[b]=new Image();IN[b].src='inner_'+b+'.png?v=7'}
 const ready=Promise.all([...Object.values(IMG),...Object.values(HM),...Object.values(IN)].map(i=>i.complete?1:new Promise(r=>{i.onload=r;i.onerror=r})));
 const hmData={};
 function tinted(base,color,amt,w=DW,h=DH){base=BASES[base]?base:'croc';const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.drawImage(IMG[base],0,0,w,h);
@@ -198,8 +198,8 @@ async function loadRank(){const ul=$('rkList');ul.innerHTML='<div class="empty">
   catch(e){ul.innerHTML=`<div class="empty">랭킹을 불러오지 못했어요 (${esc(e.message)})</div>`}}
 
 /* 내 얼굴 캐릭터: 사진 → AI(우리 그림체) → 모자 속 얼굴만 교체 */
-const REF={x:380,y:0,w:1000,h:667},FB={x:550,y:164,w:649,h:351}; // 장면(1805x1048) 좌표
-const FMASK=new Image();FMASK.src='facemask.png?v=4';
+const REF={x:52,y:-15,w:1704,h:1136},FB={x:569,y:248,w:627,h:316}; // 장면(1805x1048) 좌표
+const FMASK=new Image();FMASK.src='facemask.png?v=7';
 const faceCache={};
 function loadFace(key){if(!key)return Promise.resolve(null);if(faceCache[key])return faceCache[key];const [u,v]=key.split('/');
   return faceCache[key]=new Promise(r=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>r(i);i.onerror=()=>r(null);i.src=API.replace('desk/','desk-face/')+'?u='+u+'&v='+v})}
@@ -220,7 +220,7 @@ async function faceLayerFrom(genImg){await ready;if(!FMASK.complete)await new Pr
   const out=document.createElement('canvas');out.width=FB.w;out.height=FB.h;const og=out.getContext('2d');og.drawImage(base,0,0);og.drawImage(L,0,0);return out}
 let mk={base:'croc',color:'',amt:.85},waitInfo=null;
 function buildMaker(){
-  $('mkBase').innerHTML=Object.entries(BASES).map(([k,v])=>`<button data-b="${k}"><img src="${k}.png?v=6" alt="">${v.name}</button>`).join('');
+  $('mkBase').innerHTML=Object.entries(BASES).map(([k,v])=>`<button data-b="${k}"><img src="${k}.png?v=7" alt="">${v.name}</button>`).join('');
   $('mkBase').querySelectorAll('button').forEach(b=>b.onclick=()=>{mk.base=b.dataset.b;drawMaker()});
   $('mkSw').innerHTML=COLORS.map(c=>`<button data-c="${c}" title="${c||'원래 색'}" style="background:${c||'conic-gradient(#fff 0 25%,#ddd 0 50%,#fff 0 75%,#ddd 0)'}"></button>`).join('')+'<input type="color" id="mkPick2" value="#ff7eb0" title="직접 고르기">';
   $('mkSw').querySelectorAll('button').forEach(b=>b.onclick=()=>{mk.color=b.dataset.c;drawMaker()});$('mkPick2').oninput=e=>{mk.color=e.target.value;drawMaker()};
