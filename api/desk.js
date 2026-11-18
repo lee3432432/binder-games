@@ -5,6 +5,8 @@ const crypto = require('crypto');
 const URL_ = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const BASES = ['bunny', 'dog', 'croc'];
+const ITEMS = ['cola', 'americano', 'coffee', 'bananamilk', 'bubbletea', 'energy', 'ramen', 'strawberrymilk'];
+const okFsel = f => /^(f[1-9]|own)?$/.test(f || '');
 const ANIMAL = { bunny: '토끼', dog: '강아지', croc: '악어' };
 const DAY_MAX = 400000; // 하루 최대 인정 횟수 (조작 방지)
 
@@ -21,7 +23,7 @@ const okUid = u => /^[a-f0-9]{16,40}$/.test(u || '');
 const okColor = c => /^#[0-9a-fA-F]{6}$/.test(c || '');
 const clean = s => String(s || '').replace(/[<>"'`\\\n\r\t]/g, '').trim().slice(0, 12);
 function profileOut(h) {
-  return { name: h.name || '익명', base: BASES.includes(h.base) ? h.base : 'croc', color: okColor(h.color) ? h.color : '', amt: Math.max(0, Math.min(1, +h.amt || 0)), face: /^[a-z0-9]{4,12}$/.test(h.face || '') ? h.face : '' };
+  return { name: h.name || '익명', base: BASES.includes(h.base) ? h.base : 'croc', color: okColor(h.color) ? h.color : '', amt: Math.max(0, Math.min(1, +h.amt || 0)), face: /^[a-z0-9]{4,12}$/.test(h.face || '') ? h.face : '', item: h.item === undefined ? 'cola' : (ITEMS.includes(h.item) ? h.item : ''), fsel: okFsel(h.fsel) ? (h.fsel || '') : '', own: /^[a-z0-9]{4,12}$/.test(h.own || '') ? h.own : '' };
 }
 const toObj = arr => { const o = {}; for (let i = 0; arr && i < arr.length; i += 2) o[arr[i]] = arr[i + 1]; return o; };
 
@@ -60,6 +62,8 @@ async function profile(b) {
   if (b.base !== undefined) { if (!BASES.includes(b.base)) return [400, { error: 'bad base' }]; set.push('base', b.base); }
   if (b.color !== undefined) set.push('color', okColor(b.color) ? b.color : '');
   if (b.amt !== undefined) set.push('amt', String(Math.max(0, Math.min(1, +b.amt || 0))));
+  if (b.item !== undefined) { if (b.item !== '' && !ITEMS.includes(b.item)) return [400, { error: 'bad item' }]; set.push('item', b.item); }
+  if (b.fsel !== undefined) { if (!okFsel(b.fsel)) return [400, { error: 'bad face' }]; set.push('fsel', b.fsel); }
   if (set.length) await redis([['HSET', 'desk:p:' + uid, ...set]]);
   const [h] = await redis([['HGETALL', 'desk:p:' + uid]]);
   return [200, { ok: true, profile: profileOut(toObj(h)) }];
@@ -87,8 +91,8 @@ async function top(q) {
   }
   const [arr, n] = await redis([['ZREVRANGE', key, 0, 49, 'WITHSCORES'], ['ZCARD', key]]);
   const ids = [], scores = []; for (let i = 0; i < (arr || []).length; i += 2) { if (+arr[i + 1] > 0) { ids.push(arr[i]); scores.push(+arr[i + 1]); } }
-  const ps = ids.length ? await redis(ids.map(id => ['HMGET', 'desk:p:' + id, 'name', 'base', 'color', 'amt', 'face'])) : [];
-  const list = ids.map((id, i) => ({ id: id.slice(0, 6), name: ps[i][0] || '익명', base: ps[i][1] || 'croc', color: ps[i][2] || '', amt: +ps[i][3] || 0, face: ps[i][4] ? id + '/' + ps[i][4] : '', v: scores[i] }));
+  const ps = ids.length ? await redis(ids.map(id => ['HMGET', 'desk:p:' + id, 'name', 'base', 'color', 'amt', 'face', 'item'])) : [];
+  const list = ids.map((id, i) => ({ id: id.slice(0, 6), name: ps[i][0] || '익명', base: ps[i][1] || 'croc', color: ps[i][2] || '', amt: +ps[i][3] || 0, face: ps[i][4] ? id + '/' + ps[i][4] : '', item: ps[i][5] === null ? 'cola' : ps[i][5], v: scores[i] }));
   return [200, { period, metric, users: n || 0, list }];
 }
 

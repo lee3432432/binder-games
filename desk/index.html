@@ -67,6 +67,7 @@ input[type=range]{width:100%;accent-color:var(--pink)}
 .save:disabled{opacity:.4}
 .bases{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bases button{border:2px solid var(--line);background:#fff;border-radius:14px;padding:6px;cursor:pointer;font:inherit;font-weight:900;font-size:13px}.bases button img{width:100%;height:64px;object-fit:cover;object-position:62% 0;border-radius:10px;display:block;margin-bottom:4px}.bases button.on{border-color:var(--pink);background:#fff2f6}
 .sw{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.sw button{width:32px;height:32px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer}.sw button.on{box-shadow:0 0 0 3px var(--ink)}.sw input[type=color]{width:40px;height:34px;border:0;background:none;cursor:pointer}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.tiles button{border:2px solid var(--line);background:#fff;border-radius:14px;padding:5px 4px 6px;cursor:pointer;font:inherit;font-weight:900;font-size:12px;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:3px;min-height:88px;justify-content:center}.tiles button img{width:100%;aspect-ratio:4/3;object-fit:contain;border-radius:10px;display:block}.tiles.items button img{aspect-ratio:1;padding:4px}.tiles button.on{border-color:var(--pink);background:#fff2f6}.tiles button.add{border-style:dashed;border-color:var(--pink);color:var(--pink);background:#fff7fa}.tiles button.add b{font-size:26px;line-height:1}.tiles button.wait{opacity:.7}
 .upl{display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed var(--pink);border-radius:16px;padding:22px 12px;font-weight:900;color:var(--pink);background:#fff7fa;cursor:pointer;text-align:center}
 .upl.busy{opacity:.6;pointer-events:none}
 .btns2{display:flex;gap:8px;align-items:stretch;margin-top:10px}.btns2 .save{margin-top:0;flex:1}
@@ -102,21 +103,15 @@ input[type=range]{width:100%;accent-color:var(--pink)}
   <div class="card maker">
     <div><canvas id="mkCv" width="768" height="446"></canvas><p class="note" id="mkNote"></p></div>
     <div>
-      <div id="mkPick">
-        <label class="f" style="margin-top:0">① 모자 고르기</label>
-        <div class="bases" id="mkBase"></div>
-        <label class="f">② 모자 색</label>
-        <div class="sw" id="mkSw"></div>
-        <label class="f">색 진하기 <span id="mkAmtV"></span></label>
-        <input type="range" id="mkAmt" min="0" max="100" value="85">
-      </div>
-      <div id="mkPhoto">
-        <label class="f">③ 얼굴 <span style="font-weight:500">(선택) 내 사진으로 바꾸기</span></label>
-        <label class="upl" id="mkUpl"><input type="file" id="mkFile" accept="image/*" hidden><span id="mkUplT">얼굴이 잘 보이는 사진 올리기</span></label>
-        <div id="mkWait" class="note" style="display:none;background:#fff7e0;border:1px solid #ffe2a0;border-radius:12px;padding:10px 12px;color:#7a5a00"></div>
-        <p class="note">올린 사진은 운영자가 <b>우리 그림체</b>로 다시 그려서 모자 속 얼굴만 바꿔드려요. 모자는 위에서 고른 그대로예요. (지금은 테스트 기간이라 보통 하루 안에 완성돼요) 완성되면 바탕화면 캐릭터도 자동으로 바뀌어요.<br>완성 후 사진은 바로 지워요. <b>본인 사진</b>이나 허락받은 사진만 올려주세요.</p>
-        <button class="ghost" id="mkReset" style="margin-top:8px;padding:10px 14px">원래 얼굴로 돌아가기</button>
-      </div>
+      <label class="f" style="margin-top:0">① 얼굴 고르기</label>
+      <div class="tiles" id="mkFace"></div>
+      <input type="file" id="mkFile" accept="image/*" hidden>
+      <div id="mkWait" class="note" style="display:none;background:#fff7e0;border:1px solid #ffe2a0;border-radius:12px;padding:10px 12px;color:#7a5a00"></div>
+      <p class="note">📷 <b>내 사진 올리기</b>를 누르면 운영자가 사진을 <b>우리 그림체</b>로 다시 그려서 얼굴만 바꿔드려요. 완성되면 이 목록에 <b>내 얼굴</b>이 생기고 바탕화면 캐릭터도 자동으로 바뀌어요. 완성 후 사진은 바로 지워요. <b>본인 사진</b>이나 허락받은 사진만 올려주세요.</p>
+      <label class="f">② 모자 고르기</label>
+      <div class="bases" id="mkBase"></div>
+      <label class="f">③ 아이템 고르기 <span style="font-weight:500">(책상 위에 올려둘 것)</span></label>
+      <div class="tiles items" id="mkItem"></div>
       <button class="save" id="mkPickSave">💾 이 캐릭터로 저장</button>
       <label class="f">닉네임 (랭킹에 보여요)</label>
       <div class="btns2"><input type="text" id="mkName" maxlength="12" placeholder="1~12자"><button class="ghost" id="mkNameSave" style="flex:0 0 auto">저장</button></div>
@@ -130,7 +125,10 @@ input[type=range]{width:100%;accent-color:var(--pink)}
 const $=id=>document.getElementById(id);
 const API='/api/desk/';
 const BASES={bunny:{name:'토끼',ref:.996},dog:{name:'강아지',ref:.918},croc:{name:'악어',ref:.676}};
-const COLORS=['','#ff7eb0','#ff5a5a','#ffa43a','#ffd84a','#7ad65a','#3cc8b4','#4f8cff','#8b6cff','#a87b52','#5b5b66','#ffffff'];
+const FACES=[['','기본'],['f1','단정 소년'],['f2','안경 소녀'],['f3','금발 양갈래'],['f4','곱슬 소년'],['f5','은발 단발']];
+const ITEMS=[['cola','콜라'],['americano','아이스 아메리카노'],['coffee','따뜻한 커피'],['bananamilk','바나나우유'],['bubbletea','버블티'],['energy','에너지 드링크'],['ramen','컵라면'],['strawberrymilk','딸기우유'],['','없음']];
+const ITEM_AT={x:245,y:847,maxW:290},ITIMG={};for(const [id] of ITEMS)if(id){ITIMG[id]=new Image();ITIMG[id].src='items/'+id+'.png?v=1'}
+const PRESET={};for(const [id] of FACES)if(id){PRESET[id]=new Image();PRESET[id].crossOrigin='anonymous';PRESET[id].src='faces/'+id+'.png?v=1'}
 const fmt=n=>(+n||0).toLocaleString('ko-KR');
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2200)}
 
@@ -142,8 +140,8 @@ if(qs.get('u')&&/^[a-f0-9]{16,40}$/.test(qs.get('u'))){if(qs.get('u')!==UID)KEY=
 
 /* 캐릭터 그림: 모자 부분만 색 입히기 */
 const SW=1805,SH=1048,DW=768,DH=446; // 장면 원본 크기 / 화면용 크기
-const IMG={},HM={},IN={};for(const b in BASES){IMG[b]=new Image();IMG[b].src=b+'.png?v=8';HM[b]=new Image();HM[b].src='hood_'+b+'.png?v=8';IN[b]=new Image();IN[b].src='inner_'+b+'.png?v=8'}
-const ready=Promise.all([...Object.values(IMG),...Object.values(HM),...Object.values(IN)].map(i=>i.complete?1:new Promise(r=>{i.onload=r;i.onerror=r})));
+const IMG={},HM={},IN={};for(const b in BASES){IMG[b]=new Image();IMG[b].src=b+'.png?v=9';HM[b]=new Image();HM[b].src='hood_'+b+'.png?v=9';IN[b]=new Image();IN[b].src='inner_'+b+'.png?v=9'}
+const ready=Promise.all([...Object.values(IMG),...Object.values(HM),...Object.values(IN),...Object.values(ITIMG),...Object.values(PRESET)].map(i=>i.complete?1:new Promise(r=>{i.onload=r;i.onerror=r})));
 const hmData={};
 function tinted(base,color,amt,w=DW,h=DH){base=BASES[base]?base:'croc';const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.drawImage(IMG[base],0,0,w,h);
   if(!color||!(amt>0))return c;const key=base+w;if(!hmData[key]){const m=document.createElement('canvas');m.width=w;m.height=h;const mg=m.getContext('2d');mg.drawImage(HM[base],0,0,w,h);hmData[key]=mg.getImageData(0,0,w,h).data}
@@ -175,7 +173,7 @@ async function loadMe(){const box=$('me');
    <div class="stat"><small>지금까지 타자</small><b>${fmt(K)}</b><i>${r.allKeys?'전체 '+r.allKeys+'위':''}</i></div><div class="stat"><small>지금까지 클릭</small><b>${fmt(C)}</b><i>${r.allClicks?'전체 '+r.allClicks+'위':''}</i></div></div></div></div>
    <div class="card"><h2>📅 날짜별 기록<span class="sp"></span><span class="seg" id="rng"><button data-v="7">7일</button><button data-v="30" class="on">30일</button></span></h2><canvas id="chart"></canvas><div class="legend"><span><i style="background:var(--key)"></i>타자</span><span><i style="background:var(--mouse)"></i>마우스 클릭</span>${best?`<span>· 최고 기록 ${best.slice(5).replace('-','/')} 타자 ${fmt(d[best][0])}회</span>`:''}</div></div>
    <div class="card"><h2>🗒 일별 표</h2><table><thead><tr><th>날짜</th><th>타자</th><th>마우스</th></tr></thead><tbody>${Object.keys(d).sort().reverse().slice(0,31).map(day=>`<tr><td>${day.slice(5).replace('-','/')} ${'일월화수목금토'[new Date(day+'T00:00:00+09:00').getDay()]}</td><td class="k">${fmt(d[day][0])}</td><td class="m">${fmt(d[day][1])}</td></tr>`).join('')}</tbody></table></div>`;
-  $('meCv').getContext('2d').drawImage(sceneWith(p.face?await loadFace(UID+'/'+p.face):null,DW,DH,p.base,p.color,p.amt),0,0);
+  $('meCv').getContext('2d').drawImage(sceneWith(p.face?await loadFace(UID+'/'+p.face):null,DW,DH,p.base,p.color,p.amt,p.item),0,0);
   let range=30;$('rng').querySelectorAll('button').forEach(b=>b.onclick=()=>{range=+b.dataset.v;$('rng').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));chart(range)});chart(range);addEventListener('resize',()=>chart(range))}
 function chart(n){const cv=$('chart');if(!cv)return;const dpr=devicePixelRatio||1,W=cv.clientWidth,H=220;cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext('2d');g.scale(dpr,dpr);
   const days=[...Array(n)].map((_,i)=>kst(n-1-i)),vals=days.map(x=>ME.days[x]||[0,0]);const mx=Math.max(10,...vals.map(v=>Math.max(v[0],v[1])));
@@ -199,17 +197,18 @@ async function loadRank(){const ul=$('rkList');ul.innerHTML='<div class="empty">
 
 /* 내 얼굴 캐릭터: 사진 → AI(우리 그림체) → 모자 속 얼굴만 교체 */
 const REF={x:52,y:-15,w:1704,h:1136},FB={x:569,y:248,w:627,h:316}; // 장면(1805x1048) 좌표
-const FMASK=new Image();FMASK.src='facemask.png?v=8';
+const FMASK=new Image();FMASK.src='facemask.png?v=9';
 const faceCache={};
 function loadFace(key){if(!key)return Promise.resolve(null);if(faceCache[key])return faceCache[key];const [u,v]=key.split('/');
   return faceCache[key]=new Promise(r=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>r(i);i.onerror=()=>r(null);i.src=API.replace('desk/','desk-face/')+'?u='+u+'&v='+v})}
 const cleanCache=new WeakMap();
 function cleanFace(face){if(cleanCache.has(face))return cleanCache.get(face);const c=document.createElement('canvas');c.width=face.naturalWidth||face.width;c.height=face.naturalHeight||face.height;const g=c.getContext('2d');g.drawImage(face,0,0);
   const d=g.getImageData(0,0,c.width,c.height),p=d.data;for(let i=0;i<p.length;i+=4){if(p[i+1]>p[i]+25&&p[i+1]>p[i+2]+10)p[i+3]=0}g.putImageData(d,0,0);cleanCache.set(face,c);return c}
-function sceneWith(face,w=DW,h=DH,base='croc',color='',amt=0){base=BASES[base]?base:'croc';const c=tinted(base,color,amt,w,h);if(!face)return c;const g=c.getContext('2d'),k=w/SW,f=cleanFace(face);
+function drawItem(c,item){const im=ITIMG[item];if(!im||!im.naturalWidth)return c;const k=c.width/SW,s=Math.min(1,ITEM_AT.maxW/im.naturalWidth),iw=im.naturalWidth*s*k,ih=im.naturalHeight*s*k;c.getContext('2d').drawImage(im,ITEM_AT.x*k-iw/2,ITEM_AT.y*k-ih,iw,ih);return c}
+function sceneWith(face,w=DW,h=DH,base='croc',color='',amt=0,item='cola'){base=BASES[base]?base:'croc';const c=tinted(base,color,amt,w,h);if(!face)return drawItem(c,item);const g=c.getContext('2d'),k=w/SW,f=cleanFace(face);
   g.globalCompositeOperation='destination-out';g.drawImage(IN[base],0,0,w,h);g.globalCompositeOperation='source-over';
   const x=FB.x*k,y=FB.y*k,fw=FB.w*k,fh=FB.h*k,S=1.12;g.drawImage(f,x-fw*(S-1)/2,y-fh*(S-1)*.75,fw*S,fh*S);g.drawImage(f,x,y,fw,fh);
-  const hood=tinted(base,color,amt,w,h),hg=hood.getContext('2d');hg.globalCompositeOperation='destination-in';hg.drawImage(HM[base],0,0,w,h);g.drawImage(hood,0,0);return c}
+  const hood=tinted(base,color,amt,w,h),hg=hood.getContext('2d');hg.globalCompositeOperation='destination-in';hg.drawImage(HM[base],0,0,w,h);g.drawImage(hood,0,0);return drawItem(c,item)}
 async function faceLayerFrom(genImg){await ready;if(!FMASK.complete)await new Promise(r=>FMASK.onload=r);
   const crop=document.createElement('canvas');crop.width=REF.w;crop.height=REF.h;crop.getContext('2d').drawImage(genImg,0,0,REF.w,REF.h);
   const L=document.createElement('canvas');L.width=FB.w;L.height=FB.h;const g=L.getContext('2d');
@@ -218,33 +217,47 @@ async function faceLayerFrom(genImg){await ready;if(!FMASK.complete)await new Pr
   // 생성 그림에서 투명하게 빠진 부분은 원래 그림으로 채움
   const base=document.createElement('canvas');base.width=FB.w;base.height=FB.h;const bg=base.getContext('2d');const kk=IMG.croc.naturalWidth/SW;bg.drawImage(IMG.croc,FB.x*kk,FB.y*kk,FB.w*kk,FB.h*kk,0,0,FB.w,FB.h);bg.globalCompositeOperation='destination-in';bg.drawImage(L,0,0);
   const out=document.createElement('canvas');out.width=FB.w;out.height=FB.h;const og=out.getContext('2d');og.drawImage(base,0,0);og.drawImage(L,0,0);return out}
-let mk={base:'croc',color:'',amt:.85},waitInfo=null;
+let mk={base:'croc',face:'',item:'cola'},waitInfo=null,ownImg=null;
+function headThumb(face,base,item){const c=sceneWith(face,451,262,base,'',0,item);const o=document.createElement('canvas');o.width=200;o.height=150;o.getContext('2d').drawImage(c,90,0,200,150,0,0,200,150);return o.toDataURL('image/png')}
+function curFaceImg(){if(mk.face==='own')return ownImg;return mk.face?PRESET[mk.face]:null}
+function buildFaces(){const L=$('mkFace');const list=FACES.slice();if(ownImg)list.push(['own','내 얼굴']);
+  L.innerHTML=list.map(([id,n])=>`<button data-f="${id}"><img src="${headThumb(id==='own'?ownImg:(id?PRESET[id]:null),mk.base,'')}" alt="">${n}</button>`).join('')+`<button class="add${waitInfo&&waitInfo.waiting?' wait':''}" id="mkAdd"><b>${waitInfo&&waitInfo.waiting?'⏳':'＋'}</b>${waitInfo&&waitInfo.waiting?'만드는 중':'내 사진 올리기'}</button>`;
+  L.querySelectorAll('button[data-f]').forEach(b=>b.onclick=()=>{mk.face=b.dataset.f;drawMaker(false)});
+  $('mkAdd').onclick=()=>{if(!(UID&&KEY))return toast('앱에서 캐릭터를 클릭해 이 페이지를 열어야 올릴 수 있어요');$('mkFile').click()}}
+function buildItems(){$('mkItem').innerHTML=ITEMS.map(([id,n])=>`<button data-i="${id}">${id?`<img src="items/${id}.png?v=1" alt="">`:'<b style="font-size:26px">🚫</b>'}${n}</button>`).join('');
+  $('mkItem').querySelectorAll('button').forEach(b=>b.onclick=()=>{mk.item=b.dataset.i;drawMaker(false)})}
+function imgToPng(im){const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;c.getContext('2d').drawImage(im,0,0);return c.toDataURL('image/png')}
 function buildMaker(){
-  $('mkBase').innerHTML=Object.entries(BASES).map(([k,v])=>`<button data-b="${k}"><img src="${k}.png?v=8" alt="">${v.name}</button>`).join('');
-  $('mkBase').querySelectorAll('button').forEach(b=>b.onclick=()=>{mk.base=b.dataset.b;drawMaker()});
-  $('mkSw').innerHTML=COLORS.map(c=>`<button data-c="${c}" title="${c||'원래 색'}" style="background:${c||'conic-gradient(#fff 0 25%,#ddd 0 50%,#fff 0 75%,#ddd 0)'}"></button>`).join('')+'<input type="color" id="mkPick2" value="#ff7eb0" title="직접 고르기">';
-  $('mkSw').querySelectorAll('button').forEach(b=>b.onclick=()=>{mk.color=b.dataset.c;drawMaker()});$('mkPick2').oninput=e=>{mk.color=e.target.value;drawMaker()};
-  $('mkAmt').oninput=e=>{mk.amt=e.target.value/100;drawMaker()};
+  $('mkBase').innerHTML=Object.entries(BASES).map(([k,v])=>`<button data-b="${k}"><img src="${k}.png?v=9" alt="">${v.name}</button>`).join('');
+  $('mkBase').querySelectorAll('button').forEach(b=>b.onclick=()=>{mk.base=b.dataset.b;drawMaker(true)});
+  buildItems();
   $('mkPickSave').onclick=async()=>{if(!(UID&&KEY))return toast('앱에서 캐릭터를 클릭해 이 페이지를 열어주세요');const b=$('mkPickSave');b.disabled=true;
-    try{await api('profile','',{uid:UID,key:KEY,base:mk.base,color:mk.color,amt:mk.amt});toast('저장했어요! 1분 안에 바탕화면 캐릭터도 바뀌어요 ✨');await loadMe()}catch(e){toast('저장 실패: '+e.message)}b.disabled=false};
+    try{const p=ME?ME.profile:{};const curSel=p.fsel||(p.face?'own':'');
+      if(mk.face!==curSel||(!p.face&&mk.face)){
+        if(mk.face==='')await api('save','',{uid:UID,key:KEY,png:null},'desk-face');
+        else if(mk.face==='own')await api('save','',{uid:UID,key:KEY,own:true},'desk-face');
+        else await api('save','',{uid:UID,key:KEY,png:imgToPng(PRESET[mk.face]),fsel:mk.face},'desk-face')}
+      await api('profile','',{uid:UID,key:KEY,base:mk.base,color:'',amt:0,item:mk.item});toast('저장했어요! 1분 안에 바탕화면 캐릭터도 바뀌어요 ✨');await loadMe()}catch(e){toast('저장 실패: '+e.message)}b.disabled=false};
   $('mkFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(!(UID&&KEY)){toast('앱에서 캐릭터를 클릭해 이 페이지를 열어야 올릴 수 있어요');return}
-    const up=$('mkUpl');up.classList.add('busy');$('mkUplT').textContent='올리는 중…';
-    try{const photo=await shrink(f,800);await api('request','',{uid:UID,key:KEY,photo},'desk-face');toast('사진을 받았어요! 완성되면 캐릭터가 자동으로 바뀌어요 📸');await checkWait()}
+    const a=$('mkAdd');a.classList.add('wait');a.innerHTML='<b>⏳</b>올리는 중…';
+    try{const photo=await shrink(f,800);await api('request','',{uid:UID,key:KEY,photo},'desk-face');toast('사진을 받았어요! 완성되면 목록에 "내 얼굴"이 생겨요 📸')}
     catch(err){toast(err.message)}
-    up.classList.remove('busy');$('mkUplT').textContent='다른 사진으로 다시 신청하기'};
-  $('mkReset').onclick=async()=>{if(!(UID&&KEY))return;if(!confirm('원래 캐릭터 얼굴로 돌아갈까요?'))return;try{await api('save','',{uid:UID,key:KEY,png:null},'desk-face');toast('원래 얼굴로 돌아갔어요');await loadMe();drawMaker()}catch(e){toast(e.message)}};
+    await checkWait()};
   $('mkNameSave').onclick=async()=>{const n=$('mkName').value.trim();if(!n)return toast('닉네임을 적어주세요');if(!(UID&&KEY))return toast('앱에서 캐릭터를 클릭해 열어주세요');try{await api('profile','',{uid:UID,key:KEY,name:n});toast('닉네임 저장!');loadMe()}catch(e){toast(e.message)}}}
-async function checkWait(){if(!(UID&&KEY))return;try{waitInfo=await api('status','',{uid:UID,key:KEY},'desk-face')}catch(e){waitInfo=null}
-  const w=$('mkWait');if(waitInfo&&waitInfo.waiting){w.style.display='';w.innerHTML='⏳ <b>내 얼굴 캐릭터 만드는 중</b> · '+new Date(waitInfo.since).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})+' 신청'}else w.style.display='none'}
+async function checkWait(){if(UID&&KEY){try{waitInfo=await api('status','',{uid:UID,key:KEY},'desk-face')}catch(e){waitInfo=null}}
+  const w=$('mkWait');if(waitInfo&&waitInfo.waiting){w.style.display='';w.innerHTML='⏳ <b>내 얼굴 만드는 중</b> · '+new Date(waitInfo.since).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})+' 신청 · 완성되면 목록에 <b>내 얼굴</b>이 생겨요'}else w.style.display='none';
+  await loadOwn();buildFaces();markMaker()}
+async function loadOwn(){const p=ME&&ME.profile;if(!(p&&UID))return;let key=p.own?'own:'+p.own:(p.face&&!p.fsel?'cur:'+p.face:'');if(!key){ownImg=null;return}
+  if(loadOwn.k===key)return;loadOwn.k=key;ownImg=await new Promise(r=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>r(i);i.onerror=()=>r(null);i.src=API.replace('desk/','desk-face/')+'?u='+UID+(p.own?'&own=1&v='+p.own:'&v='+p.face)})}
 function shrink(file,max){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>{const s=Math.min(1,max/Math.max(i.width,i.height));const c=document.createElement('canvas');c.width=Math.round(i.width*s);c.height=Math.round(i.height*s);c.getContext('2d').drawImage(i,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.9))};i.onerror=()=>rej(new Error('사진을 읽을 수 없어요'));i.src=URL.createObjectURL(file)})}
-function drawMakerWith(face){const g=$('mkCv').getContext('2d');g.clearRect(0,0,DW,DH);g.drawImage(face?sceneWith(face):tinted(mk.base,mk.color,mk.amt),0,0)}
-async function drawMaker(){await ready;const f=ME&&ME.profile.face?await loadFace(UID+'/'+ME.profile.face):null;{const g=$('mkCv').getContext('2d');g.clearRect(0,0,DW,DH);g.drawImage(sceneWith(f,DW,DH,mk.base,mk.color,mk.amt),0,0)}
-  $('mkBase').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.b===mk.base));$('mkSw').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.c===mk.color));$('mkAmt').value=Math.round(mk.amt*100);$('mkAmtV').textContent=Math.round(mk.amt*100)+'%';
+function markMaker(){$('mkBase').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.b===mk.base));$('mkFace').querySelectorAll('button[data-f]').forEach(b=>b.classList.toggle('on',b.dataset.f===mk.face));$('mkItem').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.i===mk.item))}
+async function drawMaker(rebuildFaces){await ready;const g=$('mkCv').getContext('2d');g.clearRect(0,0,DW,DH);g.drawImage(sceneWith(curFaceImg(),DW,DH,mk.base,'',0,mk.item),0,0);
+  if(rebuildFaces)buildFaces();markMaker();
   if(ME&&document.activeElement!==$('mkName'))$('mkName').value=ME.profile.name;
   $('mkNote').innerHTML=UID&&KEY?'':'미리보기만 돼요. 저장하려면 <b>앱을 켠 뒤 캐릭터를 클릭</b>해서 이 페이지를 열어주세요.'}
 
 buildMaker();
-loadMe().then(()=>{if(ME){const p=ME.profile;mk={base:p.base,color:p.color,amt:p.color?p.amt:.85};}checkWait();if(qs.get('tab'))show(qs.get('tab'))});
+loadMe().then(async()=>{await ready;if(ME){const p=ME.profile;mk={base:p.base,face:p.fsel||(p.face?'own':''),item:p.item===undefined?'cola':p.item}}await checkWait();drawMaker(false);if(qs.get('tab'))show(qs.get('tab'))});
 </script>
 </body>
 </html>
