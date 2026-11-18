@@ -4,10 +4,10 @@ const crypto = require('crypto');
 
 const URL_ = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-const BASES = ['bunny', 'dog', 'croc'];
+const BASES = ['bunny', 'dog', 'croc', 'shark', 'cat', 'none'];
 const ITEMS = ['cola', 'americano', 'coffee', 'bananamilk', 'bubbletea', 'energy', 'ramen', 'strawberrymilk'];
 const okFsel = f => /^(f[1-9]|own)?$/.test(f || '');
-const ANIMAL = { bunny: '토끼', dog: '강아지', croc: '악어' };
+const ANIMAL = { bunny: '토끼', dog: '강아지', croc: '악어', shark: '상어', cat: '고양이', none: '친구' };
 const DAY_MAX = 400000; // 하루 최대 인정 횟수 (조작 방지)
 
 async function redis(cmds) {

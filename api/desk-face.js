@@ -78,8 +78,16 @@ async function queue(q) {
 async function done(b) {
   if (!isAdmin(b.t) || !okUid(b.uid)) return [403, { error: 'no' }];
   if (b.skip) { await redis([['HDEL', 'desk:face:q', b.uid], ['DEL', 'desk:face:req:' + b.uid], ['HSET', 'desk:p:' + b.uid, 'faceErr', String(b.skip).slice(0, 60)]]); return [200, { ok: true }]; }
-  const img = b64(b.png); if (!img || img.type !== 'png' || img.buf.length > 900000) return [400, { error: 'bad png' }];
+  const head = b.head ? b64(b.head) : null; if (b.head && (!head || head.type !== 'png' || head.buf.length > 1200000)) return [400, { error: 'bad head' }];
   const ver = Date.now().toString(36);
+  if (!b.png && head) { // 모자 벗은 머리만 추가 (이미 만든 내 얼굴에 덧붙임)
+    const [fs] = await redis([['HGET', 'desk:p:' + b.uid, 'fsel']]); const cmds = [['SET', 'desk:face:ownhead:' + b.uid, head.buf.toString('base64')]];
+    if (fs === 'own') cmds.push(['SET', 'desk:face:head:' + b.uid, head.buf.toString('base64')], ['HSET', 'desk:p:' + b.uid, 'face', ver]);
+    await redis(cmds); return [200, { ok: true, head: true }];
+  }
+  const img = b64(b.png); if (!img || img.type !== 'png' || img.buf.length > 900000) return [400, { error: 'bad png' }];
+  if (head) await redis([['SET', 'desk:face:ownhead:' + b.uid, head.buf.toString('base64')], ['SET', 'desk:face:head:' + b.uid, head.buf.toString('base64')]]);
+  else await redis([['DEL', 'desk:face:ownhead:' + b.uid, 'desk:face:head:' + b.uid]]);
   // 내 사진 얼굴은 따로 보관 (기본·준비된 얼굴로 바꿨다가 다시 고를 수 있게)
   await redis([['SET', 'desk:face:img:' + b.uid, img.buf.toString('base64')], ['SET', 'desk:face:own:' + b.uid, img.buf.toString('base64')], ['HSET', 'desk:p:' + b.uid, 'face', ver, 'own', ver, 'fsel', 'own'], ['HDEL', 'desk:p:' + b.uid, 'faceErr'], ['HDEL', 'desk:face:q', b.uid], ['DEL', 'desk:face:req:' + b.uid]]);
   return [200, { ok: true, face: ver }];
@@ -88,21 +96,24 @@ async function done(b) {
 async function purge(b) {
   if (!isAdmin(b.t) || !okUid(b.uid)) return [403, { error: 'no' }];
   const u = b.uid, days = [...Array(10)].map((_, i) => new Date(Date.now() + 9 * 3600e3 - i * 86400e3).toISOString().slice(0, 10));
-  const cmds = [['DEL', 'desk:p:' + u, 'desk:d:' + u, 'desk:face:img:' + u, 'desk:face:own:' + u, 'desk:face:req:' + u], ['HDEL', 'desk:face:q', u], ['SREM', 'desk:users', u], ['ZREM', 'desk:z:k:all', u], ['ZREM', 'desk:z:c:all', u]];
+  const cmds = [['DEL', 'desk:p:' + u, 'desk:d:' + u, 'desk:face:img:' + u, 'desk:face:own:' + u, 'desk:face:head:' + u, 'desk:face:ownhead:' + u, 'desk:face:req:' + u], ['HDEL', 'desk:face:q', u], ['SREM', 'desk:users', u], ['ZREM', 'desk:z:k:all', u], ['ZREM', 'desk:z:c:all', u]];
   for (const d of days) cmds.push(['ZREM', 'desk:z:k:' + d, u], ['ZREM', 'desk:z:c:' + d, u], ['DEL', 'desk:face:n:' + u + ':' + d]);
   await redis(cmds); return [200, { ok: true }];
 }
 
 async function save(b) {
   if (!(await auth(b.uid, b.key))) return [403, { error: '앱에서 캐릭터를 클릭해 열어주세요' }];
-  if (b.png === null) { await redis([['DEL', 'desk:face:img:' + b.uid], ['HDEL', 'desk:p:' + b.uid, 'face'], ['HSET', 'desk:p:' + b.uid, 'fsel', '']]); return [200, { ok: true, face: '' }]; }
+  if (b.png === null) { await redis([['DEL', 'desk:face:img:' + b.uid, 'desk:face:head:' + b.uid], ['HDEL', 'desk:p:' + b.uid, 'face'], ['HSET', 'desk:p:' + b.uid, 'fsel', '']]); return [200, { ok: true, face: '' }]; }
   if (b.own === true) {
     const [o] = await redis([['GET', 'desk:face:own:' + b.uid]]); if (!o) return [404, { error: '아직 내 사진 얼굴이 없어요' }];
-    const v = Date.now().toString(36); await redis([['SET', 'desk:face:img:' + b.uid, o], ['HSET', 'desk:p:' + b.uid, 'face', v, 'fsel', 'own']]); return [200, { ok: true, face: v }];
+    const [oh] = await redis([['GET', 'desk:face:ownhead:' + b.uid]]);
+    const v = Date.now().toString(36); await redis([['SET', 'desk:face:img:' + b.uid, o], oh ? ['SET', 'desk:face:head:' + b.uid, oh] : ['DEL', 'desk:face:head:' + b.uid], ['HSET', 'desk:p:' + b.uid, 'face', v, 'fsel', 'own']]); return [200, { ok: true, face: v }];
   }
   const img = b64(b.png); if (!img || img.type !== 'png' || img.buf.length > 900000) return [400, { error: '얼굴 그림이 너무 커요' }];
   const ver = Date.now().toString(36);
   const fsel = /^f[1-9]$/.test(b.fsel || '') ? b.fsel : '';
+  const hd = b.head ? b64(b.head) : null; if (b.head && (!hd || hd.type !== 'png' || hd.buf.length > 1200000)) return [400, { error: '머리 그림이 너무 커요' }];
+  await redis([hd ? ['SET', 'desk:face:head:' + b.uid, hd.buf.toString('base64')] : ['DEL', 'desk:face:head:' + b.uid]]);
   await redis([['SET', 'desk:face:img:' + b.uid, img.buf.toString('base64')], ['HSET', 'desk:p:' + b.uid, 'face', ver, 'fsel', fsel]]);
   return [200, { ok: true, face: ver }];
 }
@@ -118,7 +129,7 @@ module.exports = async (req, res) => {
     if (req.method === 'GET' && q.a === 'queue') { res.setHeader('Cache-Control', 'no-store'); const o = await queue(q); return res.status(o[0]).json(o[1]); }
     if (req.method === 'GET') {
       if (!okUid(q.u)) return res.status(400).json({ error: 'bad id' });
-      const [s] = await redis([['GET', (q.own ? 'desk:face:own:' : 'desk:face:img:') + q.u]]);
+      const [s] = await redis([['GET', (q.head ? (q.own ? 'desk:face:ownhead:' : 'desk:face:head:') : (q.own ? 'desk:face:own:' : 'desk:face:img:')) + q.u]]);
       if (!s) return res.status(404).json({ error: 'no face' });
       res.setHeader('Content-Type', 'image/png'); res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       return res.status(200).send(Buffer.from(s, 'base64'));

@@ -44,7 +44,7 @@ function dl(href,name){const a=document.createElement('a');a.href=href;a.downloa
 async function render(){
   const r=await fetch(API+'?a=queue&t='+encodeURIComponent(T));if(r.status===403){$('login').style.display='';return}
   try{localStorage.setItem('desk-admin',T)}catch(e){}
-  const j=await r.json();croc=await load('croc.png?v=9');mask=await load('facemask.png?v=9');
+  const j=await r.json();croc=await load('croc.png?v=10');mask=await load('facemask.png?v=10');
   const L=$('list');if(!j.list.length){L.innerHTML='<p class="s">대기 중인 신청이 없어요 🎉</p>';return}
   L.innerHTML='';
   for(const it of j.list){const el=document.createElement('div');el.className='item';
@@ -65,10 +65,19 @@ async function render(){
     el.querySelector('.skip').onclick=async()=>{const why=prompt('반려 이유 (사용자에게는 안 보여요)','얼굴이 안 보임');if(why===null)return;await fetch(API+'?a=done',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:T,uid:it.uid,skip:why||'반려'})});el.remove()};
   }}
 // 자동 처리 모드: #t=토큰&uid=아이디&img=ChatGPT결과(jpeg base64) → 얼굴만 잘라 바로 완료
-async function auto(){const h=new URLSearchParams(location.hash.slice(1));const uid=h.get('uid'),img=h.get('img');if(!uid||!img)return false;
+const HB={x:470,y:40,w:860,h:522};
+// 모자 벗은 그림 → 머리 전체 조각 (책상 윗선 위쪽만)
+async function headLayer(gen){const c=document.createElement('canvas');c.width=HB.w;c.height=HB.h;const g=c.getContext('2d');g.drawImage(gen,REF.x-HB.x,REF.y-HB.y,REF.w,REF.h);
+  const d=g.getImageData(0,0,HB.w,HB.h),p=d.data;for(let i=0;i<p.length;i+=4){const a=Math.max(0,Math.min(1,(p[i]+(255-p[i+1])+p[i+2]-70)/90));if(a<1){p[i+3]=Math.min(p[i+3],a*255);p[i+1]=Math.min(p[i+1],Math.max(p[i],p[i+2])+25)}}
+  const W=HB.w,H=HB.h,ry=H-9;for(let y=H-8;y<H;y++)for(let x=0;x<W;x++){let m=0;for(let k=-4;k<=4;k++){const xx=x+k;if(xx>=0&&xx<W)m=Math.max(m,p[(ry*W+xx)*4+3])}const i=(y*W+x)*4+3;p[i]=Math.min(p[i],m)}
+  g.putImageData(d,0,0);return c}
+// 자동 처리 모드: #t=토큰&uid=아이디&img=모자 쓴 결과(jpeg b64)&head=모자 벗은 결과(jpeg b64) → 조각만 잘라 바로 완료 (head만 보내면 머리만 추가)
+async function auto(){const h=new URLSearchParams(location.hash.slice(1));const uid=h.get('uid'),img=h.get('img'),hd=h.get('head');if(!uid||!(img||hd))return false;
   document.body.innerHTML='<h1>자동 처리 중… '+uid+'</h1>';
-  try{croc=await load('croc.png?v=9');mask=await load('facemask.png?v=9');const gen=await load('data:image/jpeg;base64,'+img);const layer=await faceLayer(gen);
-    const rr=await fetch(API+'?a=done',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:T,uid,png:layer.toDataURL('image/png')})});
+  try{croc=await load('croc.png?v=10');mask=await load('facemask.png?v=10');const body={t:T,uid};let layer=null;
+    if(img){layer=await faceLayer(await load('data:image/jpeg;base64,'+img));body.png=layer.toDataURL('image/png')}
+    if(hd){body.head=(await headLayer(await load('data:image/jpeg;base64,'+hd))).toDataURL('image/png')}
+    const rr=await fetch(API+'?a=done',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const txt=await rr.text();const cv=document.createElement('canvas');preview(cv,layer);document.body.innerHTML='<h1 id="result">'+(rr.ok?'AUTO_DONE '+uid:'AUTO_FAIL '+txt.slice(0,80))+'</h1>';document.body.appendChild(cv)}
   catch(e){document.body.innerHTML='<h1 id="result">AUTO_FAIL '+e.message+'</h1>'}
   history.replaceState(null,'',location.pathname);return true}
