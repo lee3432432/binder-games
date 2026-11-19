@@ -36,7 +36,7 @@ h2 .sp{flex:1}
 .seg button{border:0;background:none;font:inherit;font-size:12.5px;font-weight:900;color:var(--sub);padding:6px 10px;border-radius:8px;cursor:pointer}
 .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 #chart{width:100%;height:220px;display:block}
-.legend{display:flex;gap:12px;font-size:12px;color:var(--sub);font-weight:700;margin-top:6px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--sub);font-weight:700;margin-top:6px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
 table{width:100%;border-collapse:collapse;font-size:14px}
 td,th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right}td:first-child,th:first-child{text-align:left}
@@ -172,10 +172,27 @@ async function loadMe(){const box=$('me');
   box.innerHTML=`<div class="card hero"><canvas id="meCv" width="768" height="446"></canvas><div><div class="me-name">${esc(p.name)}</div><div class="me-sub">🔥 ${streak}일 연속 기록 ${KEY?'':'· <span style="color:#c93a68">이 기기에서는 수정 불가</span>'}</div>
    <div class="stats"><div class="stat"><small>오늘 타자</small><b class="k">${fmt(td[0])}</b><i>${r.todayKeys?r.todayKeys+'위 / '+r.todayUsers+'명':''}</i></div><div class="stat"><small>오늘 마우스 클릭</small><b class="m">${fmt(td[1])}</b><i>${r.todayClicks?r.todayClicks+'위':''}</i></div>
    <div class="stat"><small>지금까지 타자</small><b>${fmt(K)}</b><i>${r.allKeys?'전체 '+r.allKeys+'위':''}</i></div><div class="stat"><small>지금까지 클릭</small><b>${fmt(C)}</b><i>${r.allClicks?'전체 '+r.allClicks+'위':''}</i></div></div></div></div>
-   <div class="card"><h2>📅 날짜별 기록<span class="sp"></span><span class="seg" id="rng"><button data-v="7">7일</button><button data-v="30" class="on">30일</button></span></h2><canvas id="chart"></canvas><div class="legend"><span><i style="background:var(--key)"></i>타자</span><span><i style="background:var(--mouse)"></i>마우스 클릭</span>${best?`<span>· 최고 기록 ${best.slice(5).replace('-','/')} 타자 ${fmt(d[best][0])}회</span>`:''}</div></div>
+   <div class="card"><h2>📈 내 기록 그래프<span class="sp"></span><span class="seg" id="rng"><button data-v="0" class="on">시간대별</button><button data-v="7">7일</button><button data-v="30">30일</button></span></h2><div class="seg" id="hday" style="margin:0 0 8px"><button data-v="0" class="on">오늘</button><button data-v="1">어제</button><button data-v="7">7일 평균</button></div><canvas id="chart"></canvas><div class="legend"><span><i style="background:var(--key)"></i>타자</span><span><i style="background:var(--mouse)"></i>마우스 클릭</span><span id="cnote" style="flex-basis:100%">${best?`· 최고 기록 ${best.slice(5).replace('-','/')} 타자 ${fmt(d[best][0])}회`:''}</span></div></div>
    <div class="card"><h2>🗒 일별 표</h2><table><thead><tr><th>날짜</th><th>타자</th><th>마우스</th></tr></thead><tbody>${Object.keys(d).sort().reverse().slice(0,31).map(day=>`<tr><td>${day.slice(5).replace('-','/')} ${'일월화수목금토'[new Date(day+'T00:00:00+09:00').getDay()]}</td><td class="k">${fmt(d[day][0])}</td><td class="m">${fmt(d[day][1])}</td></tr>`).join('')}</tbody></table></div>`;
   $('meCv').getContext('2d').drawImage(sceneWith(p.face?await faceFor(p.base,UID+'/'+p.face):null,DW,DH,p.base,p.color,p.amt,p.item),0,0);
-  let range=30;$('rng').querySelectorAll('button').forEach(b=>b.onclick=()=>{range=+b.dataset.v;$('rng').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));chart(range)});chart(range);addEventListener('resize',()=>chart(range))}
+  const bestNote=$('cnote').innerHTML;let range=0,hd=0;
+  const redraw=()=>{$('hday').style.display=range?'none':'inline-flex';if(range){$('cnote').innerHTML=bestNote;chart(range)}else hchart(hd)};
+  $('rng').querySelectorAll('button').forEach(b=>b.onclick=()=>{range=+b.dataset.v;$('rng').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));redraw()});
+  $('hday').querySelectorAll('button').forEach(b=>b.onclick=()=>{hd=+b.dataset.v;$('hday').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));redraw()});
+  redraw();addEventListener('resize',redraw)}
+/* 시간대별: 오늘 / 어제 / 최근 7일 평균 (0~23시) */
+function hchart(mode){const cv=$('chart');if(!cv)return;const H0=ME.hours||{};let v=null,cnt=0;
+  if(mode===7){const s=new Array(48).fill(0);for(let i=0;i<7;i++){const r=H0[kst(i)];if(r){cnt++;r.forEach((x,j)=>s[j]+=x)}}if(cnt)v=s.map(x=>Math.round(x/cnt))}else v=H0[kst(mode)]||null;
+  const dpr=devicePixelRatio||1,W=cv.clientWidth,H=220;cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext('2d');g.scale(dpr,dpr);g.font='11px "Noto Sans KR"';
+  if(!v){g.fillStyle='#8a7a8e';g.textAlign='center';g.fillText(Object.keys(H0).length?'이 날은 시간대별 기록이 없어요':'앱이 새 버전(v14)으로 바뀐 뒤부터 시간대별 기록이 쌓여요',W/2,H/2);$('cnote').innerHTML='';return}
+  const mx=Math.max(10,...v);const L=44,B=24,T=10,cw=(W-L-6)/24,bw=Math.max(2,cw*.36),nowH=mode===0?new Date(Date.now()+9*3600e3).getUTCHours():-1;g.fillStyle='#8a7a8e';g.strokeStyle='#f1dfe6';
+  for(let i=0;i<=4;i++){const y=T+(H-T-B)*(1-i/4);g.beginPath();g.moveTo(L,y);g.lineTo(W,y);g.stroke();const q=mx*i/4;g.textAlign='right';g.fillText(q>=1e4?(q/1e4).toFixed(1)+'만':Math.round(q),L-6,y+4)}
+  for(let h=0;h<24;h++){const x=L+h*cw+cw/2,hk=(H-T-B)*v[h]/mx,hc=(H-T-B)*v[24+h]/mx;
+    if(h===nowH){g.fillStyle='rgba(79,140,255,.08)';g.fillRect(x-cw/2,T,cw,H-T-B)}
+    g.fillStyle='#4f8cff';rrect(g,x-bw-1,H-B-hk,bw,hk,3);g.fillStyle='#ffaa2b';rrect(g,x+1,H-B-hc,bw,hc,3);
+    if(h===nowH||(h%3===0&&Math.abs(h-nowH)>1)){g.fillStyle=h===nowH?'#2a1f2d':'#8a7a8e';g.textAlign='center';g.fillText(h===nowH?'지금':h+'시',x,H-6)}}
+  let bh=0;for(let h=1;h<24;h++)if(v[h]>v[bh])bh=h;const tk=v.slice(0,24).reduce((a,b)=>a+b,0);
+  $('cnote').innerHTML=tk?`· 가장 많이 친 시간 ${bh}시~${bh+1}시 (타자 ${fmt(v[bh])}회)${mode===7?' · '+cnt+'일 평균':''}`:''}
 function chart(n){const cv=$('chart');if(!cv)return;const dpr=devicePixelRatio||1,W=cv.clientWidth,H=220;cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext('2d');g.scale(dpr,dpr);
   const days=[...Array(n)].map((_,i)=>kst(n-1-i)),vals=days.map(x=>ME.days[x]||[0,0]);const mx=Math.max(10,...vals.map(v=>Math.max(v[0],v[1])));
   const L=44,B=24,T=10,cw=(W-L-6)/n,bw=Math.max(2,cw*.36);g.font='11px "Noto Sans KR"';g.fillStyle='#8a7a8e';g.strokeStyle='#f1dfe6';

@@ -47,6 +47,11 @@ async function sync(b) {
     if (!okDate(d)) continue; const v = days[d] || []; const k = Math.max(0, Math.min(DAY_MAX, Math.floor(+v[0] || 0))), c = Math.max(0, Math.min(DAY_MAX, Math.floor(+v[1] || 0)));
     cmds.push(['HSET', 'desk:d:' + uid, d, k + ',' + c], ['ZADD', 'desk:z:k:' + d, k, uid], ['ZADD', 'desk:z:c:' + d, c, uid], ['EXPIRE', 'desk:z:k:' + d, 3456000], ['EXPIRE', 'desk:z:c:' + d, 3456000]);
   }
+  const hours = b.hours || {};   // 시간대별: 날짜 → [타자 0~23시, 클릭 0~23시] (앱 v14부터)
+  for (const d of Object.keys(hours).slice(0, 3)) {
+    const v = hours[d]; if (!okDate(d) || !Array.isArray(v) || v.length !== 48) continue;
+    cmds.push(['HSET', 'desk:h:' + uid, d, v.map(x => Math.max(0, Math.min(DAY_MAX, Math.floor(+x || 0)))).join(',')]);
+  }
   cmds.push(['HGETALL', 'desk:d:' + uid], ['HGETALL', 'desk:p:' + uid], ['HSET', 'desk:p:' + uid, 'seen', Date.now()]);
   const r = await redis(cmds); const all = toObj(r[r.length - 3]); let K = 0, C = 0;
   for (const v of Object.values(all)) { const [k, c] = String(v).split(','); K += +k || 0; C += +c || 0; }
@@ -72,11 +77,12 @@ async function profile(b) {
 async function user(q) {
   const uid = q.u; if (!okUid(uid)) return [400, { error: 'bad id' }];
   const t = kstDate();
-  const [p, d, rk, rc, ak, ac, nk, nc] = await redis([['HGETALL', 'desk:p:' + uid], ['HGETALL', 'desk:d:' + uid], ['ZREVRANK', 'desk:z:k:' + t, uid], ['ZREVRANK', 'desk:z:c:' + t, uid], ['ZREVRANK', 'desk:z:k:all', uid], ['ZREVRANK', 'desk:z:c:all', uid], ['ZCARD', 'desk:z:k:' + t], ['ZCARD', 'desk:z:k:all']]);
+  const [p, d, rk, rc, ak, ac, nk, nc, hh] = await redis([['HGETALL', 'desk:p:' + uid], ['HGETALL', 'desk:d:' + uid], ['ZREVRANK', 'desk:z:k:' + t, uid], ['ZREVRANK', 'desk:z:c:' + t, uid], ['ZREVRANK', 'desk:z:k:all', uid], ['ZREVRANK', 'desk:z:c:all', uid], ['ZCARD', 'desk:z:k:' + t], ['ZCARD', 'desk:z:k:all'], ['HGETALL', 'desk:h:' + uid]]);
   const ph = toObj(p); if (!ph.sh) return [404, { error: '아직 기록이 없어요' }];
   const days = {}; for (const [k, v] of Object.entries(toObj(d))) days[k] = String(v).split(',').map(Number);
+  const hours = {}, hcut = kstDate(31); for (const [k, v] of Object.entries(toObj(hh))) if (k >= hcut) hours[k] = String(v).split(',').map(Number);
   const R = x => (x === null || x === undefined ? null : x + 1);
-  return [200, { profile: profileOut(ph), days, today: t, rank: { todayKeys: R(rk), todayClicks: R(rc), allKeys: R(ak), allClicks: R(ac), todayUsers: nk, allUsers: nc } }];
+  return [200, { profile: profileOut(ph), days, hours, today: t, rank: { todayKeys: R(rk), todayClicks: R(rc), allKeys: R(ak), allClicks: R(ac), todayUsers: nk, allUsers: nc } }];
 }
 
 async function top(q) {
