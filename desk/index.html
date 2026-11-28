@@ -105,7 +105,7 @@ canvas.buddy{width:100%;max-width:320px;display:block;margin:0 auto;background:t
 </section>
 <section id="make">
   <div class="card maker">
-    <div><canvas id="mkCv" class="buddy" width="504" height="614"></canvas><p class="note" id="mkNote"></p></div>
+    <div><canvas id="mkCv" class="buddy" width="520" height="512"></canvas><p class="note" id="mkNote"></p></div>
     <div>
       <div class="card" style="background:#fff7e0;border:1px solid #ffe2a0;margin:0 0 12px;padding:12px 14px;font-size:14px;line-height:1.6">✨ 캐릭터가 <b>양반다리로 앉아 타자 치는 친구</b>로 새로 바뀌었어요. 얼굴·옷 꾸미기는 새 캐릭터에 맞춰 곧 다시 열려요.</div><div id="oldMk" style="display:none"><label class="f" style="margin-top:0">① 얼굴 고르기</label>
       <div class="tiles" id="mkFace"></div>
@@ -167,13 +167,13 @@ function show(t){document.querySelectorAll('.tabs button').forEach(x=>x.classLis
 let ME=null;
 const kst=(o=0)=>new Date(Date.now()+9*3600e3-o*86400e3).toISOString().slice(0,10);
 async function loadMe(){const box=$('me');
-  if(!UID){box.innerHTML=`<div class="card intro"><canvas class="buddy" width="504" height="614" style="max-width:240px;margin:0 auto 6px"></canvas><h3>내가 하루에 키보드를<br><b>몇 번</b> 누르는지 아세요?</h3><p>바탕화면 위에서 양반다리 친구가 내가 누른 키를 손가락으로 똑같이 따라 쳐요.<br>날짜별 기록이 쌓이고, 다른 사람들과 랭킹도 겨룰 수 있어요.</p><a class="dl" href="TypingFriends-win.zip" download>⬇ 윈도우 앱 무료로 받기</a><div class="steps"><div><b>① 압축 풀고 실행</b>카톡처럼 다음부터는 컴퓨터 켜면 자동으로 떠요</div><div><b>② 캐릭터를 클릭</b>내 기록 페이지가 열려요 (이 페이지!)</div><div><b>③ 랭킹·캐릭터</b>순위를 보고 다른 사람들과 겨뤄요</div></div><p class="note" id="thint">⌨ 지금 아무 키나 눌러보세요. 글자가 톡톡 튀어나와요! (윈도우 앱도 똑같아요)</p><p class="note">무슨 키를 눌렀는지는 절대 저장하지 않아요. 누른 <b>횟수</b>만 세요.</p></div>`;return}
+  if(!UID){box.innerHTML=`<div class="card intro"><canvas class="buddy" width="520" height="512" style="max-width:240px;margin:0 auto 6px"></canvas><h3>내가 하루에 키보드를<br><b>몇 번</b> 누르는지 아세요?</h3><p>바탕화면 위에서 양반다리 친구가 내가 누른 키를 손가락으로 똑같이 따라 쳐요.<br>날짜별 기록이 쌓이고, 다른 사람들과 랭킹도 겨룰 수 있어요.</p><a class="dl" href="TypingFriends-win.zip" download>⬇ 윈도우 앱 무료로 받기</a><div class="steps"><div><b>① 압축 풀고 실행</b>카톡처럼 다음부터는 컴퓨터 켜면 자동으로 떠요</div><div><b>② 캐릭터를 클릭</b>내 기록 페이지가 열려요 (이 페이지!)</div><div><b>③ 랭킹·캐릭터</b>순위를 보고 다른 사람들과 겨뤄요</div></div><p class="note" id="thint">⌨ 지금 아무 키나 눌러보세요. 글자가 톡톡 튀어나와요! (윈도우 앱도 똑같아요)</p><p class="note">무슨 키를 눌렀는지는 절대 저장하지 않아요. 누른 <b>횟수</b>만 세요.</p></div>`;return}
   box.innerHTML='<div class="card empty">불러오는 중…</div>';
   try{ME=await api('user','&u='+UID)}catch(e){box.innerHTML=`<div class="card empty">${e.status===404?'아직 기록이 없어요. 앱을 켜두면 1분 안에 첫 기록이 올라와요 🙂':'기록을 불러오지 못했어요 ('+e.message+')'}</div>`;return}
   await ready;const d=ME.days,t=ME.today,td=d[t]||[0,0];let K=0,C=0,best=null;for(const [day,v] of Object.entries(d)){K+=v[0];C+=v[1];if(!best||v[0]>d[best][0])best=day}
   let streak=0;for(let i=0;i<400;i++){const v=d[kst(i)];if(v&&(v[0]+v[1])>0)streak++;else if(i>0)break}
   const r=ME.rank,p=ME.profile;
-  box.innerHTML=`<div class="card hero"><canvas id="meCv" class="buddy" width="504" height="614"></canvas><div><div class="me-name">${esc(p.name)}</div><div class="me-sub">🔥 ${streak}일 연속 기록 ${KEY?'':'· <span style="color:#c93a68">이 기기에서는 수정 불가</span>'}</div>
+  box.innerHTML=`<div class="card hero"><canvas id="meCv" class="buddy" width="520" height="512"></canvas><div><div class="me-name">${esc(p.name)}</div><div class="me-sub">🔥 ${streak}일 연속 기록 ${KEY?'':'· <span style="color:#c93a68">이 기기에서는 수정 불가</span>'}</div>
    <div class="stats"><div class="stat"><small>오늘 타자</small><b class="k">${fmt(td[0])}</b><i>${r.todayKeys?r.todayKeys+'위 / '+r.todayUsers+'명':''}</i></div><div class="stat"><small>오늘 마우스 클릭</small><b class="m">${fmt(td[1])}</b><i>${r.todayClicks?r.todayClicks+'위':''}</i></div>
    <div class="stat"><small>지금까지 타자</small><b>${fmt(K)}</b><i>${r.allKeys?'전체 '+r.allKeys+'위':''}</i></div><div class="stat"><small>지금까지 클릭</small><b>${fmt(C)}</b><i>${r.allClicks?'전체 '+r.allClicks+'위':''}</i></div></div></div></div>
    <div class="card"><h2>📈 내 기록 그래프<span class="sp"></span><span class="seg" id="rng"><button data-v="0" class="on">시간대별</button><button data-v="7">7일</button><button data-v="30">30일</button></span></h2><div class="seg" id="hday" style="margin:0 0 8px"><button data-v="0" class="on">오늘</button><button data-v="1">어제</button><button data-v="7">7일 평균</button></div><canvas id="chart"></canvas><div class="legend"><span><i style="background:var(--key)"></i>타자</span><span><i style="background:var(--mouse)"></i>마우스 클릭</span><span id="cnote" style="flex-basis:100%">${best?`· 최고 기록 ${best.slice(5).replace('-','/')} 타자 ${fmt(d[best][0])}회`:''}</span></div></div>
@@ -296,7 +296,7 @@ document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return
  if(han&&(e.key==='Process'||e.isComposing||/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(e.key)))ch=e.shiftKey&&SH[han]?SH[han]:han;
  else if(e.key&&e.key.length===1&&e.key!==' ')ch=e.key;else if(e.key==='Enter')ch='↵';
  if(!ch)return;const r=target();let x,y,k=1;
- if(r){const q=window.BUDDY&&BUDDY.pos(e.code);x=r.left+(q.x-300)/840*r.width;y=r.top+(q.y-150)/1024*r.height;k=Math.max(.7,Math.min(1.1,r.width/300))}else{const h=document.getElementById('thint'),hr=h&&h.offsetParent?h.getBoundingClientRect():null;x=(hr?hr.left+hr.width/2:innerWidth/2)+(Math.random()-.5)*160;y=hr&&hr.top>60&&hr.top<innerHeight?hr.top-6:innerHeight-90}
+ if(r){const q=window.BUDDY&&BUDDY.pos(e.code);x=r.left+(q.x-160)/1040*r.width;y=r.top+(q.y-95)/1024*r.height;k=Math.max(.7,Math.min(1.1,r.width/300))}else{const h=document.getElementById('thint'),hr=h&&h.offsetParent?h.getBoundingClientRect():null;x=(hr?hr.left+hr.width/2:innerWidth/2)+(Math.random()-.5)*160;y=hr&&hr.top>60&&hr.top<innerHeight?hr.top-6:innerHeight-90}
  const el=document.createElement('div');el.className='tpop';el.textContent=ch;el.style.left=x+'px';el.style.top=y+'px';el.style.color=COLS[ci++%COLS.length];
  el.style.setProperty('--dx',((Math.random()-.5)*50*k)+'px');el.style.setProperty('--up',(110*k)+'px');el.style.setProperty('--r',((Math.random()-.5)*24)+'deg');
  if(k!==1)el.style.fontSize=(17*k)+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),1150);
@@ -305,22 +305,22 @@ document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return
 </script>
 <script>
 // 새 캐릭터: 양반다리 안경 친구 — 앱(v18)과 같은 방식으로 누른 키에 검지 끝이 가서 꾹
-window.BUDDY=(()=>{const I={};for(const n of ['body','hand_l','hand_r','mouse']){I[n]=new Image();I[n].src='buddy/'+n+'.png?v=4'}
-const KP={};const LEFT='12345QWERTASDFGZXCVB';
-'QWERTYUIOP'.split('').forEach((c,i)=>{const x=[620,662,700,737,775,805,835,870,905,947][i];KP[c]=[x,905];KP['1234567890'[i]]=[x,900]});
-'ASDFGHJKL'.split('').forEach((c,i)=>KP[c]=[[592,635,675,712,750,785,815,852,892][i],932]);
-'ZXCVBNM'.split('').forEach((c,i)=>KP[c]=[[560,605,650,700,760,820,872][i],960]);
-const EX={Space:[760,960,0],Enter:[992,932,0],Backspace:[997,905,0],Semicolon:[937,932,0],Quote:[975,932,0],Comma:[915,960,0],Period:[940,960,0],Slash:[965,960,0],Minus:[990,905,0],Equal:[990,905,0],BracketLeft:[990,905,0],BracketRight:[990,905,0]};
-function key(code){const k=key0(code);return {x:1538-k.x,y:1900-k.y,left:!k.left}}
-function key0(code){const c=(code.match(/^(?:Key|Digit|Numpad)(.)$/)||[])[1];if(c&&KP[c])return {x:KP[c][0],y:KP[c][1],left:LEFT.includes(c)};const e=EX[code]||[950,932,0];return {x:e[0],y:e[1],left:!!e[2]}}
-const mk=r=>({rest:r,from:r,to:r,move:0,press:-1e9,last:-1e9});const L=mk([723,968]),R=mk([826,968]);let glow=null,glowAt=-1e9;
+window.BUDDY=(()=>{const I={};for(const n of ['body','hand_l','hand_r','mouse','kb']){I[n]=new Image();I[n].src='buddy/'+n+'.png?v=6'}
+const KX=388,KY=872,KS=.55,KB=(x,y)=>[KX+x*KS,KY+y*KS],CL='12345QWERTASDFGZXCVB';
+const R1=[1165,1092,1012,930,850,770,690,610,525,440,360,278],R2=[1130,1052,970,890,808,728,648,565,482,400,315,225],R3=[1095,1012,925,840,720,560,360,270,180,95];
+const PUN={Semicolon:';',Quote:"'",Comma:',',Period:'.',Slash:'/',Minus:'-',Equal:'=',BracketLeft:'[',BracketRight:']'};
+function key(code){if(code==='Space'){const p=KB(642,130);return {x:p[0],y:p[1],left:false}}if(code==='Enter'){const p=KB(125,78);return {x:p[0],y:p[1],left:true}}if(code==='Backspace'){const p=KB(165,25);return {x:p[0],y:p[1],left:true}}
+  let c=(code.match(/^(?:Key|Digit|Numpad)(.)$/)||[])[1]||PUN[code]||'';let i,sx=480,sy=78;
+  if(c&&(i='QWERTYUIOP[]'.indexOf(c))>=0){sx=R1[i];sy=25}else if(c&&(i='1234567890-='.indexOf(c))>=0){sx=R1[i];sy=22}else if(c&&(i="ASDFGHJKL;'".indexOf(c))>=0){sx=R2[i];sy=78}else if(c&&(i='ZXCVBNM,./'.indexOf(c))>=0){sx=R3[i];sy=130}
+  const p=KB(sx,sy);return {x:p[0],y:p[1],left:!(c&&CL.includes(c))}}
+const mk=r=>({rest:r,from:r,to:r,move:0,press:-1e9,last:-1e9});const kJ=key('KeyJ'),kF=key('KeyF'),L=mk([kJ.x,kJ.y]),R=mk([kF.x,kF.y]);let glow=null,glowAt=-1e9;
 const now=()=>performance.now();
 function pos(h,n){const back=h.to===h.rest,dur=back?220:70;let t=Math.min(1,(n-h.move)/dur);t=1-(1-t)*(1-t);return [h.from[0]+(h.to[0]-h.from[0])*t,h.from[1]+(h.to[1]-h.from[1])*t]}
-let mx=.5,my=.5,sx=0,sy=0,mouseAt=-1e9,clickAt=-1e9;const MS0=[318,903],MTIP=[44,24];
+let mx=.5,my=.5,sx=0,sy=0,mouseAt=-1e9,clickAt=-1e9;const MS0=[236,898],MTIP=[50,78];
 function mouseMode(n){return n-mouseAt<1500&&n-L.last>350}
-function cur(h,n){if(h===L&&mouseMode(n)){const t=[MS0[0]+MTIP[0]+sx,MS0[1]+MTIP[1]+sy];h.from=pos(h,n);h.to=t;h.move=n-25;h.last=n-400;return pos(h,n)}if(n-h.last>650&&h.to!==h.rest){h.from=pos(h,n);h.to=h.rest;h.move=n}return pos(h,n)}
+function cur(h,n){if(h===L&&mouseMode(n)){const t=[MS0[0]+MTIP[0]+sx,MS0[1]+MTIP[1]+sy];const p=pos(h,n);h.last=n-400;if(Math.hypot(p[0]-t[0],p[1]-t[1])<24){h.from=h.to=t;h.move=n-1000;return t}h.from=p;h.to=t;h.move=n-15;return pos(h,n)}if(n-h.last>650&&h.to!==h.rest){h.from=pos(h,n);h.to=h.rest;h.move=n}return pos(h,n)}
 function press(code){const k=key(code),n=now(),h=k.left?L:R;h.from=pos(h,n);h.to=[k.x,k.y];h.move=n;h.press=n+55;h.last=n;glow=[k.x,k.y];glowAt=n+55}
-const HK=.25,HAND={l:{img:'hand_l',tip:[352,454],cuff:[[18,90],[375,90]],sl:[[652,682],[652,682]]},r:{img:'hand_r',tip:[118,452],cuff:[[85,90],[437,90]],sl:[[893,682],[893,682]]}};
+const HK=.25,HAND={l:{img:'hand_l',tip:[352,454],cuff:[[18,90],[375,90]],sl:[[658,690],[658,690]]},r:{img:'hand_r',tip:[118,452],cuff:[[85,90],[437,90]],sl:[[882,690],[882,690]]}};
 function hand(g,o,h,n){const tip=cur(h,n),pd=n-h.press,dip=pd>=0&&pd<110?7*Math.sin(Math.PI*pd/110):0;const im=I[o.img];const ox=tip[0]-o.tip[0]*HK,oy=tip[1]+dip-o.tip[1]*HK;
   const B1=[ox+o.cuff[0][0]*HK,oy+o.cuff[0][1]*HK],B2=[ox+o.cuff[1][0]*HK,oy+o.cuff[1][1]*HK];
   const Am=[(o.sl[0][0]+o.sl[1][0])/2,(o.sl[0][1]+o.sl[1][1])/2],Bm=[(B1[0]+B2[0])/2,(B1[1]+B2[1])/2];let dx=Bm[0]-Am[0],dy=Bm[1]-Am[1],len=Math.hypot(dx,dy)+.001,nx=-dy/len,ny=dx/len;if(len<30){nx=1;ny=0}
@@ -329,8 +329,8 @@ function hand(g,o,h,n){const tip=cur(h,n),pd=n-h.press,dip=pd>=0&&pd<110?7*Math.
   const m1=mid(A1,C1),m2=mid(A2,C2);g.beginPath();g.moveTo(...A1);g.quadraticCurveTo(...m1,...C1);g.lineTo(...C2);g.quadraticCurveTo(...m2,...A2);g.closePath();g.fillStyle='rgb(192,187,193)';g.fill();g.beginPath();g.arc(Am[0],Am[1],wa,0,7);g.fill();
   g.strokeStyle='#2e1e1c';g.lineWidth=5.5;g.lineCap='round';g.beginPath();g.moveTo(...A1);g.quadraticCurveTo(...m1,...C1);g.stroke();g.beginPath();g.moveTo(...A2);g.quadraticCurveTo(...m2,...C2);g.stroke();
   if(im.complete&&im.naturalWidth)g.drawImage(im,ox,oy,im.naturalWidth,im.naturalHeight)}
-function draw(cv,n){const g=cv.getContext('2d'),s=cv.width/840;g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,cv.width,cv.height);g.setTransform(s,0,0,s,-300*s,0);
-  if(I.body.complete&&I.body.naturalWidth)g.drawImage(I.body,300,0,840,1024);
+function draw(cv,n){const g=cv.getContext('2d'),s=cv.width/1040;g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,cv.width,cv.height);g.setTransform(s,0,0,s,-160*s,0);
+  if(I.body.complete&&I.body.naturalWidth)g.drawImage(I.body,160,0,1040,1024);if(I.kb.complete&&I.kb.naturalWidth)g.drawImage(I.kb,KX,KY,1380*KS,235*KS);
   sx+=((mx-.5)*70-sx)*.35;sy+=((my-.5)*36-sy)*.35;if(I.mouse.complete&&I.mouse.naturalWidth){const cb=n-clickAt>=0&&n-clickAt<160?Math.sin(Math.PI*(n-clickAt)/160):0,w=I.mouse.naturalWidth*2,hh=I.mouse.naturalHeight*2,h2=hh*(1-.1*cb);g.drawImage(I.mouse,MS0[0]+sx,MS0[1]+sy+hh-h2,w,h2)}
   const gd=n-glowAt;if(glow&&gd>=0&&gd<260){g.fillStyle=`rgba(255,225,110,${.67*(1-gd/260)})`;g.beginPath();g.ellipse(glow[0],glow[1],24,13,0,0,7);g.fill()}
   hand(g,HAND.l,L,n);hand(g,HAND.r,R,n)}
