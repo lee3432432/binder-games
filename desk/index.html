@@ -305,8 +305,9 @@ document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return
 </script>
 <script>
 // 새 캐릭터: 양반다리 안경 친구 — 앱(v18)과 같은 방식으로 누른 키에 검지 끝이 가서 꾹
-window.BUDDY=(()=>{const I={};for(const n of ['body','hand_l','hand_r','mouse','kb']){I[n]=new Image();I[n].src='buddy/'+n+'.png?v=6'}
-const KX=388,KY=872,KS=.55,KB=(x,y)=>[KX+x*KS,KY+y*KS],CL='12345QWERTASDFGZXCVB';
+window.BUDDY=(()=>{const I={};for(const n of ['body','hand_l','hand_r','mouse','kb','hand_mouse']){I[n]=new Image();I[n].src='buddy/'+n+'.png?v=7'}
+// 정면 키보드(위아래 뒤집음): 스프라이트 좌표 → 몸통 그림 좌표. left=true 면 화면 왼쪽 손(캐릭터 오른손)
+const KX=388,KY=872,KS=.55,KB=(x,y)=>[KX+x*KS,KY+(235-y)*KS],CL='12345QWERTASDFGZXCVB';
 const R1=[1165,1092,1012,930,850,770,690,610,525,440,360,278],R2=[1130,1052,970,890,808,728,648,565,482,400,315,225],R3=[1095,1012,925,840,720,560,360,270,180,95];
 const PUN={Semicolon:';',Quote:"'",Comma:',',Period:'.',Slash:'/',Minus:'-',Equal:'=',BracketLeft:'[',BracketRight:']'};
 function key(code){if(code==='Space'){const p=KB(642,130);return {x:p[0],y:p[1],left:false}}if(code==='Enter'){const p=KB(125,78);return {x:p[0],y:p[1],left:true}}if(code==='Backspace'){const p=KB(165,25);return {x:p[0],y:p[1],left:true}}
@@ -314,26 +315,29 @@ function key(code){if(code==='Space'){const p=KB(642,130);return {x:p[0],y:p[1],
   if(c&&(i='QWERTYUIOP[]'.indexOf(c))>=0){sx=R1[i];sy=25}else if(c&&(i='1234567890-='.indexOf(c))>=0){sx=R1[i];sy=22}else if(c&&(i="ASDFGHJKL;'".indexOf(c))>=0){sx=R2[i];sy=78}else if(c&&(i='ZXCVBNM,./'.indexOf(c))>=0){sx=R3[i];sy=130}
   const p=KB(sx,sy);return {x:p[0],y:p[1],left:!(c&&CL.includes(c))}}
 const mk=r=>({rest:r,from:r,to:r,move:0,press:-1e9,last:-1e9});const kJ=key('KeyJ'),kF=key('KeyF'),L=mk([kJ.x,kJ.y]),R=mk([kF.x,kF.y]);let glow=null,glowAt=-1e9;
-const now=()=>performance.now();
-function pos(h,n){const back=h.to===h.rest,dur=back?220:70;let t=Math.min(1,(n-h.move)/dur);t=1-(1-t)*(1-t);return [h.from[0]+(h.to[0]-h.from[0])*t,h.from[1]+(h.to[1]-h.from[1])*t]}
-let mx=.5,my=.5,sx=0,sy=0,mouseAt=-1e9,clickAt=-1e9;const MS0=[236,898],MTIP=[50,78];
+const now=()=>performance.now(),dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+let mx=.5,my=.5,sx=0,sy=0,mouseAt=-1e9,clickAt=-1e9;const MC0=[318,958],MSS=.7,HMK=.17,HM_MC=[370,800],HM_B1=[760,20],HM_B2=[990,300];
 function mouseMode(n){return n-mouseAt<1500&&n-L.last>350}
-function cur(h,n){if(h===L&&mouseMode(n)){const t=[MS0[0]+MTIP[0]+sx,MS0[1]+MTIP[1]+sy];const p=pos(h,n);h.last=n-400;if(Math.hypot(p[0]-t[0],p[1]-t[1])<24){h.from=h.to=t;h.move=n-1000;return t}h.from=p;h.to=t;h.move=n-15;return pos(h,n)}if(n-h.last>650&&h.to!==h.rest){h.from=pos(h,n);h.to=h.rest;h.move=n}return pos(h,n)}
+function pos(h,n){const back=h.to===h.rest,dur=back?220:70;let t=Math.min(1,(n-h.move)/dur);t=1-(1-t)*(1-t);return [h.from[0]+(h.to[0]-h.from[0])*t,h.from[1]+(h.to[1]-h.from[1])*t]}
+function cur(h,n){if(h===L&&mouseMode(n)){const t=[MC0[0]+sx,MC0[1]+sy];const p=pos(h,n);h.last=n-400;if(dist(p,t)<24){h.from=h.to=t;h.move=n-1000;return t}h.from=p;h.to=t;h.move=n-15;return pos(h,n)}
+  if(n-h.last>650&&h.to!==h.rest){h.from=pos(h,n);h.to=h.rest;h.move=n}return pos(h,n)}
 function press(code){const k=key(code),n=now(),h=k.left?L:R;h.from=pos(h,n);h.to=[k.x,k.y];h.move=n;h.press=n+55;h.last=n;glow=[k.x,k.y];glowAt=n+55}
-const HK=.25,HAND={l:{img:'hand_l',tip:[352,454],cuff:[[18,90],[375,90]],sl:[[658,690],[658,690]]},r:{img:'hand_r',tip:[118,452],cuff:[[85,90],[437,90]],sl:[[882,690],[882,690]]}};
+const HK=.25,HAND={l:{img:'hand_l',tip:[352,454],cuff:[[18,90],[375,90]],sh:[658,690]},r:{img:'hand_r',tip:[118,452],cuff:[[85,90],[437,90]],sh:[882,690]}};
+// 소매: 어깨(Am)에서 손목 소매(B1-B2)까지 재킷 팔
+function sleeve(g,Am,B1,B2){const Bm=[(B1[0]+B2[0])/2,(B1[1]+B2[1])/2];let dx=Bm[0]-Am[0],dy=Bm[1]-Am[1],len=Math.hypot(dx,dy)+.001,nx=-dy/len,ny=dx/len;if(len<30){nx=1;ny=0}
+  const wa=40,wb=Math.max(34,dist(B1,B2)/2-6);const A1=[Am[0]+nx*wa,Am[1]+ny*wa],A2=[Am[0]-nx*wa,Am[1]-ny*wa],C1=[Bm[0]+nx*wb,Bm[1]+ny*wb],C2=[Bm[0]-nx*wb,Bm[1]-ny*wb];
+  const cx=(A1[0]+A2[0]+C1[0]+C2[0])/4,cy=(A1[1]+A2[1]+C1[1]+C2[1])/4;const mid=(p,q)=>{const m=[(p[0]+q[0])/2,(p[1]+q[1])/2],Lq=Math.hypot(q[0]-p[0],q[1]-p[1])+.001;let ux=-(q[1]-p[1])/Lq,uy=(q[0]-p[0])/Lq;if((m[0]-cx)*ux+(m[1]-cy)*uy<0){ux=-ux;uy=-uy}return [m[0]+ux*.09*Lq,m[1]+uy*.09*Lq]};
+  const m1=mid(A1,C1),m2=mid(A2,C2);g.fillStyle='rgb(192,187,193)';g.beginPath();g.arc(Am[0],Am[1],wa,0,7);g.fill();g.beginPath();g.moveTo(...A1);g.quadraticCurveTo(...m1,...C1);g.lineTo(...C2);g.quadraticCurveTo(...m2,...A2);g.closePath();g.fill();
+  g.strokeStyle='#2e1e1c';g.lineWidth=5.5;g.lineCap='round';g.beginPath();g.moveTo(...A1);g.quadraticCurveTo(...m1,...C1);g.stroke();g.beginPath();g.moveTo(...A2);g.quadraticCurveTo(...m2,...C2);g.stroke()}
 function hand(g,o,h,n){const tip=cur(h,n),pd=n-h.press,dip=pd>=0&&pd<110?7*Math.sin(Math.PI*pd/110):0;const im=I[o.img];const ox=tip[0]-o.tip[0]*HK,oy=tip[1]+dip-o.tip[1]*HK;
-  const B1=[ox+o.cuff[0][0]*HK,oy+o.cuff[0][1]*HK],B2=[ox+o.cuff[1][0]*HK,oy+o.cuff[1][1]*HK];
-  const Am=[(o.sl[0][0]+o.sl[1][0])/2,(o.sl[0][1]+o.sl[1][1])/2],Bm=[(B1[0]+B2[0])/2,(B1[1]+B2[1])/2];let dx=Bm[0]-Am[0],dy=Bm[1]-Am[1],len=Math.hypot(dx,dy)+.001,nx=-dy/len,ny=dx/len;if(len<30){nx=1;ny=0}
-  const wa=40,wb=Math.max(34,Math.hypot(B2[0]-B1[0],B2[1]-B1[1])/2-6);const A1=[Am[0]+nx*wa,Am[1]+ny*wa],A2=[Am[0]-nx*wa,Am[1]-ny*wa],C1=[Bm[0]+nx*wb,Bm[1]+ny*wb],C2=[Bm[0]-nx*wb,Bm[1]-ny*wb];
-  const cx=(A1[0]+A2[0]+C1[0]+C2[0])/4,cy=(A1[1]+A2[1]+C1[1]+C2[1])/4;const mid=(p,q)=>{const m=[(p[0]+q[0])/2,(p[1]+q[1])/2],L=Math.hypot(q[0]-p[0],q[1]-p[1])+.001;let ux=-(q[1]-p[1])/L,uy=(q[0]-p[0])/L;if((m[0]-cx)*ux+(m[1]-cy)*uy<0){ux=-ux;uy=-uy}return [m[0]+ux*.09*L,m[1]+uy*.09*L]};
-  const m1=mid(A1,C1),m2=mid(A2,C2);g.beginPath();g.moveTo(...A1);g.quadraticCurveTo(...m1,...C1);g.lineTo(...C2);g.quadraticCurveTo(...m2,...A2);g.closePath();g.fillStyle='rgb(192,187,193)';g.fill();g.beginPath();g.arc(Am[0],Am[1],wa,0,7);g.fill();
-  g.strokeStyle='#2e1e1c';g.lineWidth=5.5;g.lineCap='round';g.beginPath();g.moveTo(...A1);g.quadraticCurveTo(...m1,...C1);g.stroke();g.beginPath();g.moveTo(...A2);g.quadraticCurveTo(...m2,...C2);g.stroke();
-  if(im.complete&&im.naturalWidth)g.drawImage(im,ox,oy,im.naturalWidth,im.naturalHeight)}
+  sleeve(g,o.sh,[ox+o.cuff[0][0]*HK,oy+o.cuff[0][1]*HK],[ox+o.cuff[1][0]*HK,oy+o.cuff[1][1]*HK]);if(im.complete&&im.naturalWidth)g.drawImage(im,ox,oy,im.naturalWidth,im.naturalHeight)}
+function grip(g,mc,cb){const ox=mc[0]-HM_MC[0]*HMK,oy=mc[1]+4*cb-HM_MC[1]*HMK;sleeve(g,HAND.l.sh,[ox+HM_B1[0]*HMK,oy+HM_B1[1]*HMK],[ox+HM_B2[0]*HMK,oy+HM_B2[1]*HMK]);const im=I.hand_mouse;if(im.complete&&im.naturalWidth)g.drawImage(im,ox,oy,im.naturalWidth/2,im.naturalHeight/2)}
 function draw(cv,n){const g=cv.getContext('2d'),s=cv.width/1040;g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,cv.width,cv.height);g.setTransform(s,0,0,s,-160*s,0);
   if(I.body.complete&&I.body.naturalWidth)g.drawImage(I.body,160,0,1040,1024);if(I.kb.complete&&I.kb.naturalWidth)g.drawImage(I.kb,KX,KY,1380*KS,235*KS);
-  sx+=((mx-.5)*70-sx)*.35;sy+=((my-.5)*36-sy)*.35;if(I.mouse.complete&&I.mouse.naturalWidth){const cb=n-clickAt>=0&&n-clickAt<160?Math.sin(Math.PI*(n-clickAt)/160):0,w=I.mouse.naturalWidth*2,hh=I.mouse.naturalHeight*2,h2=hh*(1-.1*cb);g.drawImage(I.mouse,MS0[0]+sx,MS0[1]+sy+hh-h2,w,h2)}
+  sx+=((mx-.5)*60-sx)*.35;sy+=((my-.5)*28-sy)*.35;const mc=[MC0[0]+sx,MC0[1]+sy],gr=mouseMode(n)&&dist(cur(L,n),mc)<24,cb=n-clickAt>=0&&n-clickAt<160?Math.sin(Math.PI*(n-clickAt)/160):0;
+  if(!gr&&I.mouse.complete&&I.mouse.naturalWidth){const w=I.mouse.naturalWidth*2*MSS,hh=I.mouse.naturalHeight*2*MSS,h2=hh*(1-.1*cb);g.drawImage(I.mouse,mc[0]-w/2,mc[1]-hh/2+(hh-h2),w,h2)}
   const gd=n-glowAt;if(glow&&gd>=0&&gd<260){g.fillStyle=`rgba(255,225,110,${.67*(1-gd/260)})`;g.beginPath();g.ellipse(glow[0],glow[1],24,13,0,0,7);g.fill()}
-  hand(g,HAND.l,L,n);hand(g,HAND.r,R,n)}
+  if(gr)grip(g,mc,cb);else hand(g,HAND.l,L,n);hand(g,HAND.r,R,n)}
 (function loop(){const n=now();document.querySelectorAll('canvas.buddy').forEach(c=>{if(c.offsetParent)draw(c,n)});requestAnimationFrame(loop)})();
 addEventListener('mousemove',e=>{const x=e.clientX/innerWidth,y=e.clientY/innerHeight;if(Math.abs(x-mx)>.0015||Math.abs(y-my)>.0015)mouseAt=now();mx=x;my=y},{passive:true});
 addEventListener('mousedown',()=>{const n=now();clickAt=n;mouseAt=n;L.press=n});
