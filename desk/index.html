@@ -305,7 +305,7 @@ document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return
 </script>
 <script>
 // 새 캐릭터: 양반다리 안경 친구 — 앱(v18)과 같은 방식으로 누른 키에 검지 끝이 가서 꾹
-window.BUDDY=(()=>{const I={};for(const n of ['body','hand_l','hand_r']){I[n]=new Image();I[n].src='buddy/'+n+'.png?v=2'}
+window.BUDDY=(()=>{const I={};for(const n of ['body','hand_l','hand_r','mouse']){I[n]=new Image();I[n].src='buddy/'+n+'.png?v=3'}
 const KP={};const LEFT='12345QWERTASDFGZXCVB';
 'QWERTYUIOP'.split('').forEach((c,i)=>{const x=[620,662,700,737,775,805,835,870,905,947][i];KP[c]=[x,905];KP['1234567890'[i]]=[x,900]});
 'ASDFGHJKL'.split('').forEach((c,i)=>KP[c]=[[592,635,675,712,750,785,815,852,892][i],932]);
@@ -316,7 +316,9 @@ function key0(code){const c=(code.match(/^(?:Key|Digit|Numpad)(.)$/)||[])[1];if(
 const mk=r=>({rest:r,from:r,to:r,move:0,press:-1e9,last:-1e9});const L=mk([723,968]),R=mk([826,968]);let glow=null,glowAt=-1e9;
 const now=()=>performance.now();
 function pos(h,n){const back=h.to===h.rest,dur=back?220:70;let t=Math.min(1,(n-h.move)/dur);t=1-(1-t)*(1-t);return [h.from[0]+(h.to[0]-h.from[0])*t,h.from[1]+(h.to[1]-h.from[1])*t]}
-function cur(h,n){if(n-h.last>650&&h.to!==h.rest){h.from=pos(h,n);h.to=h.rest;h.move=n}return pos(h,n)}
+let mx=.5,my=.5,sx=0,sy=0,mouseAt=-1e9,clickAt=-1e9;const MS0=[318,903],MTIP=[44,24];
+function mouseMode(n){return n-mouseAt<1500&&n-L.last>350}
+function cur(h,n){if(h===L&&mouseMode(n)){const t=[MS0[0]+MTIP[0]+sx,MS0[1]+MTIP[1]+sy];h.from=pos(h,n);h.to=t;h.move=n-25;h.last=n-400;return pos(h,n)}if(n-h.last>650&&h.to!==h.rest){h.from=pos(h,n);h.to=h.rest;h.move=n}return pos(h,n)}
 function press(code){const k=key(code),n=now(),h=k.left?L:R;h.from=pos(h,n);h.to=[k.x,k.y];h.move=n;h.press=n+55;h.last=n;glow=[k.x,k.y];glowAt=n+55}
 const HK=.25,HAND={l:{img:'hand_l',tip:[352,454],cuff:[212,60],elb:[655,858]},r:{img:'hand_r',tip:[118,452],cuff:[246,60],elb:[878,858]}};
 function hand(g,o,h,n){const tip=cur(h,n),pd=n-h.press,dip=pd>=0&&pd<110?7*Math.sin(Math.PI*pd/110):0;const im=I[o.img];const ox=tip[0]-o.tip[0]*HK,oy=tip[1]+dip-o.tip[1]*HK;const cx=ox+o.cuff[0]*HK,cy=oy+o.cuff[1]*HK;
@@ -324,9 +326,12 @@ function hand(g,o,h,n){const tip=cur(h,n),pd=n-h.press,dip=pd>=0&&pd<110?7*Math.
   if(im.complete&&im.naturalWidth)g.drawImage(im,ox,oy,im.naturalWidth,im.naturalHeight)}
 function draw(cv,n){const g=cv.getContext('2d'),s=cv.width/840;g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,cv.width,cv.height);g.setTransform(s,0,0,s,-300*s,0);
   if(I.body.complete&&I.body.naturalWidth)g.drawImage(I.body,300,0,840,1024);
+  sx+=((mx-.5)*70-sx)*.35;sy+=((my-.5)*36-sy)*.35;if(I.mouse.complete&&I.mouse.naturalWidth){const cb=n-clickAt>=0&&n-clickAt<160?Math.sin(Math.PI*(n-clickAt)/160):0,w=I.mouse.naturalWidth*2,hh=I.mouse.naturalHeight*2,h2=hh*(1-.1*cb);g.drawImage(I.mouse,MS0[0]+sx,MS0[1]+sy+hh-h2,w,h2)}
   const gd=n-glowAt;if(glow&&gd>=0&&gd<260){g.fillStyle=`rgba(255,225,110,${.67*(1-gd/260)})`;g.beginPath();g.ellipse(glow[0],glow[1],24,13,0,0,7);g.fill()}
   hand(g,HAND.l,L,n);hand(g,HAND.r,R,n)}
 (function loop(){const n=now();document.querySelectorAll('canvas.buddy').forEach(c=>{if(c.offsetParent)draw(c,n)});requestAnimationFrame(loop)})();
+addEventListener('mousemove',e=>{const x=e.clientX/innerWidth,y=e.clientY/innerHeight;if(Math.abs(x-mx)>.0015||Math.abs(y-my)>.0015)mouseAt=now();mx=x;my=y},{passive:true});
+addEventListener('mousedown',()=>{const n=now();clickAt=n;mouseAt=n;L.press=n});
 return {press,pos:code=>key(code)}})();
 </script>
 </body>
