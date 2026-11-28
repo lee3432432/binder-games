@@ -305,7 +305,7 @@ document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return
 </script>
 <script>
 // 새 캐릭터: 양반다리 안경 친구 — 앱(v18)과 같은 방식으로 누른 키에 검지 끝이 가서 꾹
-window.BUDDY=(()=>{const I={};for(const n of ['body','hand_l','hand_r','mouse']){I[n]=new Image();I[n].src='buddy/'+n+'.png?v=3'}
+window.BUDDY=(()=>{const I={};for(const n of ['body','hand_l','hand_r','mouse']){I[n]=new Image();I[n].src='buddy/'+n+'.png?v=4'}
 const KP={};const LEFT='12345QWERTASDFGZXCVB';
 'QWERTYUIOP'.split('').forEach((c,i)=>{const x=[620,662,700,737,775,805,835,870,905,947][i];KP[c]=[x,905];KP['1234567890'[i]]=[x,900]});
 'ASDFGHJKL'.split('').forEach((c,i)=>KP[c]=[[592,635,675,712,750,785,815,852,892][i],932]);
@@ -320,13 +320,13 @@ let mx=.5,my=.5,sx=0,sy=0,mouseAt=-1e9,clickAt=-1e9;const MS0=[318,903],MTIP=[44
 function mouseMode(n){return n-mouseAt<1500&&n-L.last>350}
 function cur(h,n){if(h===L&&mouseMode(n)){const t=[MS0[0]+MTIP[0]+sx,MS0[1]+MTIP[1]+sy];h.from=pos(h,n);h.to=t;h.move=n-25;h.last=n-400;return pos(h,n)}if(n-h.last>650&&h.to!==h.rest){h.from=pos(h,n);h.to=h.rest;h.move=n}return pos(h,n)}
 function press(code){const k=key(code),n=now(),h=k.left?L:R;h.from=pos(h,n);h.to=[k.x,k.y];h.move=n;h.press=n+55;h.last=n;glow=[k.x,k.y];glowAt=n+55}
-const HK=.25,HAND={l:{img:'hand_l',tip:[352,454],cuff:[[18,90],[375,90]],sl:[[606,815],[714,815]]},r:{img:'hand_r',tip:[118,452],cuff:[[85,90],[437,90]],sl:[[816,815],[926,815]]}};
+const HK=.25,HAND={l:{img:'hand_l',tip:[352,454],cuff:[[18,90],[375,90]],sl:[[652,682],[652,682]]},r:{img:'hand_r',tip:[118,452],cuff:[[85,90],[437,90]],sl:[[893,682],[893,682]]}};
 function hand(g,o,h,n){const tip=cur(h,n),pd=n-h.press,dip=pd>=0&&pd<110?7*Math.sin(Math.PI*pd/110):0;const im=I[o.img];const ox=tip[0]-o.tip[0]*HK,oy=tip[1]+dip-o.tip[1]*HK;
   const B1=[ox+o.cuff[0][0]*HK,oy+o.cuff[0][1]*HK],B2=[ox+o.cuff[1][0]*HK,oy+o.cuff[1][1]*HK];
   const Am=[(o.sl[0][0]+o.sl[1][0])/2,(o.sl[0][1]+o.sl[1][1])/2],Bm=[(B1[0]+B2[0])/2,(B1[1]+B2[1])/2];let dx=Bm[0]-Am[0],dy=Bm[1]-Am[1],len=Math.hypot(dx,dy)+.001,nx=-dy/len,ny=dx/len;if(len<30){nx=1;ny=0}
-  const wa=46,wb=Math.max(36,Math.hypot(B2[0]-B1[0],B2[1]-B1[1])/2-6);const A1=[Am[0]+nx*wa,Am[1]+ny*wa],A2=[Am[0]-nx*wa,Am[1]-ny*wa],C1=[Bm[0]+nx*wb,Bm[1]+ny*wb],C2=[Bm[0]-nx*wb,Bm[1]-ny*wb];
-  const cx=(A1[0]+A2[0]+C1[0]+C2[0])/4,cy=(A1[1]+A2[1]+C1[1]+C2[1])/4;const mid=(p,q)=>{const m=[(p[0]+q[0])/2,(p[1]+q[1])/2],L=Math.hypot(q[0]-p[0],q[1]-p[1])+.001;let ux=-(q[1]-p[1])/L,uy=(q[0]-p[0])/L;if((m[0]-cx)*ux+(m[1]-cy)*uy<0){ux=-ux;uy=-uy}return [m[0]+ux*.06*L,m[1]+uy*.06*L]};
-  const m1=mid(A1,C1),m2=mid(A2,C2);g.beginPath();g.moveTo(...A1);g.quadraticCurveTo(...m1,...C1);g.lineTo(...C2);g.quadraticCurveTo(...m2,...A2);g.closePath();g.fillStyle='rgb(192,187,193)';g.fill();
+  const wa=40,wb=Math.max(34,Math.hypot(B2[0]-B1[0],B2[1]-B1[1])/2-6);const A1=[Am[0]+nx*wa,Am[1]+ny*wa],A2=[Am[0]-nx*wa,Am[1]-ny*wa],C1=[Bm[0]+nx*wb,Bm[1]+ny*wb],C2=[Bm[0]-nx*wb,Bm[1]-ny*wb];
+  const cx=(A1[0]+A2[0]+C1[0]+C2[0])/4,cy=(A1[1]+A2[1]+C1[1]+C2[1])/4;const mid=(p,q)=>{const m=[(p[0]+q[0])/2,(p[1]+q[1])/2],L=Math.hypot(q[0]-p[0],q[1]-p[1])+.001;let ux=-(q[1]-p[1])/L,uy=(q[0]-p[0])/L;if((m[0]-cx)*ux+(m[1]-cy)*uy<0){ux=-ux;uy=-uy}return [m[0]+ux*.09*L,m[1]+uy*.09*L]};
+  const m1=mid(A1,C1),m2=mid(A2,C2);g.beginPath();g.moveTo(...A1);g.quadraticCurveTo(...m1,...C1);g.lineTo(...C2);g.quadraticCurveTo(...m2,...A2);g.closePath();g.fillStyle='rgb(192,187,193)';g.fill();g.beginPath();g.arc(Am[0],Am[1],wa,0,7);g.fill();
   g.strokeStyle='#2e1e1c';g.lineWidth=5.5;g.lineCap='round';g.beginPath();g.moveTo(...A1);g.quadraticCurveTo(...m1,...C1);g.stroke();g.beginPath();g.moveTo(...A2);g.quadraticCurveTo(...m2,...C2);g.stroke();
   if(im.complete&&im.naturalWidth)g.drawImage(im,ox,oy,im.naturalWidth,im.naturalHeight)}
 function draw(cv,n){const g=cv.getContext('2d'),s=cv.width/840;g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,cv.width,cv.height);g.setTransform(s,0,0,s,-300*s,0);
