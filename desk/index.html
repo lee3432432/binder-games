@@ -305,14 +305,15 @@ document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return
 </script>
 <script>
 // 새 캐릭터: 양반다리 안경 친구 — 앱(v18)과 같은 방식으로 누른 키에 검지 끝이 가서 꾹
-window.BUDDY=(()=>{const I={};for(const n of ['body','hand_l','hand_r']){I[n]=new Image();I[n].src='buddy/'+n+'.png?v=1'}
+window.BUDDY=(()=>{const I={};for(const n of ['body','hand_l','hand_r']){I[n]=new Image();I[n].src='buddy/'+n+'.png?v=2'}
 const KP={};const LEFT='12345QWERTASDFGZXCVB';
 'QWERTYUIOP'.split('').forEach((c,i)=>{const x=[620,662,700,737,775,805,835,870,905,947][i];KP[c]=[x,905];KP['1234567890'[i]]=[x,900]});
 'ASDFGHJKL'.split('').forEach((c,i)=>KP[c]=[[592,635,675,712,750,785,815,852,892][i],932]);
 'ZXCVBNM'.split('').forEach((c,i)=>KP[c]=[[560,605,650,700,760,820,872][i],960]);
 const EX={Space:[760,960,0],Enter:[992,932,0],Backspace:[997,905,0],Semicolon:[937,932,0],Quote:[975,932,0],Comma:[915,960,0],Period:[940,960,0],Slash:[965,960,0],Minus:[990,905,0],Equal:[990,905,0],BracketLeft:[990,905,0],BracketRight:[990,905,0]};
-function key(code){const c=(code.match(/^(?:Key|Digit|Numpad)(.)$/)||[])[1];if(c&&KP[c])return {x:KP[c][0],y:KP[c][1],left:LEFT.includes(c)};const e=EX[code]||[950,932,0];return {x:e[0],y:e[1],left:!!e[2]}}
-const mk=r=>({rest:r,from:r,to:r,move:0,press:-1e9,last:-1e9});const L=mk([712,932]),R=mk([815,932]);let glow=null,glowAt=-1e9;
+function key(code){const k=key0(code);return {x:1538-k.x,y:1900-k.y,left:!k.left}}
+function key0(code){const c=(code.match(/^(?:Key|Digit|Numpad)(.)$/)||[])[1];if(c&&KP[c])return {x:KP[c][0],y:KP[c][1],left:LEFT.includes(c)};const e=EX[code]||[950,932,0];return {x:e[0],y:e[1],left:!!e[2]}}
+const mk=r=>({rest:r,from:r,to:r,move:0,press:-1e9,last:-1e9});const L=mk([723,968]),R=mk([826,968]);let glow=null,glowAt=-1e9;
 const now=()=>performance.now();
 function pos(h,n){const back=h.to===h.rest,dur=back?220:70;let t=Math.min(1,(n-h.move)/dur);t=1-(1-t)*(1-t);return [h.from[0]+(h.to[0]-h.from[0])*t,h.from[1]+(h.to[1]-h.from[1])*t]}
 function cur(h,n){if(n-h.last>650&&h.to!==h.rest){h.from=pos(h,n);h.to=h.rest;h.move=n}return pos(h,n)}
