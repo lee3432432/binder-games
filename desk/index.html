@@ -305,9 +305,9 @@ document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return
 </script>
 <script>
 // 새 캐릭터: 양반다리 안경 친구 — 앱(v18)과 같은 방식으로 누른 키에 검지 끝이 가서 꾹
-window.BUDDY=(()=>{const I={};for(const n of ['body','hand_l','hand_r','mouse','kb','hand_mouse']){I[n]=new Image();I[n].src='buddy/'+n+'.png?v=7'}
+window.BUDDY=(()=>{const I={};for(const n of ['body','hand_l','hand_r','mouse','kb','hand_mouse']){I[n]=new Image();I[n].src='buddy/'+n+'.png?v=8'}
 // 정면 키보드(위아래 뒤집음): 스프라이트 좌표 → 몸통 그림 좌표. left=true 면 화면 왼쪽 손(캐릭터 오른손)
-const KX=388,KY=872,KS=.55,KB=(x,y)=>[KX+x*KS,KY+(235-y)*KS],CL='12345QWERTASDFGZXCVB';
+const KX=388,KY=872,KS=.55,KB=(x,y)=>[KX+x*KS,KY+y*KS],CL='12345QWERTASDFGZXCVB';
 const R1=[1165,1092,1012,930,850,770,690,610,525,440,360,278],R2=[1130,1052,970,890,808,728,648,565,482,400,315,225],R3=[1095,1012,925,840,720,560,360,270,180,95];
 const PUN={Semicolon:';',Quote:"'",Comma:',',Period:'.',Slash:'/',Minus:'-',Equal:'=',BracketLeft:'[',BracketRight:']'};
 function key(code){if(code==='Space'){const p=KB(642,130);return {x:p[0],y:p[1],left:false}}if(code==='Enter'){const p=KB(125,78);return {x:p[0],y:p[1],left:true}}if(code==='Backspace'){const p=KB(165,25);return {x:p[0],y:p[1],left:true}}
