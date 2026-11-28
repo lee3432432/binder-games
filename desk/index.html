@@ -305,7 +305,7 @@ document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return
 </script>
 <script>
 // 새 캐릭터: 양반다리 안경 친구 — 앱(v18)과 같은 방식으로 누른 키에 검지 끝이 가서 꾹
-window.BUDDY=(()=>{const I={};for(const n of ['body','hand_l','hand_r','mouse','kb','hand_mouse']){I[n]=new Image();I[n].src='buddy/'+n+'.png?v=8'}
+window.BUDDY=(()=>{const I={};for(const n of ['body','hand_l','hand_r','mouse','kb','hand_mouse','face_sleep','face_happy','rock1','rock2']){I[n]=new Image();I[n].src='buddy/'+n+'.png?v=9'}
 // 정면 키보드(위아래 뒤집음): 스프라이트 좌표 → 몸통 그림 좌표. left=true 면 화면 왼쪽 손(캐릭터 오른손)
 const KX=388,KY=872,KS=.55,KB=(x,y)=>[KX+x*KS,KY+y*KS],CL='12345QWERTASDFGZXCVB';
 const R1=[1165,1092,1012,930,850,770,690,610,525,440,360,278],R2=[1130,1052,970,890,808,728,648,565,482,400,315,225],R3=[1095,1012,925,840,720,560,360,270,180,95];
@@ -316,12 +316,12 @@ function key(code){if(code==='Space'){const p=KB(642,130);return {x:p[0],y:p[1],
   const p=KB(sx,sy);return {x:p[0],y:p[1],left:!(c&&CL.includes(c))}}
 const mk=r=>({rest:r,from:r,to:r,move:0,press:-1e9,last:-1e9});const kJ=key('KeyJ'),kF=key('KeyF'),L=mk([kJ.x,kJ.y]),R=mk([kF.x,kF.y]);let glow=null,glowAt=-1e9;
 const now=()=>performance.now(),dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
-let mx=.5,my=.5,sx=0,sy=0,mouseAt=-1e9,clickAt=-1e9;const MC0=[318,958],MSS=.7,HMK=.17,HM_MC=[370,800],HM_B1=[760,20],HM_B2=[990,300];
+let mx=.5,my=.5,sx=0,sy=0,mouseAt=-1e9,clickAt=-1e9,lastInput=performance.now(),cX=-1,cY=-1,lastSpawn=0;const FX=[];const MC0=[318,958],MSS=.7,HMK=.17,HM_MC=[370,800],HM_B1=[760,20],HM_B2=[990,300];
 function mouseMode(n){return n-mouseAt<1500&&n-L.last>350}
 function pos(h,n){const back=h.to===h.rest,dur=back?220:70;let t=Math.min(1,(n-h.move)/dur);t=1-(1-t)*(1-t);return [h.from[0]+(h.to[0]-h.from[0])*t,h.from[1]+(h.to[1]-h.from[1])*t]}
 function cur(h,n){if(h===L&&mouseMode(n)){const t=[MC0[0]+sx,MC0[1]+sy];const p=pos(h,n);h.last=n-400;if(dist(p,t)<24){h.from=h.to=t;h.move=n-1000;return t}h.from=p;h.to=t;h.move=n-15;return pos(h,n)}
   if(n-h.last>650&&h.to!==h.rest){h.from=pos(h,n);h.to=h.rest;h.move=n}return pos(h,n)}
-function press(code){const k=key(code),n=now(),h=k.left?L:R;h.from=pos(h,n);h.to=[k.x,k.y];h.move=n;h.press=n+55;h.last=n;glow=[k.x,k.y];glowAt=n+55}
+function press(code){const k=key(code),n=now(),h=k.left?L:R;lastInput=n;h.from=pos(h,n);h.to=[k.x,k.y];h.move=n;h.press=n+55;h.last=n;glow=[k.x,k.y];glowAt=n+55}
 const HK=.25,HAND={l:{img:'hand_l',tip:[352,454],cuff:[[18,90],[375,90]],sh:[658,690]},r:{img:'hand_r',tip:[118,452],cuff:[[85,90],[437,90]],sh:[882,690]}};
 // 소매: 어깨(Am)에서 손목 소매(B1-B2)까지 재킷 팔
 function sleeve(g,Am,B1,B2){const Bm=[(B1[0]+B2[0])/2,(B1[1]+B2[1])/2];let dx=Bm[0]-Am[0],dy=Bm[1]-Am[1],len=Math.hypot(dx,dy)+.001,nx=-dy/len,ny=dx/len;if(len<30){nx=1;ny=0}
@@ -332,15 +332,25 @@ function sleeve(g,Am,B1,B2){const Bm=[(B1[0]+B2[0])/2,(B1[1]+B2[1])/2];let dx=Bm
 function hand(g,o,h,n){const tip=cur(h,n),pd=n-h.press,dip=pd>=0&&pd<110?7*Math.sin(Math.PI*pd/110):0;const im=I[o.img];const ox=tip[0]-o.tip[0]*HK,oy=tip[1]+dip-o.tip[1]*HK;
   sleeve(g,o.sh,[ox+o.cuff[0][0]*HK,oy+o.cuff[0][1]*HK],[ox+o.cuff[1][0]*HK,oy+o.cuff[1][1]*HK]);if(im.complete&&im.naturalWidth)g.drawImage(im,ox,oy,im.naturalWidth,im.naturalHeight)}
 function grip(g,mc,cb){const ox=mc[0]-HM_MC[0]*HMK,oy=mc[1]+4*cb-HM_MC[1]*HMK;sleeve(g,HAND.l.sh,[ox+HM_B1[0]*HMK,oy+HM_B1[1]*HMK],[ox+HM_B2[0]*HMK,oy+HM_B2[1]*HMK]);const im=I.hand_mouse;if(im.complete&&im.naturalWidth)g.drawImage(im,ox,oy,im.naturalWidth/2,im.naturalHeight/2)}
+function spawn(k,x,y,n){FX.push({k,x,y,dx:Math.random()*60-30,t:n});if(FX.length>40)FX.shift()}
+function drawFx(g,n){for(let i=FX.length-1;i>=0;i--)if(n-FX[i].t>1600)FX.splice(i,1);g.textAlign='center';g.textBaseline='middle';g.lineJoin='round';
+  for(const f of FX){const a=(n-f.t)/1600,A=a<.7?1:(1-a)/.3,x=f.x+f.dx*a+(f.k===1?60*a:0),y=f.y-170*a,ch=f.k===0?'♥':f.k===1?'Z':(f.dx>0?'♪':'♫'),sz=f.k===1?50+34*a:f.k===2?78:60;
+    g.font=`900 ${sz}px Arial`;g.globalAlpha=A;g.lineWidth=7;g.strokeStyle='#2e1e1c';g.strokeText(ch,x,y);g.fillStyle=f.k===0?'#ff5a8c':f.k===1?'#fff':'#ffc83c';g.fillText(ch,x,y)}g.globalAlpha=1}
+function patting(cv){if(cX<0)return false;const r=cv.getBoundingClientRect();const bx=160+(cX-r.left)/r.width*1040,by=(cY-r.top)/r.height*1024;return bx>540&&bx<1010&&by>20&&by<600}
 function draw(cv,n){const g=cv.getContext('2d'),s=cv.width/1040;g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,cv.width,cv.height);g.setTransform(s,0,0,s,-160*s,0);
-  if(I.body.complete&&I.body.naturalWidth)g.drawImage(I.body,160,0,1040,1024);if(I.kb.complete&&I.kb.naturalWidth)g.drawImage(I.kb,KX,KY,1380*KS,235*KS);
+  const pat=patting(cv);if(pat)lastInput=n;const idle=n-lastInput,rock=idle>=90000&&((idle-90000)%85000)<25000,doze=!rock&&idle>=20000;
+  if(rock){const im=Math.floor(n/320)%2?I.rock2:I.rock1,bob=-10*Math.abs(Math.sin(n/320*Math.PI));if(im.complete&&im.naturalWidth)g.drawImage(im,352,12+bob,im.naturalWidth*2,im.naturalHeight*2);if(n-lastSpawn>350){lastSpawn=n;spawn(2,980+Math.random()*160,520,n)}drawFx(g,n);return}
+  if(I.body.complete&&I.body.naturalWidth)g.drawImage(I.body,160,0,1040,1024);{const fim=pat?I.face_happy:doze?I.face_sleep:null;if(fim&&fim.complete&&fim.naturalWidth)g.drawImage(fim,560,290,fim.naturalWidth*2,fim.naturalHeight*2)}
+  if(pat&&n-lastSpawn>220){lastSpawn=n;spawn(0,680+Math.random()*180,150,n)}if(doze&&n-lastSpawn>900){lastSpawn=n;spawn(1,960,230,n)}
+  if(I.kb.complete&&I.kb.naturalWidth)g.drawImage(I.kb,KX,KY,1380*KS,235*KS);
   sx+=((mx-.5)*60-sx)*.35;sy+=((my-.5)*28-sy)*.35;const mc=[MC0[0]+sx,MC0[1]+sy],gr=mouseMode(n)&&dist(cur(L,n),mc)<24,cb=n-clickAt>=0&&n-clickAt<160?Math.sin(Math.PI*(n-clickAt)/160):0;
   if(!gr&&I.mouse.complete&&I.mouse.naturalWidth){const w=I.mouse.naturalWidth*2*MSS,hh=I.mouse.naturalHeight*2*MSS,h2=hh*(1-.1*cb);g.drawImage(I.mouse,mc[0]-w/2,mc[1]-hh/2+(hh-h2),w,h2)}
   const gd=n-glowAt;if(glow&&gd>=0&&gd<260){g.fillStyle=`rgba(255,225,110,${.67*(1-gd/260)})`;g.beginPath();g.ellipse(glow[0],glow[1],24,13,0,0,7);g.fill()}
-  if(gr)grip(g,mc,cb);else hand(g,HAND.l,L,n);hand(g,HAND.r,R,n)}
+  if(gr)grip(g,mc,cb);else hand(g,HAND.l,L,n);hand(g,HAND.r,R,n);drawFx(g,n)}
 (function loop(){const n=now();document.querySelectorAll('canvas.buddy').forEach(c=>{if(c.offsetParent)draw(c,n)});requestAnimationFrame(loop)})();
-addEventListener('mousemove',e=>{const x=e.clientX/innerWidth,y=e.clientY/innerHeight;if(Math.abs(x-mx)>.0015||Math.abs(y-my)>.0015)mouseAt=now();mx=x;my=y},{passive:true});
-addEventListener('mousedown',()=>{const n=now();clickAt=n;mouseAt=n;L.press=n});
+addEventListener('mousemove',e=>{cX=e.clientX;cY=e.clientY;const x=e.clientX/innerWidth,y=e.clientY/innerHeight;if(Math.abs(x-mx)>.0015||Math.abs(y-my)>.0015){mouseAt=now();lastInput=mouseAt}mx=x;my=y},{passive:true});addEventListener('mouseleave',()=>{cX=-1});
+addEventListener('mousedown',()=>{const n=now();clickAt=n;mouseAt=n;L.press=n;lastInput=n});
+window.__buddyIdle=ms=>{lastInput=now()-ms};
 return {press,pos:code=>key(code)}})();
 </script>
 </body>
