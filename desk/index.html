@@ -81,6 +81,9 @@ input[type=range]{width:100%;accent-color:var(--pink)}
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;text-align:left}
 .steps div{background:#fff7fa;border:1px solid var(--line);border-radius:14px;padding:10px;font-size:13px;line-height:1.5}
 .steps b{display:block;font-size:14px;margin-bottom:2px}
+.tpop{position:fixed;z-index:60;pointer-events:none;min-width:30px;height:30px;padding:0 7px;border-radius:9px;background:#fff;border:2.5px solid #28282f;box-shadow:0 3px 0 rgba(0,0,0,.22);font:900 17px/25px "Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;text-align:center;transform:translate(-50%,-50%) scale(.1);animation:tpop 1.1s ease-out forwards}
+@keyframes tpop{0%{transform:translate(-50%,-50%) scale(.1) rotate(0)}18%{transform:translate(-50%,-50%) scale(1.18) rotate(calc(var(--r)*.3))}28%{transform:translate(-50%,-50%) scale(1) rotate(calc(var(--r)*.4));opacity:1}65%{opacity:1}100%{transform:translate(calc(-50% + var(--dx)),calc(-50% - var(--up))) scale(1) rotate(var(--r));opacity:0}}
+.thint{font-size:12px;color:#9a8;margin-top:6px;text-align:center}
 @media (max-width:640px){.hero,.maker{grid-template-columns:1fr}.hero canvas{max-width:320px;margin:0 auto;display:block}.steps{grid-template-columns:1fr}.top h1{font-size:16px}.dl span.t{display:none}}
 </style>
 </head>
@@ -163,7 +166,7 @@ function show(t){document.querySelectorAll('.tabs button').forEach(x=>x.classLis
 let ME=null;
 const kst=(o=0)=>new Date(Date.now()+9*3600e3-o*86400e3).toISOString().slice(0,10);
 async function loadMe(){const box=$('me');
-  if(!UID){box.innerHTML=`<div class="card intro"><h3>내가 하루에 키보드를<br><b>몇 번</b> 누르는지 아세요?</h3><p>바탕화면 위 책상 뒤에서 캐릭터가 내 키보드·마우스를 똑같이 따라 쳐요.<br>날짜별 기록이 쌓이고, 다른 사람들과 랭킹도 겨룰 수 있어요.</p><a class="dl" href="TypingFriends-win.zip" download>⬇ 윈도우 앱 무료로 받기</a><div class="steps"><div><b>① 압축 풀고 실행</b>카톡처럼 다음부터는 컴퓨터 켜면 자동으로 떠요</div><div><b>② 캐릭터를 클릭</b>내 기록 페이지가 열려요 (이 페이지!)</div><div><b>③ 랭킹·캐릭터</b>순위를 보고 나만의 모자를 만들어요</div></div><p class="note">무슨 키를 눌렀는지는 절대 저장하지 않아요. 누른 <b>횟수</b>만 세요.</p></div>`;return}
+  if(!UID){box.innerHTML=`<div class="card intro"><h3>내가 하루에 키보드를<br><b>몇 번</b> 누르는지 아세요?</h3><p>바탕화면 위 책상 뒤에서 캐릭터가 내 키보드·마우스를 똑같이 따라 쳐요.<br>날짜별 기록이 쌓이고, 다른 사람들과 랭킹도 겨룰 수 있어요.</p><a class="dl" href="TypingFriends-win.zip" download>⬇ 윈도우 앱 무료로 받기</a><div class="steps"><div><b>① 압축 풀고 실행</b>카톡처럼 다음부터는 컴퓨터 켜면 자동으로 떠요</div><div><b>② 캐릭터를 클릭</b>내 기록 페이지가 열려요 (이 페이지!)</div><div><b>③ 랭킹·캐릭터</b>순위를 보고 나만의 모자를 만들어요</div></div><p class="note" id="thint">⌨ 지금 아무 키나 눌러보세요. 글자가 톡톡 튀어나와요! (윈도우 앱도 똑같아요)</p><p class="note">무슨 키를 눌렀는지는 절대 저장하지 않아요. 누른 <b>횟수</b>만 세요.</p></div>`;return}
   box.innerHTML='<div class="card empty">불러오는 중…</div>';
   try{ME=await api('user','&u='+UID)}catch(e){box.innerHTML=`<div class="card empty">${e.status===404?'아직 기록이 없어요. 앱을 켜두면 1분 안에 첫 기록이 올라와요 🙂':'기록을 불러오지 못했어요 ('+e.message+')'}</div>`;return}
   await ready;const d=ME.days,t=ME.today,td=d[t]||[0,0];let K=0,C=0,best=null;for(const [day,v] of Object.entries(d)){K+=v[0];C+=v[1];if(!best||v[0]>d[best][0])best=day}
@@ -280,6 +283,26 @@ async function drawMaker(rebuildFaces){await ready;const g=$('mkCv').getContext(
 
 buildMaker();
 loadMe().then(async()=>{await ready;if(ME){const p=ME.profile;mk={base:p.base,face:p.fsel||(p.face?'own':''),item:p.item===undefined?'cola':p.item}}await checkWait();drawMaker(false);if(qs.get('tab'))show(qs.get('tab'))});
+</script>
+<script>
+// 타자 치면 누른 글자가 캐릭터 키보드 위로 톡톡 튀어나옴 (윈도우 앱 v16과 같은 효과)
+(()=>{const COLS=['#ff5c8d','#4096ff','#ff9628','#28b96e','#9664ff'];let ci=0;
+const ROWS=['1234567890','QWERTYUIOP','ASDFGHJKL','ZXCVBNM'];
+const HAN={KeyQ:'ㅂ',KeyW:'ㅈ',KeyE:'ㄷ',KeyR:'ㄱ',KeyT:'ㅅ',KeyY:'ㅛ',KeyU:'ㅕ',KeyI:'ㅑ',KeyO:'ㅐ',KeyP:'ㅔ',KeyA:'ㅁ',KeyS:'ㄴ',KeyD:'ㅇ',KeyF:'ㄹ',KeyG:'ㅎ',KeyH:'ㅗ',KeyJ:'ㅓ',KeyK:'ㅏ',KeyL:'ㅣ',KeyZ:'ㅋ',KeyX:'ㅌ',KeyC:'ㅊ',KeyV:'ㅍ',KeyB:'ㅠ',KeyN:'ㅜ',KeyM:'ㅡ'};
+const SH={ㅂ:'ㅃ',ㅈ:'ㅉ',ㄷ:'ㄸ',ㄱ:'ㄲ',ㅅ:'ㅆ',ㅐ:'ㅒ',ㅔ:'ㅖ'};
+function target(){for(const id of ['meCv','mkCv']){const c=document.getElementById(id);if(!c||!c.offsetParent)continue;const r=c.getBoundingClientRect();if(r.bottom>40&&r.top<innerHeight-40&&r.width>50)return r}return null}
+function keyFrac(code){const L=(code.match(/^(?:Key|Digit)(.)$/)||[])[1];if(L)for(let i=0;i<ROWS.length;i++){const j=ROWS[i].indexOf(L);if(j>=0)return [.53+(j+i*.35)/11*.33,.55+i*.042]}return [.71,.63]}
+document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return;const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;
+ let ch=null;const han=HAN[e.code];
+ if(han&&(e.key==='Process'||e.isComposing||/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(e.key)))ch=e.shiftKey&&SH[han]?SH[han]:han;
+ else if(e.key&&e.key.length===1&&e.key!==' ')ch=e.key;else if(e.key==='Enter')ch='↵';
+ if(!ch)return;const r=target();let x,y,k=1;
+ if(r){const f=keyFrac(e.code);x=r.left+r.width*f[0];y=r.top+r.height*f[1];k=Math.max(.7,Math.min(1.2,r.width/600))}else{const h=document.getElementById('thint'),hr=h&&h.offsetParent?h.getBoundingClientRect():null;x=(hr?hr.left+hr.width/2:innerWidth/2)+(Math.random()-.5)*160;y=hr&&hr.top>60&&hr.top<innerHeight?hr.top-6:innerHeight-90}
+ const el=document.createElement('div');el.className='tpop';el.textContent=ch;el.style.left=x+'px';el.style.top=y+'px';el.style.color=COLS[ci++%COLS.length];
+ el.style.setProperty('--dx',((Math.random()-.5)*50*k)+'px');el.style.setProperty('--up',(110*k)+'px');el.style.setProperty('--r',((Math.random()-.5)*24)+'deg');
+ if(k!==1)el.style.fontSize=(17*k)+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),1150);
+ const all=document.querySelectorAll('.tpop');if(all.length>24)all[0].remove()});
+})();
 </script>
 </body>
 </html>
